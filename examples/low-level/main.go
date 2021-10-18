@@ -6,7 +6,7 @@
 // to this file "full-example_test.go" to be copied without restrictions.
 // Refer to https://creativecommons.org/publicdomain/zero/1.0
 
-package server_test
+package main
 
 import (
 	"log"
@@ -14,9 +14,11 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/go-chi/chi"
 	"github.com/teal-finance/server"
 	"github.com/teal-finance/server/chain"
 	"github.com/teal-finance/server/cors"
+	"github.com/teal-finance/server/fileserver"
 	"github.com/teal-finance/server/limiter"
 	"github.com/teal-finance/server/metrics"
 	"github.com/teal-finance/server/opa"
@@ -89,4 +91,30 @@ func runServer(h http.Handler, connState func(net.Conn, http.ConnState)) {
 	log.Print("Server listening on http://localhost", server.Addr)
 
 	log.Fatal(server.ListenAndServe())
+}
+
+// handler creates the mapping between the endpoints and the handler functions.
+func handler(resErr reserr.ResErr) http.Handler {
+	r := chi.NewRouter()
+
+	// Static website files
+	fs := fileserver.FileServer{Dir: "/var/www/my-site", ResErr: resErr}
+	r.Get("/", fs.ServeFile("index.html", "text/html; charset=utf-8"))
+	r.Get("/js/*", fs.ServeDir("text/javascript; charset=utf-8"))
+	r.Get("/css/*", fs.ServeDir("text/css; charset=utf-8"))
+	r.Get("/images/*", fs.ServeImages())
+
+	// API
+	r.Get("/api/v1/items", items)
+	r.Get("/api/v1/ducks", resErr.NotImplemented)
+
+	// Other endpoints
+	r.NotFound(resErr.InvalidPath)
+
+	return r
+}
+
+func items(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write([]byte(`["item1","item2","item3"]`))
 }

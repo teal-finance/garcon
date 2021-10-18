@@ -35,11 +35,11 @@ See the [LICENSE](LICENSE) file.
 Except the two example files under CC0-1.0 (Creative Commons Zero v1.0 Universal)
 and the file [chain.go](chain/chain.go) (fork) under the MIT License.
 
-## Easy usage
+## High-level usage
 
-See [easy-example_test.go](easy-example_test.go).
+See the [high-level example](examples/high-level/main.go).
 
-The following source code uses the all-in-one function `Server.RunServer()` that does the same thing as the longer source code of the next chapter.
+The following Go code uses the high-level function `Server.RunServer()`.
 
 ```go
 package main
@@ -65,14 +65,14 @@ func main() {
 }
 ```
 
-## Fined-control usage
+## Low-level example
 
-See the [cmd/server/main.go](https://github.com/teal-finance/rainbow/blob/main/cmd/server/main.go)
-in the repository Rainbow for a complete example.
+See the [low-level example](examples/low-level/main.go).
 
-See also the local file [full-example_test.go](full-example_test.go).
+See also a complete real example in the repo
+[github.com/teal-finance/rainbow](https://github.com/teal-finance/rainbow/blob/main/cmd/server/main.go).
 
-The following source code could be replaced by the all-in-one function `Server.RunServer()` presented in the previous chapter. The following source code is intended to show that the Teal.Finance/Server can be customized to meet specific requirements.
+The following Go code can be replaced by the high-level function `Server.RunServer()` presented in the previous chapter. The following Go code is intended to show that the Teal.Finance/Server can be customized to meet specific requirements.
 
 ```go
 package main

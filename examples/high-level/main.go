@@ -6,7 +6,7 @@
 // to this file "easy-example_test.go" to be copied without restrictions.
 // Refer to https://creativecommons.org/publicdomain/zero/1.0
 
-package server_test
+package main
 
 import (
 	"log"
