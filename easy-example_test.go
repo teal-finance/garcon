@@ -23,13 +23,13 @@ func ExampleServer() {
 		Version:        "MyApp-1.2.3",
 		ResErr:         "https://my-dns.com/doc",
 		AllowedOrigins: []string{"http://my-dns.com"},
-		OPAFilenames:   []string{"rego.json"},
+		OPAFilenames:   []string{"example-auth.rego"},
 	}
 
 	// Handles both REST API and static web files
 	h := handler(s.ResErr)
 
-	log.Fatal(s.RunServer(h, 8080, 9093, 10, 20, true))
+	log.Fatal(s.RunServer(h, 8080, 9093, 10, 30, true))
 }
 
 // handler creates the mapping between the endpoints and the handler functions.

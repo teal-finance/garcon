@@ -36,18 +36,40 @@ type Policy struct {
 }
 
 // New creates a new Policy by loading rego files.
-func New(reserr reserr.ResErr, filenames []string) (Policy, error) {
+func New(filenames []string, reserr reserr.ResErr) (Policy, error) {
 	compiler, err := Load(filenames)
 
 	return Policy{compiler, reserr}, err
 }
 
-// Load loads one or more Rego policies.
+// Ready returns true if the Policy compiler contains rules.
+func (opa Policy) Ready() bool {
+	return opa.Compiler != nil
+}
+
+// Load check the Rego filenames and loads them to build the OPA compiler.
 func Load(filenames []string) (*ast.Compiler, error) {
+	trimmedFN := make([]string, 0, len(filenames))
+
+	for _, fn := range filenames {
+		f := strings.TrimSpace(fn)
+		if f == "" {
+			log.Printf("OPA: skip empty filename %q", fn)
+
+			continue
+		}
+
+		trimmedFN = append(trimmedFN, f)
+	}
+
+	if len(trimmedFN) == 0 {
+		return nil, nil
+	}
+
 	modules := map[string]string{}
 
 	for _, f := range filenames {
-		log.Print("OPA: load ", f)
+		log.Printf("OPA: load %q", f)
 
 		content, err := ioutil.ReadFile(f)
 		if err != nil {

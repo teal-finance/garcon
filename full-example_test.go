@@ -43,14 +43,7 @@ func setMiddlewares(resErr reserr.ResErr) (middlewares chain.Chain, connState fu
 	middlewares, connState = metrics.StartServer(9093, true)
 
 	// Limit the input request rate per IP
-	reqLimiter := limiter.New(10, 20, true, resErr)
-	middlewares = middlewares.Append()
-
-	// Endpoint authentication rules (Open Policy Agent)
-	policy, err := opa.New(resErr, []string{"rego.json"})
-	if err != nil {
-		log.Fatal(err)
-	}
+	reqLimiter := limiter.New(10, 30, true, resErr)
 
 	// CORS
 	allowedOrigins := []string{"http://my-dns.com"}
@@ -59,9 +52,18 @@ func setMiddlewares(resErr reserr.ResErr) (middlewares chain.Chain, connState fu
 		server.LogRequests,
 		reqLimiter.Limit,
 		server.Header("MyServerName-1.2.3"),
-		policy.Auth,
 		cors.HandleCORS(allowedOrigins),
 	)
+
+	// Endpoint authentication rules (Open Policy Agent)
+	policy, err := opa.New([]string{"example-auth.rego"}, resErr)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if policy.Ready() {
+		middlewares = middlewares.Append(policy.Auth)
+	}
 
 	return middlewares, connState
 }

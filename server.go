@@ -48,27 +48,26 @@ func (s *Server) RunServer(h http.Handler, port, expPort, maxReqBurst, maxReqPer
 
 	reqLimiter := limiter.New(maxReqBurst, maxReqPerMinute, devMode, s.ResErr)
 
-	middlewares = middlewares.Append(LogRequests, reqLimiter.Limit, Header(s.Version))
+	middlewares = middlewares.Append(
+		LogRequests,
+		reqLimiter.Limit,
+		Header(s.Version),
+		cors.HandleCORS(s.AllowedOrigins),
+	)
 
-	if len(s.OPAFilenames) > 0 {
-		compiler, err := opa.Load(s.OPAFilenames)
-		if err != nil {
-			return err
-		}
+	// Endpoint authentication rules (Open Policy Agent)
+	policy, err := opa.New(s.OPAFilenames, s.ResErr)
+	if err != nil {
+		return err
+	}
 
-		policy := opa.Policy{Compiler: compiler, ResErr: s.ResErr}
+	if policy.Ready() {
 		middlewares = middlewares.Append(policy.Auth)
 	}
 
-	middlewares = middlewares.Append(cors.HandleCORS(s.AllowedOrigins))
-
-	addr := ":" + strconv.Itoa(port)
-
-	log.Print("HTTP server listening on http://localhost", addr)
-
-	// main server: REST API or any HTTP web server
+	// main server: REST API or other web servers
 	server := http.Server{
-		Addr:              addr,
+		Addr:              ":" + strconv.Itoa(port),
 		Handler:           middlewares.Then(h),
 		TLSConfig:         nil,
 		ReadTimeout:       1 * time.Second,
@@ -83,15 +82,15 @@ func (s *Server) RunServer(h http.Handler, port, expPort, maxReqBurst, maxReqPer
 		ConnContext:       nil,
 	}
 
-	if err := server.ListenAndServe(); err != nil {
-		log.Print("ERROR: Install ncat and ss: sudo apt install ncat iproute2")
-		log.Printf("ERROR: Try to listen port %v: sudo ncat -l %v", port, port)
-		log.Printf("ERROR: Get the process using port %v: sudo ss -pan | grep %v", port, port)
+	log.Print("Server listening on http://localhost", server.Addr)
 
-		return err
-	}
+	err = server.ListenAndServe()
 
-	return nil
+	log.Print("ERROR: Install ncat and ss: sudo apt install ncat iproute2")
+	log.Printf("ERROR: Try to listen port %v: sudo ncat -l %v", port, port)
+	log.Printf("ERROR: Get the process using port %v: sudo ss -pan | grep %v", port, port)
+
+	return err
 }
 
 // Header sets the Server HTTP header in the response.

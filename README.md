@@ -55,7 +55,7 @@ func main() {
         Version:        "MyApp-1.2.3",
         Resp:           "https://my-dns.com/doc",
         AllowedOrigins: []string{"http://my-dns.com"},
-        OPAFilenames:   []string{"rego.json"},
+        OPAFilenames:   []string{"example-auth.rego"},
     }
 
     h := myHandler()
@@ -103,7 +103,7 @@ func main() {
 
 func setMiddlewares() (middlewares chain.Chain, connState func(net.Conn, http.ConnState)) {
     // Uniformize error responses with API doc
-    respError := reserr.New("https://my-dns.com/doc")
+    resErr := reserr.New("https://my-dns.com/doc")
 
     // Start a metrics server in background if export port > 0.
     // The metrics server is for use with Prometheus or another compatible monitoring tool.
@@ -111,11 +111,11 @@ func setMiddlewares() (middlewares chain.Chain, connState func(net.Conn, http.Co
     middlewares, connState = metrics.StartServer(9093, true)
 
     // Limit the input request rate per IP
-    reqLimiter := limiter.New(10, 20, true, respError)
+    reqLimiter := limiter.New(10, 20, true, resErr)
     middlewares = middlewares.Append()
 
     // Endpoint authentication rules (Open Policy Agent)
-    policy, err := opa.New(respError, []string{"rego.json"})
+    policy, err := opa.New(resErr, []string{"example-auth.rego"})
     if err != nil {
         log.Fatal(err)
     }
