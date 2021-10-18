@@ -1,6 +1,6 @@
 # Teal.Finance/Server
 
-![logo](logo.jpg) | Opinionated HTTP server with CORS, OPA, Prometheus, rate-limiter… for API and static website.
+![logo](logo.jpg) | <big>Opinionated boilerplate HTTP server with CORS, OPA, Prometheus, rate-limiter… for API and static website.</big>
 -|-
 
 ## Origin
@@ -39,6 +39,8 @@ and the file [chain.go](chain/chain.go) (fork) under the MIT License.
 
 See [easy-example_test.go](easy-example_test.go).
 
+The following source code uses the all-in-one function `Server.RunServer()` that does the same thing as the longer source code of the next chapter.
+
 ```go
 package main
 
@@ -70,6 +72,8 @@ in the repository Rainbow for a complete example.
 
 See also the local file [full-example_test.go](full-example_test.go).
 
+The following source code could be replaced by the all-in-one function `Server.RunServer()` presented in the previous chapter. The following source code is intended to show that the Teal.Finance/Server can be customized to meet specific requirements.
+
 ```go
 package main
 
@@ -85,7 +89,7 @@ import (
     "github.com/teal-finance/server/export"
     "github.com/teal-finance/server/limiter"
     "github.com/teal-finance/server/opa"
-    "github.com/teal-finance/server/resperr"
+    "github.com/teal-finance/server/reserr"
 )
 
 func main() {
@@ -99,7 +103,7 @@ func main() {
 
 func setMiddlewares() (middlewares chain.Chain, connState func(net.Conn, http.ConnState)) {
     // Uniformize error responses with API doc
-    respError := resperr.New("https://my-dns.com/doc")
+    respError := reserr.New("https://my-dns.com/doc")
 
     // Start a metrics server in background if export port > 0.
     // The metrics server is for use with Prometheus or another compatible monitoring tool.

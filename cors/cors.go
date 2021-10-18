@@ -1,4 +1,4 @@
-// Teal.Finance/Server is an opinionated complete HTTP server.
+// Teal.Finance/Server is an opinionated boilerplate API and website server.
 // Copyright (C) 2021 Teal.Finance contributors
 //
 // This file is part of Teal.Finance/Server, licensed under LGPL-3.0-or-later.
