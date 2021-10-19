@@ -53,8 +53,7 @@ func setMiddlewares(resErr reserr.ResErr) (middlewares chain.Chain, connState fu
 	middlewares = middlewares.Append(
 		server.LogRequests,
 		reqLimiter.Limit,
-		server.Header("MyServerName-1.2.3"),
-		cors.HandleCORS(allowedOrigins),
+		cors.Handle(allowedOrigins, true),
 	)
 
 	// Endpoint authentication rules (Open Policy Agent)

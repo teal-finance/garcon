@@ -19,25 +19,26 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/go-chi/cors"
+	"github.com/rs/cors"
 )
 
-// HandleCORS uses restrictive CORS values.
-func HandleCORS(origins []string) func(next http.Handler) http.Handler {
+// Handle uses restrictive CORS values.
+func Handle(origins []string, debug bool) func(next http.Handler) http.Handler {
 	options := cors.Options{
-		AllowedOrigins:     []string{},               // No need because use function
-		AllowOriginFunc:    nil,                      // Function is set below
-		AllowedMethods:     []string{http.MethodGet}, // The most restrictive
-		AllowedHeaders:     []string{"Origin", "Accept", "Content-Type", "Authorization", "Cookie"},
-		ExposedHeaders:     []string{},
-		AllowCredentials:   true,
-		OptionsPassthrough: false, // false = this middleware stops OPTION requests
-		Debug:              true,
-		MaxAge:             60, // Cache the response for 1 minute
+		AllowedOrigins:         []string{},
+		AllowOriginFunc:        nil,
+		AllowOriginRequestFunc: nil,
+		AllowedMethods:         []string{http.MethodGet},
+		AllowedHeaders:         []string{"Origin", "Accept", "Content-Type", "Authorization", "Cookie"},
+		ExposedHeaders:         []string{},
+		MaxAge:                 60,
+		AllowCredentials:       true,
+		OptionsPassthrough:     false,
+		Debug:                  debug, // verbose logs
 	} // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Max-Age
 
-	for i, dns := range origins {
-		origins[i] = insertSchema(dns)
+	for i, o := range origins {
+		origins[i] = insertSchema(o)
 	}
 
 	if len(origins) == 1 {
@@ -48,7 +49,7 @@ func HandleCORS(origins []string) func(next http.Handler) http.Handler {
 
 	log.Printf("Middleware CORS: %+v", options)
 
-	return cors.Handler(options)
+	return cors.New(options).Handler
 }
 
 func insertSchema(domain string) string {
@@ -60,18 +61,18 @@ func insertSchema(domain string) string {
 	return domain
 }
 
-func oneOrigin(addr string) func(r *http.Request, origin string) bool {
+func oneOrigin(addr string) func(rorigin string) bool {
 	log.Print("CORS: Set origin: ", addr)
 
-	return func(r *http.Request, origin string) bool {
+	return func(origin string) bool {
 		return origin == addr
 	}
 }
 
-func multipleOriginPrefixes(prefixes []string) func(r *http.Request, origin string) bool {
+func multipleOriginPrefixes(prefixes []string) func(origin string) bool {
 	log.Print("CORS: Set origin prefixes: ", prefixes)
 
-	return func(r *http.Request, origin string) bool {
+	return func(origin string) bool {
 		for _, prefix := range prefixes {
 			if strings.HasPrefix(origin, prefix) {
 				log.Printf("CORS: Accept %v because starts with prefix %v", origin, prefix)

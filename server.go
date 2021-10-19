@@ -52,7 +52,7 @@ func (s *Server) RunServer(h http.Handler, port, expPort, maxReqBurst, maxReqPer
 		LogRequests,
 		reqLimiter.Limit,
 		Header(s.Version),
-		cors.HandleCORS(s.AllowedOrigins),
+		cors.Handle(s.AllowedOrigins, devMode),
 	)
 
 	// Endpoint authentication rules (Open Policy Agent)
