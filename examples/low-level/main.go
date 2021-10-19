@@ -25,9 +25,9 @@ import (
 	"github.com/teal-finance/server/reserr"
 )
 
-func Example() {
+func main() {
 	// Uniformize error responses with API doc
-	resErr := reserr.New("https://my-dns.com/doc")
+	resErr := reserr.New("https://my.dns.co/doc")
 
 	middlewares, connState := setMiddlewares(resErr)
 
@@ -48,11 +48,12 @@ func setMiddlewares(resErr reserr.ResErr) (middlewares chain.Chain, connState fu
 	reqLimiter := limiter.New(10, 30, true, resErr)
 
 	// CORS
-	allowedOrigins := []string{"http://my-dns.com"}
+	allowedOrigins := []string{"https://my.dns.co"}
 
 	middlewares = middlewares.Append(
 		server.LogRequests,
 		reqLimiter.Limit,
+		server.Header("MyServerName-1.2.0"),
 		cors.Handle(allowedOrigins, true),
 	)
 

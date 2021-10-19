@@ -3,7 +3,7 @@ package auth
 default allow = false
 
 tokens := {
-    "Bearer eZNG6I3VTU28Qe",
+    "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb2dnZWRJbkFzIjoiYWRtaW4iLCJpYXQiOjE0MjI3Nzk2Mzh9.gzSraSYS8EXBxLN_oWnFSRgCzcmJmMjLiuyu5CSpyHI",
 }
 
 allow {

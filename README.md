@@ -35,11 +35,14 @@ See the [LICENSE](LICENSE) file.
 Except the two example files under CC0-1.0 (Creative Commons Zero v1.0 Universal)
 and the file [chain.go](chain/chain.go) (fork) under the MIT License.
 
-## High-level usage
+## Examples
 
-See the [high-level example](examples/high-level/main.go).
+See also a complete real example in the repo
+[github.com/teal-finance/rainbow](https://github.com/teal-finance/rainbow/blob/main/cmd/server/main.go).
 
-The following Go code uses the high-level function `Server.RunServer()`.
+## High-level
+
+The following code uses the high-level function `Server.RunServer()`.
 
 ```go
 package main
@@ -52,27 +55,116 @@ import (
 
 func main() {
     s := server.Server{
-        Version:        "MyApp-1.2.3",
-        Resp:           "https://my-dns.com/doc",
-        AllowedOrigins: []string{"http://my-dns.com"},
+        Version:        "MyApp-1.2.0",
+        Resp:           "https://my.dns.co/doc",
+        AllowedOrigins: []string{"https://my.dns.co"},
         OPAFilenames:   []string{"example-auth.rego"},
     }
 
     h := myHandler()
 
-    // main port 8080, export port 9093, rate limiter 10 20, debug mode 
+    // main port 8080, export port 9093, rate limiter 10 20, dev mode 
     log.Fatal(s.RunServer(h, 8080, 9093, 10, 20, true))
 }
 ```
 
-## Low-level example
+Run the [high-level example](examples/high-level/main.go):
+
+```
+$ go build ./examples/high-level && ./high-level
+2021/10/19 23:41:50 Prometheus export http://localhost:9093
+2021/10/19 23:41:50 CORS: Set origin: https://my.dns.co
+2021/10/19 23:41:50 Middleware CORS: {AllowedOrigins:[] AllowOriginFunc:0x556b48e30960 AllowOriginRequestFunc:<nil> AllowedMethods:[GET] AllowedHeaders:[Origin Accept Content-Type Authorization Cookie] ExposedHeaders:[] MaxAge:60 AllowCredentials:true OptionsPassthrough:false Debug:true}
+2021/10/19 23:41:50 OPA: load "example-auth.rego"
+2021/10/19 23:41:50 Middleware OPA: map[example-auth.rego:package auth
+
+default allow = false
+tokens := {"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb2dnZWRJbkFzIjoiYWRtaW4iLCJpYXQiOjE0MjI3Nzk2Mzh9.gzSraSYS8EXBxLN_oWnFSRgCzcmJmMjLiuyu5CSpyHI"} { true }
+allow = true { __local0__ = input.token; data.auth.tokens[__local0__] }]
+2021/10/19 23:41:50 Middleware response HTTP header: Set Server MyApp-1.2.0
+2021/10/19 23:41:50 Middleware RateLimiter: burst=100 rate=5/s
+2021/10/19 23:41:50 Middleware logger: log requested URLs and remote addresses
+2021/10/19 23:41:50 Server listening on http://localhost:8080
+```
+
+Test the API endpoint with default `curl` HTTP headers:
+
+```
+$ curl -D - http://localhost:8080/api/v1/items
+HTTP/1.1 401 Unauthorized
+Content-Type: application/json
+Server: MyApp-1.2.0
+Vary: Origin
+X-Content-Type-Options: nosniff
+Date: Tue, 19 Oct 2021 21:42:29 GMT
+Content-Length: 77
+
+{"error":"Unauthorized","doc":"https://my.dns.co/doc","path":"/api/v1/items"}
+```
+
+The corresponding server logs in debug mode:
+
+```
+2021/10/19 23:42:29 in  GET /api/v1/items [::1]:54796
+[cors] 2021/10/19 23:42:29 Handler: Actual request
+[cors] 2021/10/19 23:42:29   Actual request no headers added: missing origin
+2021/10/19 23:42:29 OPA unauthorize [::1]:54796 /api/v1/items
+2021/10/19 23:42:29 out GET /api/v1/items 337.751µs
+```
+
+Test the API endpoint with valid Authorization header:
+
+```
+$ curl -D - -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb2dnZWRJbkFzIjoiYWRtaW4iLCJpYXQiOjE0MjI3Nzk2Mzh9.gzSraSYS8EXBxLN_oWnFSRgCzcmJmMjLiuyu5CSpyHI' http://localhost:8080/api/v1/items
+HTTP/1.1 200 OK
+Content-Type: application/json
+Server: MyApp-1.2.0
+Vary: Origin
+Date: Tue, 19 Oct 2021 21:43:55 GMT
+Content-Length: 25
+
+["item1","item2","item3"]
+```
+
+The corresponding server logs:
+
+```
+2021/10/19 23:43:55 in  GET /api/v1/items [::1]:54798
+[cors] 2021/10/19 23:43:55 Handler: Actual request
+[cors] 2021/10/19 23:43:55   Actual request no headers added: missing origin
+2021/10/19 23:43:55 out GET /api/v1/items 235.621µs
+```
+
+Test the API endpoint with valid Authorization and Origin headers:
+
+```
+$ curl -D - -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb2dnZWRJbkFzIjoiYWRtaW4iLCJpYXQiOjE0MjI3Nzk2Mzh9.gzSraSYS8EXBxLN_oWnFSRgCzcmJmMjLiuyu5CSpyHI' -H 'Origin: https://my.dns.co' http://localhost:8080/api/v1/items
+HTTP/1.1 200 OK
+Access-Control-Allow-Credentials: true
+Access-Control-Allow-Origin: https://my.dns.co
+Content-Type: application/json
+Server: MyApp-1.2.0
+Vary: Origin
+Date: Tue, 19 Oct 2021 21:45:00 GMT
+Content-Length: 25
+
+["item1","item2","item3"]
+```
+
+The corresponding server logs:
+
+```
+2021/10/19 23:45:00 in  GET /api/v1/items [::1]:54800
+[cors] 2021/10/19 23:45:00 Handler: Actual request
+[cors] 2021/10/19 23:45:00   Actual response added headers: map[Access-Control-Allow-Credentials:[true] Access-Control-Allow-Origin:[https://my.dns.co] Server:[MyApp-1.2.0] Vary:[Origin]]
+2021/10/19 23:45:00 out GET /api/v1/items 341.432µs
+```
+
+## Low-level
 
 See the [low-level example](examples/low-level/main.go).
 
-See also a complete real example in the repo
-[github.com/teal-finance/rainbow](https://github.com/teal-finance/rainbow/blob/main/cmd/server/main.go).
-
-The following Go code can be replaced by the high-level function `Server.RunServer()` presented in the previous chapter. The following Go code is intended to show that the Teal.Finance/Server can be customized to meet specific requirements.
+The following code can be replaced by the high-level function `Server.RunServer()` presented in the previous chapter. The following code is intended to show that the Teal.Finance/Server can be customized to meet specific requirements.
 
 ```go
 package main
@@ -103,7 +195,7 @@ func main() {
 
 func setMiddlewares() (middlewares chain.Chain, connState func(net.Conn, http.ConnState)) {
     // Uniformize error responses with API doc
-    resErr := reserr.New("https://my-dns.com/doc")
+    resErr := reserr.New("https://my.dns.co/doc")
 
     // Start a metrics server in background if export port > 0.
     // The metrics server is for use with Prometheus or another compatible monitoring tool.
@@ -121,14 +213,14 @@ func setMiddlewares() (middlewares chain.Chain, connState func(net.Conn, http.Co
     }
 
     // CORS
-    allowedOrigins := []string{"http://my-dns.com"}
+    allowedOrigins := []string{"https://my.dns.co"}
 
     middlewares = middlewares.Append(
         server.LogRequests,
         reqLimiter.Limit,
-        server.Header("MyServerName-1.2.3"),
+        server.Header("MyServerName-1.2.0"),
         policy.Auth,
-        cors.HandleCORS(allowedOrigins),
+        cors.Handle(allowedOrigins, true),
     )
 
     return middlewares, connState

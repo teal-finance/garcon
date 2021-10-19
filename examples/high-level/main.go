@@ -18,11 +18,11 @@ import (
 	"github.com/teal-finance/server/reserr"
 )
 
-func ExampleServer() {
+func main() {
 	s := server.Server{
-		Version:        "MyApp-1.2.3",
-		ResErr:         "https://my-dns.com/doc",
-		AllowedOrigins: []string{"http://my-dns.com"},
+		Version:        "MyApp-1.2.0",
+		ResErr:         "https://my.dns.co/doc",
+		AllowedOrigins: []string{"https://my.dns.co"},
 		OPAFilenames:   []string{"example-auth.rego"},
 	}
 
