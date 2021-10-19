@@ -72,8 +72,7 @@ func (fs FileServer) ServeImages() func(w http.ResponseWriter, r *http.Request) 
 func validPath(w http.ResponseWriter, r *http.Request) bool {
 	if strings.Contains(r.URL.Path, "..") {
 		log.Print("WARN Fileserver: reject path with '..' ", r.URL.Path)
-		w.WriteHeader(http.StatusBadRequest)
-		reserr.Handle(w, r, "Invalid URL Path Containing '..'")
+		reserr.Write(w, r, http.StatusBadRequest, "Invalid URL Path Containing '..'")
 
 		return false
 	}
@@ -102,8 +101,7 @@ func (fs FileServer) send(w http.ResponseWriter, r *http.Request, absPath string
 	if file == nil {
 		f, err := os.Open(absPath)
 		if err != nil {
-			w.WriteHeader(http.StatusNotFound)
-			fs.ResErr.Handle(w, r, "Page not found")
+			fs.ResErr.Write(w, r, http.StatusNotFound, "Page not found")
 			log.Printf("WARN Fileserver: Open(%v) %v", absPath, err)
 
 			return
@@ -121,8 +119,7 @@ func (fs FileServer) send(w http.ResponseWriter, r *http.Request, absPath string
 	fi, err := file.Stat()
 	if err != nil {
 		log.Printf("WARN Fileserver: Stat(%v) %v", absPath, err)
-		w.WriteHeader(http.StatusInternalServerError)
-		fs.ResErr.Handle(w, r, "Internal Server Error")
+		fs.ResErr.Write(w, r, http.StatusInternalServerError, "Internal Server Error")
 
 		return
 	}

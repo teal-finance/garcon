@@ -27,13 +27,11 @@ func New(docURL string) ResErr {
 }
 
 func (resErr ResErr) NotImplemented(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-	resErr.Handle(w, r, "Path is reserved for future use. Please contact us to share your ideas.")
+	resErr.Write(w, r, http.StatusNotImplemented, "Path is reserved for future use. Please contact us to share your ideas.")
 }
 
 func (resErr ResErr) InvalidPath(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusBadRequest)
-	resErr.Handle(w, r, "Path is not valid. Please refer to the API doc.")
+	resErr.Write(w, r, http.StatusBadRequest, "Path is not valid. Please refer to the API doc.")
 }
 
 type msg struct {
@@ -43,9 +41,10 @@ type msg struct {
 	Query string
 }
 
-func (resErr ResErr) Handle(w http.ResponseWriter, r *http.Request, text string) {
+func (resErr ResErr) Write(w http.ResponseWriter, r *http.Request, statusCode int, text string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.WriteHeader(statusCode)
 
 	m := msg{
 		Error: text,
@@ -74,6 +73,6 @@ func (resErr ResErr) Handle(w http.ResponseWriter, r *http.Request, text string)
 	}
 }
 
-func Handle(w http.ResponseWriter, r *http.Request, text string) {
-	ResErr("").Handle(w, r, text)
+func Write(w http.ResponseWriter, r *http.Request, statusCode int, text string) {
+	ResErr("").Write(w, r, statusCode, text)
 }

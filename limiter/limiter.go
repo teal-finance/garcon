@@ -63,8 +63,7 @@ func (rl *ReqLimiter) Limit(next http.Handler) http.Handler {
 		ip, _, err := net.SplitHostPort(r.RemoteAddr)
 		if err != nil {
 			log.Printf("WARN: SplitHostPort(%v) %v", r.RemoteAddr, err)
-			w.WriteHeader(http.StatusInternalServerError)
-			rl.resErr.Handle(w, r, "Internal Server Error")
+			rl.resErr.Write(w, r, http.StatusInternalServerError, "Internal Server Error #3")
 
 			return
 		}
@@ -72,8 +71,7 @@ func (rl *ReqLimiter) Limit(next http.Handler) http.Handler {
 		limiter := rl.getVisitor(ip)
 		if !limiter.Allow() {
 			log.Print("TooManyRequests ", ip)
-			w.WriteHeader(http.StatusTooManyRequests)
-			rl.resErr.Handle(w, r, "Too Many Requests")
+			rl.resErr.Write(w, r, http.StatusTooManyRequests, "Too Many Requests")
 
 			return
 		}
