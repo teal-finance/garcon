@@ -22,8 +22,8 @@ import (
 	"github.com/rs/cors"
 )
 
-// Handle uses restrictive CORS values.
-func Handle(origins []string, debug bool) func(next http.Handler) http.Handler {
+// Handler uses restrictive CORS values.
+func Handler(origins []string, debug bool) func(next http.Handler) http.Handler {
 	options := cors.Options{
 		AllowedOrigins:         []string{},
 		AllowOriginFunc:        nil,
