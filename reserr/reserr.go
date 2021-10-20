@@ -19,6 +19,11 @@ import (
 	"net/http"
 )
 
+const (
+	pathReserved = "Path is reserved for future use. Please contact us to share your ideas."
+	pathInvalid  = "Path is not valid. Please refer to the API doc."
+)
+
 type ResErr string
 
 // New is useless.
@@ -27,11 +32,11 @@ func New(docURL string) ResErr {
 }
 
 func (resErr ResErr) NotImplemented(w http.ResponseWriter, r *http.Request) {
-	resErr.Write(w, r, http.StatusNotImplemented, "Path is reserved for future use. Please contact us to share your ideas.")
+	resErr.Write(w, r, http.StatusNotImplemented, pathReserved)
 }
 
 func (resErr ResErr) InvalidPath(w http.ResponseWriter, r *http.Request) {
-	resErr.Write(w, r, http.StatusBadRequest, "Path is not valid. Please refer to the API doc.")
+	resErr.Write(w, r, http.StatusBadRequest, pathInvalid)
 }
 
 type msg struct {
@@ -75,4 +80,12 @@ func (resErr ResErr) Write(w http.ResponseWriter, r *http.Request, statusCode in
 
 func Write(w http.ResponseWriter, r *http.Request, statusCode int, text string) {
 	ResErr("").Write(w, r, statusCode, text)
+}
+
+func NotImplemented(w http.ResponseWriter, r *http.Request) {
+	ResErr("").NotImplemented(w, r)
+}
+
+func InvalidPath(w http.ResponseWriter, r *http.Request) {
+	ResErr("").InvalidPath(w, r)
 }
