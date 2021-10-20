@@ -17,6 +17,7 @@ package reserr
 import (
 	"log"
 	"net/http"
+	"strconv"
 )
 
 const (
@@ -46,7 +47,7 @@ type msg struct {
 	Query string
 }
 
-func (resErr ResErr) Write(w http.ResponseWriter, r *http.Request, statusCode int, text string) {
+func (resErr ResErr) SafeWrite(w http.ResponseWriter, r *http.Request, statusCode int, text string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.WriteHeader(statusCode)
@@ -76,6 +77,37 @@ func (resErr ResErr) Write(w http.ResponseWriter, r *http.Request, statusCode in
 	if err != nil {
 		log.Printf("ResErr Write %v err: %v", m, err)
 	}
+}
+
+// Write is a faster and prettier implementation, but maybe unsafe.
+func (resErr ResErr) Write(w http.ResponseWriter, r *http.Request, statusCode int, text string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.WriteHeader(statusCode)
+
+	b := make([]byte, 0, 300)
+
+	b = append(b, []byte(`{"error":`)...)
+	b = strconv.AppendQuote(b, text)
+
+	if r != nil {
+		b = append(b, []byte(",\n"+`"path":`)...)
+		b = strconv.AppendQuote(b, r.URL.Path)
+
+		if r.URL.RawQuery != "" {
+			b = append(b, []byte(",\n"+`"query":`)...)
+			b = strconv.AppendQuote(b, r.URL.RawQuery)
+		}
+	}
+
+	if string(resErr) != "" {
+		b = append(b, []byte(",\n"+`"doc":"`)...)
+		b = append(b, []byte(string(resErr))...)
+	}
+
+	b = append(b, []byte(`"}`+"\n")...)
+
+	_, _ = w.Write(b)
 }
 
 func Write(w http.ResponseWriter, r *http.Request, statusCode int, text string) {
