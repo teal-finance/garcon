@@ -1,4 +1,4 @@
-module github.com/teal-finance/server
+module github.com/teal-finance/garcon
 
 go 1.17
 

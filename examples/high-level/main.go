@@ -13,13 +13,13 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi"
-	"github.com/teal-finance/server"
-	"github.com/teal-finance/server/fileserver"
-	"github.com/teal-finance/server/reserr"
+	"github.com/teal-finance/garcon"
+	"github.com/teal-finance/garcon/fileserver"
+	"github.com/teal-finance/garcon/reserr"
 )
 
 func main() {
-	s := server.Server{
+	s := garcon.Garcon{
 		Version:        "MyApp-1.2.0",
 		ResErr:         "https://my.dns.co/doc",
 		AllowedOrigins: []string{"https://my.dns.co"},

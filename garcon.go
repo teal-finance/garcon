@@ -1,18 +1,18 @@
-// Teal.Finance/Server is an opinionated boilerplate API and website server.
+// Teal.Finance/Garcon is an opinionated boilerplate API and website server.
 // Copyright (C) 2021 Teal.Finance contributors
 //
-// This file is part of Teal.Finance/Server, licensed under LGPL-3.0-or-later.
+// This file is part of Teal.Finance/Garcon, licensed under LGPL-3.0-or-later.
 //
-// Teal.Finance/Server is free software: you can redistribute it
+// Teal.Finance/Garcon is free software: you can redistribute it
 // and/or modify it under the terms of the GNU Lesser General Public License
 // either version 3 of the License, or (at your option) any later version.
 //
-// Teal.Finance/Server is distributed in the hope that it will be useful,
+// Teal.Finance/Garcon is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty
 // of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 // See the GNU General Public License for more details.
 
-package server
+package garcon
 
 import (
 	"log"
@@ -21,15 +21,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/teal-finance/server/cors"
-	"github.com/teal-finance/server/limiter"
-	"github.com/teal-finance/server/metrics"
-	"github.com/teal-finance/server/opa"
-	"github.com/teal-finance/server/pprof"
-	"github.com/teal-finance/server/reserr"
+	"github.com/teal-finance/garcon/cors"
+	"github.com/teal-finance/garcon/limiter"
+	"github.com/teal-finance/garcon/metrics"
+	"github.com/teal-finance/garcon/opa"
+	"github.com/teal-finance/garcon/pprof"
+	"github.com/teal-finance/garcon/reserr"
 )
 
-type Server struct {
+type Garcon struct {
 	Version string
 	ResErr  reserr.ResErr
 
@@ -45,7 +45,7 @@ type Server struct {
 // RunServer runs the HTTP server(s) in foreground.
 // Optionally it also starts a metrics server in background (if export port > 0).
 // The metrics server is for use with Prometheus or another compatible monitoring tool.
-func (s *Server) RunServer(h http.Handler, port, pprofPort, expPort, reqBurst, reqPerMinute int, devMode bool) error {
+func (s *Garcon) RunServer(h http.Handler, port, pprofPort, expPort, reqBurst, reqPerMinute int, devMode bool) error {
 	pprof.StartServer(pprofPort)
 
 	middlewares, connState := s.metrics.StartServer(expPort, devMode)
@@ -59,7 +59,7 @@ func (s *Server) RunServer(h http.Handler, port, pprofPort, expPort, reqBurst, r
 	middlewares = middlewares.Append(
 		LogRequests,
 		reqLimiter.Limit,
-		Header(s.Version),
+		ServerHeader(s.Version),
 		cors.Handler(s.AllowedOrigins, devMode),
 	)
 
@@ -73,7 +73,7 @@ func (s *Server) RunServer(h http.Handler, port, pprofPort, expPort, reqBurst, r
 		middlewares = middlewares.Append(policy.Auth)
 	}
 
-	// main server: REST API or other web servers
+	// main garcon: REST API or other web servers
 	server := http.Server{
 		Addr:              ":" + strconv.Itoa(port),
 		Handler:           middlewares.Then(h),
@@ -101,8 +101,8 @@ func (s *Server) RunServer(h http.Handler, port, pprofPort, expPort, reqBurst, r
 	return err
 }
 
-// Header sets the Server HTTP header in the response.
-func Header(version string) func(next http.Handler) http.Handler {
+// ServerHeader sets the Server HTTP header in the response.
+func ServerHeader(version string) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		log.Print("Middleware response HTTP header: Set Server ", version)
 

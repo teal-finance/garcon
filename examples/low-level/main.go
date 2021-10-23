@@ -15,15 +15,15 @@ import (
 	"time"
 
 	"github.com/go-chi/chi"
-	"github.com/teal-finance/server"
-	"github.com/teal-finance/server/chain"
-	"github.com/teal-finance/server/cors"
-	"github.com/teal-finance/server/fileserver"
-	"github.com/teal-finance/server/limiter"
-	"github.com/teal-finance/server/metrics"
-	"github.com/teal-finance/server/opa"
-	"github.com/teal-finance/server/pprof"
-	"github.com/teal-finance/server/reserr"
+	"github.com/teal-finance/garcon"
+	"github.com/teal-finance/garcon/chain"
+	"github.com/teal-finance/garcon/cors"
+	"github.com/teal-finance/garcon/fileserver"
+	"github.com/teal-finance/garcon/limiter"
+	"github.com/teal-finance/garcon/metrics"
+	"github.com/teal-finance/garcon/opa"
+	"github.com/teal-finance/garcon/pprof"
+	"github.com/teal-finance/garcon/reserr"
 )
 
 func main() {
@@ -65,17 +65,17 @@ func setMiddlewares(resErr reserr.ResErr) (middlewares chain.Chain, connState fu
 		corsConfig += " http://localhost: http://192.168.1."
 	}
 
-	allowedOrigins := server.SplitClean(corsConfig)
+	allowedOrigins := garcon.SplitClean(corsConfig)
 
 	middlewares = middlewares.Append(
-		server.LogRequests,
+		garcon.LogRequests,
 		reqLimiter.Limit,
-		server.Header("MyServerName-1.2.0"),
+		garcon.ServerHeader("MyServerName-1.2.0"),
 		cors.Handler(allowedOrigins, devMode),
 	)
 
 	// Endpoint authentication rules (Open Policy Agent)
-	files := server.SplitClean("example-auth.rego")
+	files := garcon.SplitClean("example-auth.rego")
 	policy, err := opa.New(files, resErr)
 	if err != nil {
 		log.Fatal(err)

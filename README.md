@@ -1,4 +1,4 @@
-# Teal.Finance/Server
+# Teal.Finance/Garcon
 
 ![logo](logo.jpg) | <big>Opinionated boilerplate HTTP server with CORS, OPA, Prometheus, rate-limiter… for API and static website.</big>
 -|-
@@ -8,11 +8,11 @@
 This library was originally developed as part of the project
 [Rainbow](https://github.com/teal-finance/rainbow) during hackathons,
 based on older Teal.Finance products,
-and then moved to [its own repository](https://github.com/teal-finance/server).
+and then moved to [its own repository](https://github.com/teal-finance/garcon).
 
 ## Features
 
-Teal.Finance/Server supports:
+Teal.Finance/Garcon supports:
 
 * Metrics server exporting data to Prometheus or other monitoring services ;
 * File server intended for static web files ;
@@ -42,7 +42,7 @@ See also a complete real example in the repo
 
 ## High-level
 
-The following code uses the high-level function `Server.RunServer()`.
+The following code uses the high-level function `Garcon.RunServer()`.
 
 ```go
 package main
@@ -50,11 +50,11 @@ package main
 import (
     "log"
 
-    "github.com/teal-finance/server"
+    "github.com/teal-finance/garcon"
 )
 
 func main() {
-    s := server.Server{
+    s := garcon.Garcon{
         Version:        "MyApp-1.2.0",
         Resp:           "https://my.dns.co/doc",
         AllowedOrigins: []string{"https://my.dns.co"},
@@ -102,7 +102,7 @@ Content-Length: 77
 {"error":"Unauthorized","doc":"https://my.dns.co/doc","path":"/api/v1/items"}
 ```
 
-The corresponding server logs in debug mode:
+The corresponding garcon logs in debug mode:
 
 ```
 2021/10/19 23:42:29 in  GET /api/v1/items [::1]:54796
@@ -126,7 +126,7 @@ Content-Length: 25
 ["item1","item2","item3"]
 ```
 
-The corresponding server logs:
+The corresponding garcon logs:
 
 ```
 2021/10/19 23:43:55 in  GET /api/v1/items [::1]:54798
@@ -151,7 +151,7 @@ Content-Length: 25
 ["item1","item2","item3"]
 ```
 
-The corresponding server logs:
+The corresponding garcon logs:
 
 ```
 2021/10/19 23:45:00 in  GET /api/v1/items [::1]:54800
@@ -164,7 +164,7 @@ The corresponding server logs:
 
 See the [low-level example](examples/low-level/main.go).
 
-The following code can be replaced by the high-level function `Server.RunServer()` presented in the previous chapter. The following code is intended to show that the Teal.Finance/Server can be customized to meet specific requirements.
+The following code can be replaced by the high-level function `Garcon.RunServer()` presented in the previous chapter. The following code is intended to show that the Teal.Finance/Garcon can be customized to meet specific requirements.
 
 ```go
 package main
@@ -175,13 +175,13 @@ import (
     "net/http"
     "time"
 
-    "github.com/teal-finance/server"
-    "github.com/teal-finance/server/chain"
-    "github.com/teal-finance/server/cors"
-    "github.com/teal-finance/server/export"
-    "github.com/teal-finance/server/limiter"
-    "github.com/teal-finance/server/opa"
-    "github.com/teal-finance/server/reserr"
+    "github.com/teal-finance/garcon"
+    "github.com/teal-finance/garcon/chain"
+    "github.com/teal-finance/garcon/cors"
+    "github.com/teal-finance/garcon/export"
+    "github.com/teal-finance/garcon/limiter"
+    "github.com/teal-finance/garcon/opa"
+    "github.com/teal-finance/garcon/reserr"
 )
 
 func main() {
@@ -216,9 +216,9 @@ func setMiddlewares() (middlewares chain.Chain, connState func(net.Conn, http.Co
     allowedOrigins := []string{"https://my.dns.co"}
 
     middlewares = middlewares.Append(
-        server.LogRequests,
+        garcon.LogRequests,
         reqLimiter.Limit,
-        server.Header("MyServerName-1.2.0"),
+        garcon.ServerHeader("MyServerName-1.2.0"),
         policy.Auth,
         cors.Handle(allowedOrigins, true),
     )

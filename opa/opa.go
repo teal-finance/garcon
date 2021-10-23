@@ -1,13 +1,13 @@
-// Teal.Finance/Server is an opinionated boilerplate API and website server.
+// Teal.Finance/Garcon is an opinionated boilerplate API and website server.
 // Copyright (C) 2021 Teal.Finance contributors
 //
-// This file is part of Teal.Finance/Server, licensed under LGPL-3.0-or-later.
+// This file is part of Teal.Finance/Garcon, licensed under LGPL-3.0-or-later.
 //
-// Teal.Finance/Server is free software: you can redistribute it
+// Teal.Finance/Garcon is free software: you can redistribute it
 // and/or modify it under the terms of the GNU Lesser General Public License
 // either version 3 of the License, or (at your option) any later version.
 //
-// Teal.Finance/Server is distributed in the hope that it will be useful,
+// Teal.Finance/Garcon is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty
 // of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 // See the GNU General Public License for more details.
@@ -27,7 +27,7 @@ import (
 
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/rego"
-	"github.com/teal-finance/server/reserr"
+	"github.com/teal-finance/garcon/reserr"
 )
 
 type Policy struct {
