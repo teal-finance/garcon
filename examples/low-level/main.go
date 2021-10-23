@@ -49,7 +49,7 @@ func setMiddlewares(resErr reserr.ResErr) (middlewares chain.Chain, connState fu
 
 	if devMode {
 		// the following line writes a CPU-profile file of the function setMiddlewares()
-		defer pprof.WriteCPUProfile().Stop()
+		defer pprof.ProbeCPU().Stop()
 	}
 
 	// Start a metrics server in background if export port > 0.

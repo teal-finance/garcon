@@ -30,19 +30,21 @@ type Stoppable interface {
 	Stop()
 }
 
-// WriteCPUProfile should be called in a high level function like the following:
+// ProbeCPU is used like the following:
 //
-//     defer WriteCPUProfile.Stop()
+//     defer ProbeCPU.Stop()
 //
 // When the caller reaches its function end,
 // the defer executes Stop() that writes the file "cpu.pprof".
-// To visualize that "cpu.pprof" file use the pprof tool:
+// To visualize "cpu.pprof" use the pprof tool:
 //
 //    cd ~/go
 //    go get -u github.com/google/pprof
 //    cd -
 //    pprof -http=: cpu.pprof
-func WriteCPUProfile() Stoppable {
+func ProbeCPU() Stoppable {
+	log.Print("Probing CPU. To visualize the profile: pprof -http=: cpu.pprof")
+
 	return profile.Start(profile.ProfilePath("."))
 }
 
