@@ -60,8 +60,12 @@ func setMiddlewares(resErr reserr.ResErr) (middlewares chain.Chain, connState fu
 	// Limit the input request rate per IP
 	reqLimiter := limiter.New(burst, reqPerMinute, devMode, resErr)
 
-	// CORS
-	allowedOrigins := server.SplitClean("https://my.dns.co")
+	corsConfig := "https://my.dns.co"
+	if devMode {
+		corsConfig += " http://localhost: http://192.168.1."
+	}
+
+	allowedOrigins := server.SplitClean(corsConfig)
 
 	middlewares = middlewares.Append(
 		server.LogRequests,

@@ -52,6 +52,10 @@ func (s *Server) RunServer(h http.Handler, port, pprofPort, expPort, reqBurst, r
 
 	reqLimiter := limiter.New(reqBurst, reqPerMinute, devMode, s.ResErr)
 
+	if devMode {
+		s.AllowedOrigins = append(s.AllowedOrigins, "http://localhost:", "http://192.168.1.")
+	}
+
 	middlewares = middlewares.Append(
 		LogRequests,
 		reqLimiter.Limit,
