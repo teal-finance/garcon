@@ -29,9 +29,9 @@ func main() {
 	// Handles both REST API and static web files
 	h := handler(s.ResErr)
 
-	mainPort, pprofPort, expPort := 8080, 8093, 9093
-	burst, reqPerMinute := 10, 30
-	devMode := true
+	const mainPort, pprofPort, expPort = 8080, 8093, 9093
+	const burst, reqPerMinute = 10, 30
+	const devMode = true
 
 	err := s.RunServer(h, mainPort, pprofPort, expPort, burst, reqPerMinute, devMode)
 	log.Fatal(err)

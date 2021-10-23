@@ -22,10 +22,14 @@ import (
 	"github.com/teal-finance/server/limiter"
 	"github.com/teal-finance/server/metrics"
 	"github.com/teal-finance/server/opa"
+	"github.com/teal-finance/server/pprof"
 	"github.com/teal-finance/server/reserr"
 )
 
 func main() {
+	const pprofPort = 8093
+	pprof.StartServer(pprofPort)
+
 	// Uniformize error responses with API doc
 	resErr := reserr.New("https://my.dns.co/doc")
 
@@ -39,13 +43,22 @@ func main() {
 }
 
 func setMiddlewares(resErr reserr.ResErr) (middlewares chain.Chain, connState func(net.Conn, http.ConnState)) {
+	const expPort = 9093
+	const burst, reqPerMinute = 10, 30
+	const devMode = true
+
+	if devMode {
+		// the following line writes a CPU-profile file of the function setMiddlewares()
+		defer pprof.WriteCPUProfile().Stop()
+	}
+
 	// Start a metrics server in background if export port > 0.
 	// The metrics server is for use with Prometheus or another compatible monitoring tool.
 	metrics := metrics.Metrics{}
-	middlewares, connState = metrics.StartServer(9093, true)
+	middlewares, connState = metrics.StartServer(expPort, devMode)
 
 	// Limit the input request rate per IP
-	reqLimiter := limiter.New(10, 30, true, resErr)
+	reqLimiter := limiter.New(burst, reqPerMinute, devMode, resErr)
 
 	// CORS
 	allowedOrigins := []string{"https://my.dns.co"}
@@ -54,7 +67,7 @@ func setMiddlewares(resErr reserr.ResErr) (middlewares chain.Chain, connState fu
 		server.LogRequests,
 		reqLimiter.Limit,
 		server.Header("MyServerName-1.2.0"),
-		cors.Handler(allowedOrigins, true),
+		cors.Handler(allowedOrigins, devMode),
 	)
 
 	// Endpoint authentication rules (Open Policy Agent)
@@ -72,8 +85,10 @@ func setMiddlewares(resErr reserr.ResErr) (middlewares chain.Chain, connState fu
 
 // runServer runs in foreground the main server.
 func runServer(h http.Handler, connState func(net.Conn, http.ConnState)) {
+	const mainPort = "8080"
+
 	server := http.Server{
-		Addr:              ":8080",
+		Addr:              ":" + mainPort,
 		Handler:           h,
 		TLSConfig:         nil,
 		ReadTimeout:       1 * time.Second,

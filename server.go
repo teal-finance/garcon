@@ -41,16 +41,15 @@ type Server struct {
 	metrics metrics.Metrics
 }
 
-// RunServer runs the HTTP server in foreground.
+// RunServer runs the HTTP server(s) in foreground.
 // Optionally it also starts a metrics server in background (if export port > 0).
 // The metrics server is for use with Prometheus or another compatible monitoring tool.
-func (s *Server) RunServer(h http.Handler, port, pprofPort, expPort, maxReqBurst, maxReqPerMinute int, devMode bool) error {
-	// may start one or two optional web servers in background
+func (s *Server) RunServer(h http.Handler, port, pprofPort, expPort, reqBurst, reqPerMinute int, devMode bool) error {
 	pprof.StartServer(pprofPort)
 
 	middlewares, connState := s.metrics.StartServer(expPort, devMode)
 
-	reqLimiter := limiter.New(maxReqBurst, maxReqPerMinute, devMode, s.ResErr)
+	reqLimiter := limiter.New(reqBurst, reqPerMinute, devMode, s.ResErr)
 
 	middlewares = middlewares.Append(
 		LogRequests,

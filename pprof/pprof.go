@@ -23,31 +23,44 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/pkg/profile"
 )
+
+type Stoppable interface {
+	Stop()
+}
+
+// WriteCPUProfile should be called in a high level function like the following:
+//
+//     defer WriteCPUProfile.Stop()
+func WriteCPUProfile() Stoppable {
+	return profile.Start(profile.ProfilePath("."))
+}
 
 func StartServer(port int) {
 	if port == 0 {
 		return // Disable PProf endpoints /debug/pprof
 	}
 
-	handler := pprofHandler()
+	addr := "localhost:" + strconv.Itoa(port)
+	h := handler()
 
-	go runPProfServer("localhost:"+strconv.Itoa(port), handler)
+	go runServer(addr, h)
 }
 
-func pprofHandler() http.Handler {
-	handler := chi.NewRouter()
+func handler() http.Handler {
+	r := chi.NewRouter()
 
-	handler.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
-	handler.HandleFunc("/debug/pprof/profile", pprof.Profile)
-	handler.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
-	handler.HandleFunc("/debug/pprof/trace", pprof.Trace)
-	handler.NotFound(pprof.Index) // also serves /debug/pprof/{heap,goroutine,block…}
+	r.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+	r.HandleFunc("/debug/pprof/profile", pprof.Profile)
+	r.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	r.HandleFunc("/debug/pprof/trace", pprof.Trace)
+	r.NotFound(pprof.Index) // also serves /debug/pprof/{heap,goroutine,block…}
 
-	return handler
+	return r
 }
 
-func runPProfServer(addr string, handler http.Handler) {
+func runServer(addr string, handler http.Handler) {
 	log.Print("Enable PProf endpoints: http://" + addr + "/debug/pprof")
 
 	err := http.ListenAndServe(addr, handler)
