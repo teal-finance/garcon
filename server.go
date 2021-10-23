@@ -18,6 +18,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/teal-finance/server/cors"
@@ -118,4 +119,29 @@ func LogRequests(next http.Handler) http.Handler {
 			log.Printf("in  %v %v %v", r.Method, r.RequestURI, r.RemoteAddr)
 			next.ServeHTTP(w, r)
 		})
+}
+
+func isSeparator(c rune) bool {
+	switch c {
+	case ',', '\t', '\n', '\v', '\f', '\r':
+		return true
+	}
+
+	return false
+}
+
+// SplitClean splits the values and trim them.
+func SplitClean(values string) []string {
+	splitValues := strings.FieldsFunc(values, isSeparator)
+
+	cleanValues := make([]string, 0, len(splitValues))
+
+	for _, v := range splitValues {
+		v = strings.TrimSpace(v)
+		if v != "" {
+			cleanValues = append(cleanValues, v)
+		}
+	}
+
+	return cleanValues
 }

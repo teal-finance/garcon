@@ -61,7 +61,7 @@ func setMiddlewares(resErr reserr.ResErr) (middlewares chain.Chain, connState fu
 	reqLimiter := limiter.New(burst, reqPerMinute, devMode, resErr)
 
 	// CORS
-	allowedOrigins := []string{"https://my.dns.co"}
+	allowedOrigins := server.SplitClean("https://my.dns.co")
 
 	middlewares = middlewares.Append(
 		server.LogRequests,
@@ -71,7 +71,8 @@ func setMiddlewares(resErr reserr.ResErr) (middlewares chain.Chain, connState fu
 	)
 
 	// Endpoint authentication rules (Open Policy Agent)
-	policy, err := opa.New([]string{"example-auth.rego"}, resErr)
+	files := server.SplitClean("example-auth.rego")
+	policy, err := opa.New(files, resErr)
 	if err != nil {
 		log.Fatal(err)
 	}

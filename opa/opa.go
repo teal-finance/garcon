@@ -49,20 +49,7 @@ func (opa Policy) Ready() bool {
 
 // Load check the Rego filenames and loads them to build the OPA compiler.
 func Load(filenames []string) (*ast.Compiler, error) {
-	trimmedFN := make([]string, 0, len(filenames))
-
-	for _, fn := range filenames {
-		f := strings.TrimSpace(fn)
-		if f == "" {
-			log.Printf("OPA: skip empty filename %q", fn)
-
-			continue
-		}
-
-		trimmedFN = append(trimmedFN, f)
-	}
-
-	if len(trimmedFN) == 0 {
+	if len(filenames) == 0 {
 		return nil, nil
 	}
 
