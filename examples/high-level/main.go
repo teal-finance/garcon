@@ -29,7 +29,12 @@ func main() {
 	// Handles both REST API and static web files
 	h := handler(s.ResErr)
 
-	log.Fatal(s.RunServer(h, 8080, 9093, 10, 30, true))
+	mainPort, pprofPort, expPort := 8080, 8093, 9093
+	burst, reqPerMinute := 10, 30
+	devMode := true
+
+	err := s.RunServer(h, mainPort, pprofPort, expPort, burst, reqPerMinute, devMode)
+	log.Fatal(err)
 }
 
 // handler creates the mapping between the endpoints and the handler functions.

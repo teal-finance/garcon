@@ -24,6 +24,7 @@ import (
 	"github.com/teal-finance/server/limiter"
 	"github.com/teal-finance/server/metrics"
 	"github.com/teal-finance/server/opa"
+	"github.com/teal-finance/server/pprof"
 	"github.com/teal-finance/server/reserr"
 )
 
@@ -43,7 +44,10 @@ type Server struct {
 // RunServer runs the HTTP server in foreground.
 // Optionally it also starts a metrics server in background (if export port > 0).
 // The metrics server is for use with Prometheus or another compatible monitoring tool.
-func (s *Server) RunServer(h http.Handler, port, expPort, maxReqBurst, maxReqPerMinute int, devMode bool) error {
+func (s *Server) RunServer(h http.Handler, port, pprofPort, expPort, maxReqBurst, maxReqPerMinute int, devMode bool) error {
+	// may start one or two optional web servers in background
+	pprof.StartServer(pprofPort)
+
 	middlewares, connState := s.metrics.StartServer(expPort, devMode)
 
 	reqLimiter := limiter.New(maxReqBurst, maxReqPerMinute, devMode, s.ResErr)
