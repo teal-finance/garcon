@@ -33,13 +33,36 @@ type Stoppable interface {
 // WriteCPUProfile should be called in a high level function like the following:
 //
 //     defer WriteCPUProfile.Stop()
+//
+// When the caller reaches its function end,
+// the defer executes Stop() that writes the file "cpu.pprof".
+// To visualize that "cpu.pprof" file use the pprof tool:
+//
+//    cd ~/go
+//    go get -u github.com/google/pprof
+//    cd -
+//    pprof -http=: cpu.pprof
 func WriteCPUProfile() Stoppable {
 	return profile.Start(profile.ProfilePath("."))
 }
 
+// StartServer starts a PProf server in background.
+// Endpoints usage example:
+//
+//     curl http://localhost:6063/debug/pprof/allocs > allocs.pprof
+//     pprof -http=: allocs.pprof
+//
+//     wget http://localhost:31415/debug/pprof/goroutine
+//     pprof -http=: goroutine
+//
+//     wget http://localhost:31415/debug/pprof/heap
+//     pprof -http=: heap
+//
+//     wget http://localhost:31415/debug/pprof/trace
+//     pprof -http=: trace
 func StartServer(port int) {
 	if port == 0 {
-		return // Disable PProf endpoints /debug/pprof
+		return // Disable PProf endpoints /debug/pprof/*
 	}
 
 	addr := "localhost:" + strconv.Itoa(port)
