@@ -48,6 +48,14 @@ func (fs FileServer) ServeDir(contentType string) func(w http.ResponseWriter, r 
 		if validPath(w, r) {
 			w.Header().Set("Content-Type", contentType)
 
+			// JS and CSS files should contain a [hash].
+			// Thus the path changes when content changes,
+			// enabling aggressive Cache-Control parameters:
+			// public            Can be cached by proxy (reverse-proxy. CDN…) and by browser
+			// max-age=31536000  Store it up to 1 year (browser stores it some days due to limited cache size)
+			// immutable         Only supported by Firefox and Safari
+			w.Header().Set("Cache-Control", "public,max-age=31536000,immutable")
+
 			absPath := path.Join(fs.Dir, r.URL.Path)
 			fs.send(w, r, absPath)
 		}
@@ -62,6 +70,10 @@ func (fs FileServer) ServeImages() func(w http.ResponseWriter, r *http.Request) 
 			if contentType != "" {
 				w.Header().Set("Content-Type", contentType)
 			}
+
+			// Images are supposed never change, else better to create a new image
+			// (or to wait some days the browser clears out data based on LRU).
+			w.Header().Set("Cache-Control", "public,max-age=31536000,immutable")
 
 			fs.send(w, r, absPath)
 		}
