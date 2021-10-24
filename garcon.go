@@ -53,6 +53,12 @@ func (s *Garcon) RunServer(h http.Handler, port, pprofPort, expPort, reqBurst, r
 	reqLimiter := limiter.New(reqBurst, reqPerMinute, devMode, s.ResErr)
 
 	if devMode {
+		// Allow the development origins:
+		//  - yarn run vite --port 3000
+		//  - yarn run vite preview --port 5000
+		//  - localhost:8085 on multidevices: web autoreload using https://github.com/synw/fwr
+		//  - flutter run --web-port=8080
+		//  - 192.168.1.x + any port on tablet: mobile app using fast builtin autoreload
 		s.AllowedOrigins = append(s.AllowedOrigins, "http://localhost:", "http://192.168.1.")
 	}
 

@@ -61,19 +61,19 @@ func insertSchema(domain string) string {
 	return domain
 }
 
-func oneOrigin(addr string) func(rorigin string) bool {
-	log.Print("CORS: Set origin: ", addr)
+func oneOrigin(addr string) func(origin string) bool {
+	log.Print("CORS: Set one origin: ", addr)
 
 	return func(origin string) bool {
 		return origin == addr
 	}
 }
 
-func multipleOriginPrefixes(prefixes []string) func(origin string) bool {
-	log.Print("CORS: Set origin prefixes: ", prefixes)
+func multipleOriginPrefixes(addrPrefixes []string) func(origin string) bool {
+	log.Print("CORS: Set origin prefixes: ", addrPrefixes)
 
 	return func(origin string) bool {
-		for _, prefix := range prefixes {
+		for _, prefix := range addrPrefixes {
 			if strings.HasPrefix(origin, prefix) {
 				log.Printf("CORS: Accept %v because starts with prefix %v", origin, prefix)
 
@@ -83,7 +83,7 @@ func multipleOriginPrefixes(prefixes []string) func(origin string) bool {
 			log.Printf("CORS: %v does not begin with %v", origin, prefix)
 		}
 
-		log.Printf("CORS: Refuse %v because different from %v", origin, prefixes)
+		log.Printf("CORS: Refuse %v because different from %v", origin, addrPrefixes)
 
 		return false
 	}
