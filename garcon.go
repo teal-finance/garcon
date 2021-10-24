@@ -50,7 +50,12 @@ func (s *Garcon) RunServer(h http.Handler, port, pprofPort, expPort, reqBurst, r
 
 	middlewares, connState := s.metrics.StartServer(expPort, devMode)
 
-	reqLimiter := limiter.New(reqBurst, reqPerMinute, devMode, s.ResErr)
+	if reqPerMinute == 0 {
+		middlewares = middlewares.Append(LogRequests)
+	} else {
+		reqLimiter := limiter.New(reqBurst, reqPerMinute, devMode, s.ResErr)
+		middlewares = middlewares.Append(reqLimiter.Limit)
+	}
 
 	if devMode {
 		// Allow the development origins:
@@ -63,8 +68,6 @@ func (s *Garcon) RunServer(h http.Handler, port, pprofPort, expPort, reqBurst, r
 	}
 
 	middlewares = middlewares.Append(
-		LogRequests,
-		reqLimiter.Limit,
 		ServerHeader(s.Version),
 		cors.Handler(s.AllowedOrigins, devMode),
 	)
@@ -126,7 +129,7 @@ func LogRequests(next http.Handler) http.Handler {
 
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			log.Printf("in  %v %v %v", r.Method, r.RequestURI, r.RemoteAddr)
+			log.Printf("in  %v %v %v", r.Method, r.RemoteAddr, r.RequestURI)
 			next.ServeHTTP(w, r)
 		})
 }

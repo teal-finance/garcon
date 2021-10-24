@@ -104,8 +104,8 @@ func (m *Metrics) countRED(next http.Handler) http.Handler {
 		duration := time.Since(start)
 		metrics.AddSampleWithLabels([]string{"request_duration"}, float32(duration.Milliseconds()), labels)
 
-		log.Printf("out %v %v %v c=%v a=%v i=%v h=%v",
-			r.Method, r.URL, duration, m.conn, m.active, m.idle, m.hijacked)
+		log.Printf("out %v %v %v %v c=%v a=%v i=%v h=%v",
+			r.Method, r.RemoteAddr, r.URL, duration, m.conn, m.active, m.idle, m.hijacked)
 	})
 }
 

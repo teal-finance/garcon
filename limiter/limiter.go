@@ -26,10 +26,10 @@ import (
 )
 
 type ReqLimiter struct {
-	visitors       map[string]*visitor
-	defaultLimiter *rate.Limiter
-	mu             sync.Mutex
-	resErr         reserr.ResErr
+	visitors    map[string]*visitor
+	initLimiter *rate.Limiter
+	mu          sync.Mutex
+	resErr      reserr.ResErr
 }
 
 type visitor struct {
@@ -46,33 +46,50 @@ func New(maxReqBurst, maxReqPerMinute int, devMode bool, resErr reserr.ResErr) R
 	ratePerSecond := float64(maxReqPerMinute) / 60
 
 	return ReqLimiter{
-		visitors:       make(map[string]*visitor),
-		defaultLimiter: rate.NewLimiter(rate.Limit(ratePerSecond), maxReqBurst),
-		mu:             sync.Mutex{},
-		resErr:         resErr,
+		visitors:    make(map[string]*visitor),
+		initLimiter: rate.NewLimiter(rate.Limit(ratePerSecond), maxReqBurst),
+		mu:          sync.Mutex{},
+		resErr:      resErr,
 	}
+}
+
+// LogRequests logs the incoming HTTP requests.
+func LogRequests(next http.Handler) http.Handler {
+	log.Print("Middleware logger: log requested URLs and remote addresses")
+
+	return http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			log.Printf("in  %v %v %v", r.Method, r.RemoteAddr, r.RequestURI)
+			next.ServeHTTP(w, r)
+		})
 }
 
 func (rl *ReqLimiter) Limit(next http.Handler) http.Handler {
 	log.Printf("Middleware RateLimiter: burst=%v rate=%v/s",
-		rl.defaultLimiter.Burst(), rl.defaultLimiter.Limit())
+		rl.initLimiter.Burst(), rl.initLimiter.Limit())
 
 	go rl.removeOldVisitors()
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ip, _, err := net.SplitHostPort(r.RemoteAddr)
 		if err != nil {
-			log.Printf("WARN: SplitHostPort(%v) %v", r.RemoteAddr, err)
 			rl.resErr.Write(w, r, http.StatusInternalServerError, "Internal Server Error #3")
+			log.Printf("in  %v %v %v - Error SplitHostPort %v", r.Method, r.RemoteAddr, r.RequestURI, err)
 
 			return
 		}
 
 		limiter := rl.getVisitor(ip)
+
+		log.Printf("in  %v %v %v B=%v %v/m", r.Method, r.RemoteAddr, r.RequestURI,
+			limiter.Burst(), int(60*limiter.Limit()))
+
 		if err := limiter.Wait(r.Context()); err != nil {
-			if r.Context().Err() != nil {
-				log.Printf("TooManyRequests %v %v", ip, err)
+			if r.Context().Err() == nil {
 				rl.resErr.Write(w, r, http.StatusTooManyRequests, "Too Many Requests")
+				log.Printf("rej %v %v %v TooManyRequests %v", r.Method, r.RemoteAddr, r.RequestURI, err)
+			} else {
+				log.Printf("XXX %v %v %v %v", r.Method, r.RemoteAddr, r.RequestURI, err)
 			}
 
 			return
@@ -100,11 +117,14 @@ func (rl *ReqLimiter) getVisitor(ip string) *rate.Limiter {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
 
-	v, exists := rl.visitors[ip]
-	if !exists {
-		rl.visitors[ip] = &visitor{rl.defaultLimiter, time.Now()}
+	v, ok := rl.visitors[ip]
+	if !ok {
+		v = &visitor{
+			limiter:  rl.initLimiter,
+			lastSeen: time.Time{},
+		}
 
-		return rl.defaultLimiter
+		rl.visitors[ip] = v
 	}
 
 	v.lastSeen = time.Now()
