@@ -81,8 +81,7 @@ func (rl *ReqLimiter) Limit(next http.Handler) http.Handler {
 
 		limiter := rl.getVisitor(ip)
 
-		log.Printf("in  %v %v %v B=%v %v/m", r.Method, r.RemoteAddr, r.RequestURI,
-			limiter.Burst(), int(60*limiter.Limit()))
+		log.Printf("in  %v %v %v", r.Method, r.RemoteAddr, r.RequestURI)
 
 		if err := limiter.Wait(r.Context()); err != nil {
 			if r.Context().Err() == nil {
