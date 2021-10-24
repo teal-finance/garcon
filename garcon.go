@@ -16,11 +16,13 @@ package garcon
 
 import (
 	"log"
+	"net"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/teal-finance/garcon/chain"
 	"github.com/teal-finance/garcon/cors"
 	"github.com/teal-finance/garcon/limiter"
 	"github.com/teal-finance/garcon/metrics"
@@ -42,10 +44,7 @@ type Garcon struct {
 	metrics metrics.Metrics
 }
 
-// RunServer runs the HTTP server(s) in foreground.
-// Optionally it also starts a metrics server in background (if export port > 0).
-// The metrics server is for use with Prometheus or another compatible monitoring tool.
-func (s *Garcon) RunServer(h http.Handler, port, pprofPort, expPort, reqBurst, reqPerMinute int, devMode bool) error {
+func (s *Garcon) Setup(pprofPort, expPort, reqBurst, reqPerMinute int, devMode bool) (chain.Chain, func(net.Conn, http.ConnState), error) {
 	pprof.StartServer(pprofPort)
 
 	middlewares, connState := s.metrics.StartServer(expPort, devMode)
@@ -75,11 +74,23 @@ func (s *Garcon) RunServer(h http.Handler, port, pprofPort, expPort, reqBurst, r
 	// Endpoint authentication rules (Open Policy Agent)
 	policy, err := opa.New(s.OPAFilenames, s.ResErr)
 	if err != nil {
-		return err
+		return middlewares, connState, err
 	}
 
 	if policy.Ready() {
 		middlewares = middlewares.Append(policy.Auth)
+	}
+
+	return middlewares, connState, nil
+}
+
+// RunServer runs the HTTP server(s) in foreground.
+// Optionally it also starts a metrics server in background (if export port > 0).
+// The metrics server is for use with Prometheus or another compatible monitoring tool.
+func (s *Garcon) Run(h http.Handler, port, pprofPort, expPort, reqBurst, reqPerMinute int, devMode bool) error {
+	middlewares, connState, err := s.Setup(pprofPort, expPort, reqBurst, reqPerMinute, devMode)
+	if err != nil {
+		return err
 	}
 
 	// main garcon: REST API or other web servers

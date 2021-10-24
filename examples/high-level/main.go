@@ -33,7 +33,7 @@ func main() {
 	const burst, reqPerMinute = 10, 30
 	const devMode = true
 
-	err := s.RunServer(h, mainPort, pprofPort, expPort, burst, reqPerMinute, devMode)
+	err := s.Run(h, mainPort, pprofPort, expPort, burst, reqMinute, devMode)
 	log.Fatal(err)
 }
 
