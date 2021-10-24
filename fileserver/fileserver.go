@@ -71,8 +71,8 @@ func (fs FileServer) ServeImages() func(w http.ResponseWriter, r *http.Request) 
 // validPath returns a HTTP error if the path is invalid.
 func validPath(w http.ResponseWriter, r *http.Request) bool {
 	if strings.Contains(r.URL.Path, "..") {
-		log.Print("WARN Fileserver: reject path with '..' ", r.URL.Path)
 		reserr.Write(w, r, http.StatusBadRequest, "Invalid URL Path Containing '..'")
+		log.Print("WARN Fileserver: reject path with '..' ", r.URL.Path)
 
 		return false
 	}
@@ -118,8 +118,8 @@ func (fs FileServer) send(w http.ResponseWriter, r *http.Request, absPath string
 
 	fi, err := file.Stat()
 	if err != nil {
-		log.Printf("WARN Fileserver: Stat(%v) %v", absPath, err)
 		fs.ResErr.Write(w, r, http.StatusInternalServerError, "Internal Server Error")
+		log.Printf("WARN Fileserver: Stat(%v) %v", absPath, err)
 
 		return
 	}
