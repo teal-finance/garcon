@@ -30,18 +30,18 @@ import (
 )
 
 type Metrics struct {
-	httpConn     int64 // gauge
-	httpActive   int64 // counter
-	httpIdle     int64 // counter
-	httpHijacked int64 // counter
+	conn     int64 // gauge   - Current number of HTTP connections
+	active   int64 // counter - Accumulate HTTP connections that have been in StateActive
+	idle     int64 // counter - Accumulate HTTP connections that have been in StateIdle
+	hijacked int64 // counter - Accumulate HTTP connections that have been in StateHijacked
 }
 
 // MetricsServer creates and starts the Prometheus export server.
-func (m *Metrics) StartServer(port int, devMode bool) (middlewares chain.Chain, connState func(net.Conn, http.ConnState)) {
+func (m *Metrics) StartServer(port int, devMode bool) (chain.Chain, func(net.Conn, http.ConnState)) {
 	if port <= 0 {
 		log.Print("Disable Prometheus, export port=", port)
 
-		return middlewares, nil
+		return nil, nil
 	}
 
 	addr := ":" + strconv.Itoa(port)
@@ -56,13 +56,14 @@ func (m *Metrics) StartServer(port int, devMode bool) (middlewares chain.Chain, 
 	// connState counts the HTTP client connections.
 	// In prod mode, we do not care about minor counting errors, we use the unsafe-thread version.
 	// In dev mode we use the atomic version to avoid warnings from "go build -race".
+	var connState func(net.Conn, http.ConnState)
 	if devMode {
 		connState = m.updateConnCountersAtomic()
 	} else {
 		connState = m.updateConnCounters()
 	}
 
-	return chain.New(countRED), connState
+	return chain.New(m.countRED), connState
 }
 
 // handler returns the endpoints "/metrics/xxx".
@@ -87,7 +88,7 @@ func handler() http.Handler {
 }
 
 // countRED increments/decrements the RED metrics depending on incoming requests and outgoing responses.
-func countRED(next http.Handler) http.Handler {
+func (m *Metrics) countRED(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		record := &statusRecorder{ResponseWriter: w, Status: "success"}
@@ -103,7 +104,8 @@ func countRED(next http.Handler) http.Handler {
 		duration := time.Since(start)
 		metrics.AddSampleWithLabels([]string{"request_duration"}, float32(duration.Milliseconds()), labels)
 
-		log.Printf("out %v %v %v", r.Method, r.URL, duration)
+		log.Printf("out %v %v %v c=%v a=%v i=%v h=%v",
+			r.Method, r.URL, duration, m.conn, m.active, m.idle, m.hijacked)
 	})
 }
 
@@ -114,24 +116,24 @@ func (m *Metrics) updateConnCounters() func(net.Conn, http.ConnState) {
 		// StateNew: the client just connects to TealAPI expecting a request.
 		// Transition to either StateActive or StateClosed.
 		case http.StateNew:
-			m.httpConn++
+			m.conn++
 		// StateActive when 1 or more bytes of a request has been read.
 		// After the request is handled, transitions to StateClosed, StateHijacked, or StateIdle.
 		// HTTP/2: StateActive only transitions away once all active requests are complete.
 		case http.StateActive:
-			m.httpActive++
+			m.active++
 		// StateIdle when handling a request is finished and is in the keep-alive state,
 		// waiting for a new request, then transitions to either StateActive or StateClosed.
 		case http.StateIdle:
-			m.httpIdle++
+			m.idle++
 		// StateHijacked is a terminal state: does not transition to StateClosed.
 		case http.StateHijacked:
-			m.httpHijacked++
-			m.httpConn--
+			m.hijacked++
+			m.conn--
 		// StateClosed is a terminal state.
 		case http.StateClosed:
 		default:
-			m.httpConn--
+			m.conn--
 		}
 	}
 }
@@ -140,17 +142,17 @@ func (m *Metrics) updateConnCountersAtomic() func(net.Conn, http.ConnState) {
 	return func(nc net.Conn, cs http.ConnState) {
 		switch cs {
 		case http.StateNew:
-			atomic.AddInt64(&m.httpConn, 1)
+			atomic.AddInt64(&m.conn, 1)
 		case http.StateActive:
-			atomic.AddInt64(&m.httpActive, 1)
+			atomic.AddInt64(&m.active, 1)
 		case http.StateIdle:
-			atomic.AddInt64(&m.httpIdle, 1)
+			atomic.AddInt64(&m.idle, 1)
 		case http.StateHijacked:
-			atomic.AddInt64(&m.httpHijacked, 1)
-			atomic.AddInt64(&m.httpConn, -1)
+			atomic.AddInt64(&m.hijacked, 1)
+			atomic.AddInt64(&m.conn, -1)
 		case http.StateClosed:
 		default:
-			atomic.AddInt64(&m.httpConn, -1)
+			atomic.AddInt64(&m.conn, -1)
 		}
 	}
 }
