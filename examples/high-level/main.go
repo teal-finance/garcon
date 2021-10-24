@@ -30,7 +30,7 @@ func main() {
 	h := handler(s.ResErr)
 
 	const mainPort, pprofPort, expPort = 8080, 8093, 9093
-	const burst, reqPerMinute = 10, 30
+	const burst, reqMinute = 10, 30
 	const devMode = true
 
 	err := s.Run(h, mainPort, pprofPort, expPort, burst, reqMinute, devMode)

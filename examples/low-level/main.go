@@ -44,7 +44,7 @@ func main() {
 
 func setMiddlewares(resErr reserr.ResErr) (middlewares chain.Chain, connState func(net.Conn, http.ConnState)) {
 	const expPort = 9093
-	const burst, reqPerMinute = 10, 30
+	const burst, reqMinute = 10, 30
 	const devMode = true
 
 	if devMode {
@@ -58,7 +58,7 @@ func setMiddlewares(resErr reserr.ResErr) (middlewares chain.Chain, connState fu
 	middlewares, connState = metrics.StartServer(expPort, devMode)
 
 	// Limit the input request rate per IP
-	reqLimiter := limiter.New(burst, reqPerMinute, devMode, resErr)
+	reqLimiter := limiter.New(burst, reqMinute, devMode, resErr)
 
 	corsConfig := "https://my.dns.co"
 	if devMode {

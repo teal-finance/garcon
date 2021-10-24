@@ -44,15 +44,15 @@ type Garcon struct {
 	metrics metrics.Metrics
 }
 
-func (s *Garcon) Setup(pprofPort, expPort, reqBurst, reqPerMinute int, devMode bool) (chain.Chain, func(net.Conn, http.ConnState), error) {
+func (s *Garcon) Setup(pprofPort, expPort, reqBurst, reqMinute int, devMode bool) (chain.Chain, func(net.Conn, http.ConnState), error) {
 	pprof.StartServer(pprofPort)
 
 	middlewares, connState := s.metrics.StartServer(expPort, devMode)
 
-	if reqPerMinute == 0 {
+	if reqMinute == 0 {
 		middlewares = middlewares.Append(LogRequests)
 	} else {
-		reqLimiter := limiter.New(reqBurst, reqPerMinute, devMode, s.ResErr)
+		reqLimiter := limiter.New(reqBurst, reqMinute, devMode, s.ResErr)
 		middlewares = middlewares.Append(reqLimiter.Limit)
 	}
 
@@ -87,8 +87,8 @@ func (s *Garcon) Setup(pprofPort, expPort, reqBurst, reqPerMinute int, devMode b
 // RunServer runs the HTTP server(s) in foreground.
 // Optionally it also starts a metrics server in background (if export port > 0).
 // The metrics server is for use with Prometheus or another compatible monitoring tool.
-func (s *Garcon) Run(h http.Handler, port, pprofPort, expPort, reqBurst, reqPerMinute int, devMode bool) error {
-	middlewares, connState, err := s.Setup(pprofPort, expPort, reqBurst, reqPerMinute, devMode)
+func (s *Garcon) Run(h http.Handler, port, pprofPort, expPort, reqBurst, reqMinute int, devMode bool) error {
+	middlewares, connState, err := s.Setup(pprofPort, expPort, reqBurst, reqMinute, devMode)
 	if err != nil {
 		return err
 	}
