@@ -99,7 +99,9 @@ X-Content-Type-Options: nosniff
 Date: Tue, 19 Oct 2021 21:42:29 GMT
 Content-Length: 77
 
-{"error":"Unauthorized","doc":"https://my.dns.co/doc","path":"/api/v1/items"}
+{"error":"Unauthorized",
+"path":"/api/v1/items",
+"doc":"https://my.dns.co/doc"}
 ```
 
 The corresponding garcon logs in debug mode:
