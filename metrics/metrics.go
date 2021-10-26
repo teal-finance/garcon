@@ -63,7 +63,7 @@ func (m *Metrics) StartServer(port int, devMode bool) (chain.Chain, func(net.Con
 		connState = m.updateConnCounters()
 	}
 
-	return chain.New(m.countRED), connState
+	return chain.New(m.count), connState
 }
 
 // handler returns the endpoints "/metrics/xxx".
@@ -87,8 +87,8 @@ func handler() http.Handler {
 	return handler
 }
 
-// countRED increments/decrements the RED metrics depending on incoming requests and outgoing responses.
-func (m *Metrics) countRED(next http.Handler) http.Handler {
+// count increments/decrements web traffic metrics depending on incoming requests and outgoing responses.
+func (m *Metrics) count(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		record := &statusRecorder{ResponseWriter: w, Status: "success"}
