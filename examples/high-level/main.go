@@ -9,6 +9,7 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"net/http"
 
@@ -18,20 +19,29 @@ import (
 	"github.com/teal-finance/garcon/reserr"
 )
 
+// Garcon settings
+const authCfg = "examples/sample-auth.rego"
+const mainPort, pprofPort, expPort = 8080, 8093, 9093
+const burst, reqMinute = 10, 30
+const devMode = true
+
 func main() {
+	auth := flag.Bool("auth", false, "Enable OPA authorization specified in file "+authCfg)
+	flag.Parse()
+
+	// other Garcon settings
 	s := garcon.Garcon{
-		Version:        "MyApp-1.2.0",
+		Version:        "MyBackendName-1.2.0",
 		ResErr:         "https://my.dns.co/doc",
 		AllowedOrigins: []string{"https://my.dns.co"},
-		OPAFilenames:   []string{"example-auth.rego"},
 	}
 
-	// Handles both REST API and static web files
-	h := handler(s.ResErr)
+	if *auth {
+		s.OPAFilenames = []string{authCfg}
+	}
 
-	const mainPort, pprofPort, expPort = 8080, 8093, 9093
-	const burst, reqMinute = 10, 30
-	const devMode = true
+	// handles both REST API and static web files
+	h := handler(s.ResErr)
 
 	err := s.Run(h, mainPort, pprofPort, expPort, burst, reqMinute, devMode)
 	log.Fatal(err)
@@ -42,7 +52,7 @@ func handler(resErr reserr.ResErr) http.Handler {
 	r := chi.NewRouter()
 
 	// Static website files
-	fs := fileserver.FileServer{Dir: "/var/www/my-site", ResErr: resErr}
+	fs := fileserver.FileServer{Dir: "examples/www", ResErr: resErr}
 	r.Get("/", fs.ServeFile("index.html", "text/html; charset=utf-8"))
 	r.Get("/js/*", fs.ServeDir("text/javascript; charset=utf-8"))
 	r.Get("/css/*", fs.ServeDir("text/css; charset=utf-8"))

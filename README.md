@@ -1,39 +1,29 @@
 # Teal.Finance/Garcon
 
-![logo](logo.jpg) | <big>Opinionated boilerplate HTTP server with CORS, OPA, Prometheus, rate-limiter… for API and static website.</big>
+![logo](logo.jpg) | <big>Opinionated boilerplate all-in-one HTTP server with rate-limiter, CORS, OPA, web traffic, Prometheus export, PProf… for API and static website.</big>
 -|-
-
-## Origin
-
-This library was originally developed as part of the project
-[Rainbow](https://github.com/teal-finance/rainbow) during hackathons,
-based on older Teal.Finance products,
-and then moved to [its own repository](https://github.com/teal-finance/garcon).
 
 ## Features
 
-Teal.Finance/Garcon supports:
+Garcon includes the following middlewares:
 
-* Metrics server exporting data to Prometheus or other monitoring services ;
-* File server intended for static web files ;
-* HTTP/REST server for API endpoints (compatible any Go-standard HTTP handlers) ;
-* Chained middlewares (fork of github.com/justinas/alice)
-* Auto-completed error response in JSON format ;
-* Middleware: authentication rules based on Datalog/Rego files using [Open Policy Agent](https://www.openpolicyagent.org) ;
-* Middleware: rate limiter to prevent flooding by incoming requests ;
-* Middleware: logging of incoming requests ;
-* Middleware: Cross-Origin Resource Sharing (CORS).
+* Logging of incoming requests ;
+* Rate limiter to prevent requests flooding ;
+* Authentication rules based on Datalog/Rego files using [Open Policy Agent](https://www.openpolicyagent.org) ;
+* Cross-Origin Resource Sharing (CORS) ;
+* Web traffic metrics.
 
-## License
+Garcon also provides the following features:
 
-[LGPL-3.0-or-later](https://spdx.org/licenses/LGPL-3.0-or-later.html):
-GNU Lesser General Public License v3.0 or later
-([tl;drLegal](https://tldrlegal.com/license/gnu-lesser-general-public-license-v3-(lgpl-3)),
-[Choosealicense.com](https://choosealicense.com/licenses/lgpl-3.0/)).
-See the [LICENSE](LICENSE) file.
+* HTTP/REST server for API endpoints (compatible with any Go-standard HTTP handlers) ;
+* File server intended for static web files supporting Brotli and AVIF data ;
+* Metrics server exporting data to Prometheus (or other compatible monitoring tool) ;
+* PProf server for debugging purpose ;
+* Error response in JSON format ;
+* Chained middlewares (fork of [github.com/justinas/alice](https://github.com/justinas/alice)).
 
-Except the two example files under CC0-1.0 (Creative Commons Zero v1.0 Universal)
-and the file [chain.go](chain/chain.go) (fork) under the MIT License.
+This library is used by
+[Rainbow](https://github.com/teal-finance/rainbow) and other stuff at Teal.Finance.
 
 ## Examples
 
@@ -58,7 +48,7 @@ func main() {
         Version:        "MyApp-1.2.0",
         Resp:           "https://my.dns.co/doc",
         AllowedOrigins: []string{"https://my.dns.co"},
-        OPAFilenames:   []string{"example-auth.rego"},
+        OPAFilenames:   []string{"my-auth.rego"},
     }
 
     h := myHandler()
@@ -68,61 +58,93 @@ func main() {
 }
 ```
 
-Run the [high-level example](examples/high-level/main.go):
+Run the [high-level example](examples/high-level/main.go) without authentication for our first try, and open <http://localhost:8080> with your browser:
 
 ```
 $ go build ./examples/high-level && ./high-level
-2021/10/19 23:41:50 Prometheus export http://localhost:9093
-2021/10/19 23:41:50 CORS: Set origin: https://my.dns.co
-2021/10/19 23:41:50 Middleware CORS: {AllowedOrigins:[] AllowOriginFunc:0x556b48e30960 AllowOriginRequestFunc:<nil> AllowedMethods:[GET] AllowedHeaders:[Origin Accept Content-Type Authorization Cookie] ExposedHeaders:[] MaxAge:60 AllowCredentials:true OptionsPassthrough:false Debug:true}
-2021/10/19 23:41:50 OPA: load "example-auth.rego"
-2021/10/19 23:41:50 Middleware OPA: map[example-auth.rego:package auth
+2021/10/26 16:55:37 Prometheus export http://localhost:9093
+2021/10/26 16:55:37 CORS: Set origin prefixes: [https://my.dns.co http://localhost: http://192.168.1.]
+2021/10/26 16:55:37 Middleware CORS: {AllowedOrigins:[] AllowOriginFunc:0x6e6ee0 AllowOriginRequestFunc:<nil> AllowedMethods:[GET] AllowedHeaders:[Origin Accept Content-Type Authorization Cookie] ExposedHeaders:[] MaxAge:60 AllowCredentials:true OptionsPassthrough:false Debug:true}
+2021/10/26 16:55:37 Enable PProf endpoints: http://localhost:8093/debug/pprof
+2021/10/26 16:55:37 Middleware response HTTP header: Set Server MyBackendName-1.2.0
+2021/10/26 16:55:37 Middleware RateLimiter: burst=100 rate=5/s
+2021/10/26 16:55:37 Server listening on http://localhost:8080
+```
+
+Play with the API endpoints from the <http://localhost:8080/> web page.
+
+---------------
+
+Then restart the [high-level example](examples/high-level/main.go), but with authentication enabled, and then test the API with `curl`.
+
+```
+$ go build ./examples/high-level && ./high-level -auth
+2021/10/26 16:51:30 Prometheus export http://localhost:9093
+2021/10/26 16:51:30 CORS: Set origin prefixes: [https://my.dns.co http://localhost: http://192.168.1.]
+2021/10/26 16:51:30 Middleware CORS: {AllowedOrigins:[] AllowOriginFunc:0x6e6ee0 AllowOriginRequestFunc:<nil> AllowedMethods:[GET] AllowedHeaders:[Origin Accept Content-Type Authorization Cookie] ExposedHeaders:[] MaxAge:60 AllowCredentials:true OptionsPassthrough:false Debug:true}
+2021/10/26 16:51:30 OPA: load "examples/sample-auth.rego"
+2021/10/26 16:51:30 Enable PProf endpoints: http://localhost:8093/debug/pprof
+2021/10/26 16:51:30 Middleware OPA: map[sample-auth.rego:package auth
 
 default allow = false
 tokens := {"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb2dnZWRJbkFzIjoiYWRtaW4iLCJpYXQiOjE0MjI3Nzk2Mzh9.gzSraSYS8EXBxLN_oWnFSRgCzcmJmMjLiuyu5CSpyHI"} { true }
 allow = true { __local0__ = input.token; data.auth.tokens[__local0__] }]
-2021/10/19 23:41:50 Middleware response HTTP header: Set Server MyApp-1.2.0
-2021/10/19 23:41:50 Middleware RateLimiter: burst=100 rate=5/s
-2021/10/19 23:41:50 Middleware logger: log requested URLs and remote addresses
-2021/10/19 23:41:50 Server listening on http://localhost:8080
+2021/10/26 16:51:30 Middleware response HTTP header: Set Server MyBackendName-1.2.0
+2021/10/26 16:51:30 Middleware RateLimiter: burst=100 rate=5/s
+2021/10/26 16:51:30 Server listening on http://localhost:8080
 ```
 
-Test the API endpoint with default `curl` HTTP headers:
+### 1. Default HTTP request headers
 
 ```
-$ curl -D - http://localhost:8080/api/v1/items
+curl -D - http://localhost:8080/api/v1/items
+```
+
+```yaml
 HTTP/1.1 401 Unauthorized
 Content-Type: application/json
-Server: MyApp-1.2.0
+Server: MyBackendName-1.2.0
 Vary: Origin
 X-Content-Type-Options: nosniff
-Date: Tue, 19 Oct 2021 21:42:29 GMT
-Content-Length: 77
+Date: Tue, 26 Oct 2021 15:01:58 GMT
+Content-Length: 80
 
 {"error":"Unauthorized",
 "path":"/api/v1/items",
 "doc":"https://my.dns.co/doc"}
 ```
 
-The corresponding garcon logs in debug mode:
+The corresponding garcon logs:
 
 ```
-2021/10/19 23:42:29 in  GET /api/v1/items [::1]:54796
-[cors] 2021/10/19 23:42:29 Handler: Actual request
-[cors] 2021/10/19 23:42:29   Actual request no headers added: missing origin
-2021/10/19 23:42:29 OPA unauthorize [::1]:54796 /api/v1/items
-2021/10/19 23:42:29 out GET /api/v1/items 337.751µs
+2021/10/26 17:01:58 in  GET [::1]:53336 /api/v1/items
+[cors] 2021/10/26 17:01:58 Handler: Actual request
+[cors] 2021/10/26 17:01:58   Actual request no headers added: missing origin
+2021/10/26 17:01:58 OPA unauthorize [::1]:53336 /api/v1/items
+2021/10/26 17:01:58 out GET [::1]:53336 /api/v1/items 342.221µs c=1 a=1 i=0 h=0
 ```
 
-Test the API endpoint with valid Authorization header:
+The CORS logs can be disabled by passing `debug=false` in `cors.Handler(origins, false)`.
+
+The values `c=1 a=1 i=0 h=0` measure the web traffic:
+
+* `c` for the current number of HTTP connections (gauge)
+* `a` for the accumulated HTTP connections that have been in StateActive (counter)
+* `i` for the accumulated HTTP connections that have been in StateIdle (counter)
+* `h` for the accumulated HTTP connections that have been in StateHijacked (counter)
+
+### 2. With Authorization header
 
 ```
-$ curl -D - -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb2dnZWRJbkFzIjoiYWRtaW4iLCJpYXQiOjE0MjI3Nzk2Mzh9.gzSraSYS8EXBxLN_oWnFSRgCzcmJmMjLiuyu5CSpyHI' http://localhost:8080/api/v1/items
+curl -D - http://localhost:8080/api/v1/items -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb2dnZWRJbkFzIjoiYWRtaW4iLCJpYXQiOjE0MjI3Nzk2Mzh9.gzSraSYS8EXBxLN_oWnFSRgCzcmJmMjLiuyu5CSpyHI'
+```
+
+```yaml
 HTTP/1.1 200 OK
 Content-Type: application/json
-Server: MyApp-1.2.0
+Server: MyBackendName-1.2.0
 Vary: Origin
-Date: Tue, 19 Oct 2021 21:43:55 GMT
+Date: Tue, 26 Oct 2021 15:10:10 GMT
 Content-Length: 25
 
 ["item1","item2","item3"]
@@ -131,23 +153,26 @@ Content-Length: 25
 The corresponding garcon logs:
 
 ```
-2021/10/19 23:43:55 in  GET /api/v1/items [::1]:54798
-[cors] 2021/10/19 23:43:55 Handler: Actual request
-[cors] 2021/10/19 23:43:55   Actual request no headers added: missing origin
-2021/10/19 23:43:55 out GET /api/v1/items 235.621µs
+2021/10/26 17:10:10 in  GET [::1]:53338 /api/v1/items
+[cors] 2021/10/26 17:10:10 Handler: Actual request
+[cors] 2021/10/26 17:10:10   Actual request no headers added: missing origin
+2021/10/26 17:10:10 out GET [::1]:53338 /api/v1/items 333.351µs c=2 a=2 i=1 h=0
 ```
 
-Test the API endpoint with valid Authorization and Origin headers:
+### 3. With Authorization and Origin headers
 
 ```
-$ curl -D - -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb2dnZWRJbkFzIjoiYWRtaW4iLCJpYXQiOjE0MjI3Nzk2Mzh9.gzSraSYS8EXBxLN_oWnFSRgCzcmJmMjLiuyu5CSpyHI' -H 'Origin: https://my.dns.co' http://localhost:8080/api/v1/items
+curl -D - http://localhost:8080/api/v1/items -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb2dnZWRJbkFzIjoiYWRtaW4iLCJpYXQiOjE0MjI3Nzk2Mzh9.gzSraSYS8EXBxLN_oWnFSRgCzcmJmMjLiuyu5CSpyHI' -H 'Origin: https://my.dns.co'
+```
+
+```yaml
 HTTP/1.1 200 OK
 Access-Control-Allow-Credentials: true
 Access-Control-Allow-Origin: https://my.dns.co
 Content-Type: application/json
-Server: MyApp-1.2.0
+Server: MyBackendName-1.2.0
 Vary: Origin
-Date: Tue, 19 Oct 2021 21:45:00 GMT
+Date: Tue, 26 Oct 2021 15:12:50 GMT
 Content-Length: 25
 
 ["item1","item2","item3"]
@@ -156,17 +181,18 @@ Content-Length: 25
 The corresponding garcon logs:
 
 ```
-2021/10/19 23:45:00 in  GET /api/v1/items [::1]:54800
-[cors] 2021/10/19 23:45:00 Handler: Actual request
-[cors] 2021/10/19 23:45:00   Actual response added headers: map[Access-Control-Allow-Credentials:[true] Access-Control-Allow-Origin:[https://my.dns.co] Server:[MyApp-1.2.0] Vary:[Origin]]
-2021/10/19 23:45:00 out GET /api/v1/items 341.432µs
+2021/10/26 17:12:50 in  GET [::1]:53340 /api/v1/items
+[cors] 2021/10/26 17:12:50 Handler: Actual request
+2021/10/26 17:12:50 CORS: Accept https://my.dns.co because starts with prefix https://my.dns.co
+[cors] 2021/10/26 17:12:50   Actual response added headers: map[Access-Control-Allow-Credentials:[true] Access-Control-Allow-Origin:[https://my.dns.co] Server:[MyBackendName-1.2.0] Vary:[Origin]]
+2021/10/26 17:12:50 out GET [::1]:53340 /api/v1/items 385.422µs c=3 a=3 i=2 h=0
 ```
 
 ## Low-level
 
 See the [low-level example](examples/low-level/main.go).
 
-The following code can be replaced by the high-level function `Garcon.RunServer()` presented in the previous chapter. The following code is intended to show that the Teal.Finance/Garcon can be customized to meet specific requirements.
+The following code is similar to the stuff done by the high-level function `Garcon.RunServer()` presented in the previous chapter. The following code is intended to show that Garcon can be customized to meet specific requirements.
 
 ```go
 package main
@@ -209,7 +235,7 @@ func setMiddlewares() (middlewares chain.Chain, connState func(net.Conn, http.Co
     middlewares = middlewares.Append()
 
     // Endpoint authentication rules (Open Policy Agent)
-    policy, err := opa.New(resErr, []string{"example-auth.rego"})
+    policy, err := opa.New(resErr, []string{"examples/sample-auth.rego"})
     if err != nil {
         log.Fatal(err)
     }
@@ -220,7 +246,7 @@ func setMiddlewares() (middlewares chain.Chain, connState func(net.Conn, http.Co
     middlewares = middlewares.Append(
         garcon.LogRequests,
         reqLimiter.Limit,
-        garcon.ServerHeader("MyServerName-1.2.0"),
+        garcon.ServerHeader("MyBackendName-1.2.0"),
         policy.Auth,
         cors.Handle(allowedOrigins, true),
     )
@@ -251,3 +277,16 @@ func runServer(h http.Handler, connState func(net.Conn, http.ConnState)) {
     log.Fatal(server.ListenAndServe())
 }
 ```
+
+## License
+
+[LGPL-3.0-or-later](https://spdx.org/licenses/LGPL-3.0-or-later.html):
+GNU Lesser General Public License v3.0 or later
+([tl;drLegal](https://tldrlegal.com/license/gnu-lesser-general-public-license-v3-(lgpl-3)),
+[Choosealicense.com](https://choosealicense.com/licenses/lgpl-3.0/)).
+See the [LICENSE](LICENSE) file.
+
+Except:
+
+* the example files under CC0-1.0 (Creative Commons Zero v1.0 Universal) ;
+* the file [chain.go](chain/chain.go) (fork) under the MIT License.

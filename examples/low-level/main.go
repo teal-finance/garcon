@@ -26,12 +26,22 @@ import (
 	"github.com/teal-finance/garcon/reserr"
 )
 
+// Garcon settings
+const apiDoc = "https://my.dns.co/doc"
+const allowedProdOrigin = "https://my.dns.co"
+const allowedDevOrigins = "http://localhost:  http://192.168.1."
+const serverHeader = "MyBackendName-1.2.0"
+const authCfg = "examples/sample-auth.rego"
+const expPort = 9093
+const burst, reqMinute = 10, 30
+const devMode = true
+
 func main() {
 	const pprofPort = 8093
 	pprof.StartServer(pprofPort)
 
 	// Uniformize error responses with API doc
-	resErr := reserr.New("https://my.dns.co/doc")
+	resErr := reserr.New(apiDoc)
 
 	middlewares, connState := setMiddlewares(resErr)
 
@@ -43,10 +53,6 @@ func main() {
 }
 
 func setMiddlewares(resErr reserr.ResErr) (middlewares chain.Chain, connState func(net.Conn, http.ConnState)) {
-	const expPort = 9093
-	const burst, reqMinute = 10, 30
-	const devMode = true
-
 	if devMode {
 		// the following line writes a CPU-profile file of the function setMiddlewares()
 		defer pprof.ProbeCPU().Stop()
@@ -60,9 +66,9 @@ func setMiddlewares(resErr reserr.ResErr) (middlewares chain.Chain, connState fu
 	// Limit the input request rate per IP
 	reqLimiter := limiter.New(burst, reqMinute, devMode, resErr)
 
-	corsConfig := "https://my.dns.co"
+	corsConfig := allowedProdOrigin
 	if devMode {
-		corsConfig += " http://localhost: http://192.168.1."
+		corsConfig += " " + allowedDevOrigins
 	}
 
 	allowedOrigins := garcon.SplitClean(corsConfig)
@@ -70,12 +76,12 @@ func setMiddlewares(resErr reserr.ResErr) (middlewares chain.Chain, connState fu
 	middlewares = middlewares.Append(
 		garcon.LogRequests,
 		reqLimiter.Limit,
-		garcon.ServerHeader("MyServerName-1.2.0"),
+		garcon.ServerHeader(serverHeader),
 		cors.Handler(allowedOrigins, devMode),
 	)
 
 	// Endpoint authentication rules (Open Policy Agent)
-	files := garcon.SplitClean("example-auth.rego")
+	files := garcon.SplitClean(authCfg)
 	policy, err := opa.New(files, resErr)
 	if err != nil {
 		log.Fatal(err)
@@ -118,7 +124,7 @@ func handler(resErr reserr.ResErr) http.Handler {
 	r := chi.NewRouter()
 
 	// Static website files
-	fs := fileserver.FileServer{Dir: "/var/www/my-site", ResErr: resErr}
+	fs := fileserver.FileServer{Dir: "examples/www", ResErr: resErr}
 	r.Get("/", fs.ServeFile("index.html", "text/html; charset=utf-8"))
 	r.Get("/js/*", fs.ServeDir("text/javascript; charset=utf-8"))
 	r.Get("/css/*", fs.ServeDir("text/css; charset=utf-8"))
