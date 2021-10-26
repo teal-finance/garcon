@@ -93,33 +93,32 @@ func validPath(w http.ResponseWriter, r *http.Request) bool {
 }
 
 func (fs FileServer) send(w http.ResponseWriter, r *http.Request, absPath string) {
-	var file *os.File
+	var (
+		file *os.File
+		err  error
+	)
 
 	// if client (browser) supports Brotli and the *.br file is present
 	// => send the *.br file
 	if strings.Contains(r.Header.Get("Accept-Encoding"), "br") {
 		brotli := absPath + ".br"
 
-		f, err := os.Open(brotli)
+		file, err = os.Open(brotli)
 		if err == nil {
-			absPath = brotli
-
 			w.Header().Set("Content-Encoding", "br")
-		}
 
-		file = f
+			absPath = brotli
+		}
 	}
 
 	if file == nil {
-		f, err := os.Open(absPath)
+		file, err = os.Open(absPath)
 		if err != nil {
 			fs.ResErr.Write(w, r, http.StatusNotFound, "Page not found")
-			log.Printf("WARN Fileserver: Open(%v) %v", absPath, err)
+			log.Print("WARN Fileserver: ", err)
 
 			return
 		}
-
-		file = f
 	}
 
 	defer func() {
