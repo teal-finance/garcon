@@ -32,12 +32,17 @@ const allowedProdOrigin = "https://my.dns.co"
 const allowedDevOrigins = "http://localhost:  http://192.168.1."
 const serverHeader = "MyBackendName-1.2.0"
 const authCfg = "examples/sample-auth.rego"
+const pprofPort = 8093
 const expPort = 9093
 const burst, reqMinute = 10, 30
 const devMode = true
 
 func main() {
-	const pprofPort = 8093
+	if devMode {
+		// the following line collects the CPU-profile and writes it in the file "cpu.pprof"
+		defer pprof.ProbeCPU().Stop()
+	}
+
 	pprof.StartServer(pprofPort)
 
 	// Uniformize error responses with API doc
@@ -53,11 +58,6 @@ func main() {
 }
 
 func setMiddlewares(resErr reserr.ResErr) (middlewares chain.Chain, connState func(net.Conn, http.ConnState)) {
-	if devMode {
-		// the following line writes a CPU-profile file of the function setMiddlewares()
-		defer pprof.ProbeCPU().Stop()
-	}
-
 	// Start a metrics server in background if export port > 0.
 	// The metrics server is for use with Prometheus or another compatible monitoring tool.
 	metrics := metrics.Metrics{}

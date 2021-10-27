@@ -3,6 +3,12 @@
 ![logo](logo.jpg) | <big>Opinionated boilerplate all-in-one HTTP server with rate-limiter, CORS, OPA, web traffic, Prometheus export, PProf… for API and static website.</big>
 -|-
 
+This library is used by
+[Rainbow](https://github.com/teal-finance/rainbow)
+and other internal projects at Teal.Finance.
+
+Please propose a PR to add here your project that also uses Garcon.
+
 ## Features
 
 Garcon includes the following middlewares:
@@ -22,8 +28,29 @@ Garcon also provides the following features:
 * Error response in JSON format ;
 * Chained middlewares (fork of [github.com/justinas/alice](https://github.com/justinas/alice)).
 
-This library is used by
-[Rainbow](https://github.com/teal-finance/rainbow) and other stuff at Teal.Finance.
+## CPU profiling
+
+Moreover, Garcon provides a helper feature `defer ProbeCPU.Stop()`
+to investigate CPU consumption issues.
+
+In you code, add `defer ProbeCPU.Stop()` that will write the `cpu.pprof` file.
+
+```go
+func myFunctionConsummingLotsOfCPU() {
+    defer ProbeCPU.Stop()
+
+    // ... lots of stuff
+}
+```
+
+Install `pprof ` and browse your `cpu.pprof` file:
+
+```
+cd ~/go
+go get -u github.com/google/pprof
+cd -
+pprof -http=: cpu.pprof
+```
 
 ## Examples
 
@@ -58,7 +85,7 @@ func main() {
 }
 ```
 
-Run the [high-level example](examples/high-level/main.go) without authentication for our first try, and open <http://localhost:8080> with your browser:
+### 1. Run the [high-level example](examples/high-level/main.go)
 
 ```
 $ go build ./examples/high-level && ./high-level
@@ -71,11 +98,56 @@ $ go build ./examples/high-level && ./high-level
 2021/10/26 16:55:37 Server listening on http://localhost:8080
 ```
 
-Play with the API endpoints from the <http://localhost:8080/> web page.
+### 2. Embedded PProf server
 
----------------
+Visit the PProf server at <http://localhost:8093/debug/pprof> providing the following endpoints:
 
-Then restart the [high-level example](examples/high-level/main.go), but with authentication enabled, and then test the API with `curl`.
+* <http://localhost:8093/debug/pprof/cmdline> - Command line arguments
+* <http://localhost:8093/debug/pprof/profile> - CPU profile
+* <http://localhost:8093/debug/pprof/allocs> - Memory allocations from start
+* <http://localhost:8093/debug/pprof/heap> - Current memory allocations
+* <http://localhost:8093/debug/pprof/trace> - Current program trace
+* <http://localhost:8093/debug/pprof/goroutine> - Traces of all current threads (goroutines)
+* <http://localhost:8093/debug/pprof/block> - Traces of blocking threads
+* <http://localhost:8093/debug/pprof/mutex> - Traces of threads with contended mutex
+* <http://localhost:8093/debug/pprof/threadcreate> - Traces of threads creating a new thread
+
+PProf is easy to use with `curl` or `wget`:
+
+```
+cd ~
+go get -u github.com/google/pprof
+
+curl http://localhost:6063/debug/pprof/allocs > allocs.pprof
+pprof -http=: allocs.pprof
+
+wget http://localhost:31415/debug/pprof/heap
+pprof -http=: heap
+
+wget http://localhost:31415/debug/pprof/trace
+pprof -http=: trace
+
+wget http://localhost:31415/debug/pprof/goroutine
+pprof -http=: goroutine
+```
+
+See the [blog post](https://go.dev/blog/pprof) (2013) for more accurate explanation.
+
+### 3. Embedded metrics server
+
+The export port <http://localhost:9093/metrics> (test it) is for monitoring tools like Prometheus.
+
+### 4. Static website server
+
+The [high-level example](examples/high-level/main.go)
+is running without authentication.
+Open <http://localhost:8080> with your browser,
+and play with the API endpoints.
+
+### 5. Enable Authentication
+
+Then restart again the [high-level example](examples/high-level/main.go),
+but with authentication enabled:
 
 ```
 $ go build ./examples/high-level && ./high-level -auth
@@ -94,7 +166,9 @@ allow = true { __local0__ = input.token; data.auth.tokens[__local0__] }]
 2021/10/26 16:51:30 Server listening on http://localhost:8080
 ```
 
-### 1. Default HTTP request headers
+### 6. Default HTTP request headers
+
+Test the API with `curl`:
 
 ```
 curl -D - http://localhost:8080/api/v1/items
@@ -133,7 +207,7 @@ The values `c=1 a=1 i=0 h=0` measure the web traffic:
 * `i` for the accumulated HTTP connections that have been in StateIdle (counter)
 * `h` for the accumulated HTTP connections that have been in StateHijacked (counter)
 
-### 2. With Authorization header
+### 7. With Authorization header
 
 ```
 curl -D - http://localhost:8080/api/v1/items -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb2dnZWRJbkFzIjoiYWRtaW4iLCJpYXQiOjE0MjI3Nzk2Mzh9.gzSraSYS8EXBxLN_oWnFSRgCzcmJmMjLiuyu5CSpyHI'
@@ -159,7 +233,7 @@ The corresponding garcon logs:
 2021/10/26 17:10:10 out GET [::1]:53338 /api/v1/items 333.351µs c=2 a=2 i=1 h=0
 ```
 
-### 3. With Authorization and Origin headers
+### 8. With Authorization and Origin headers
 
 ```
 curl -D - http://localhost:8080/api/v1/items -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb2dnZWRJbkFzIjoiYWRtaW4iLCJpYXQiOjE0MjI3Nzk2Mzh9.gzSraSYS8EXBxLN_oWnFSRgCzcmJmMjLiuyu5CSpyHI' -H 'Origin: https://my.dns.co'
