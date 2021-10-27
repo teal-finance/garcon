@@ -31,7 +31,8 @@ Garcon also provides the following features:
 ## CPU profiling
 
 Moreover, Garcon provides a helper feature `defer ProbeCPU.Stop()`
-to investigate CPU consumption issues.
+to investigate CPU consumption issues
+thanks to <https://github.com/pkg/profile>.
 
 In you code, add `defer ProbeCPU.Stop()` that will write the `cpu.pprof` file.
 
@@ -43,7 +44,7 @@ func myFunctionConsummingLotsOfCPU() {
 }
 ```
 
-Install `pprof ` and browse your `cpu.pprof` file:
+Install `pprof` and browse your `cpu.pprof` file:
 
 ```
 cd ~/go
