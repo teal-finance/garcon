@@ -37,8 +37,10 @@ thanks to <https://github.com/pkg/profile>.
 In you code, add `defer ProbeCPU.Stop()` that will write the `cpu.pprof` file.
 
 ```go
+import "github.com/teal-finance/garcon/pprof"
+
 func myFunctionConsummingLotsOfCPU() {
-    defer ProbeCPU.Stop()
+    defer pprof.ProbeCPU.Stop()
 
     // ... lots of stuff
 }

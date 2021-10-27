@@ -32,7 +32,7 @@ type Stoppable interface {
 
 // ProbeCPU is used like the following:
 //
-//     defer ProbeCPU.Stop()
+//     defer pprof.ProbeCPU.Stop()
 //
 // When the caller reaches its function end,
 // the defer executes Stop() that writes the file "cpu.pprof".
