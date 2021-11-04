@@ -37,7 +37,11 @@ func (fs FileServer) ServeFile(urlPath, contentType string) func(w http.Response
 	absPath := path.Join(fs.Dir, urlPath)
 
 	return func(w http.ResponseWriter, r *http.Request) {
+		// Set aggressive "Cache-Control" because ServeFile() is often used
+		// to serve "favicon.ico" and other assets that do not change often
+		w.Header().Set("Cache-Control", "public,max-age=31536000,immutable")
 		w.Header().Set("Content-Type", contentType)
+
 		fs.send(w, r, absPath)
 	}
 }
@@ -46,8 +50,6 @@ func (fs FileServer) ServeFile(urlPath, contentType string) func(w http.Response
 func (fs FileServer) ServeDir(contentType string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if validPath(w, r) {
-			w.Header().Set("Content-Type", contentType)
-
 			// JS and CSS files should contain a [hash].
 			// Thus the path changes when content changes,
 			// enabling aggressive Cache-Control parameters:
@@ -55,6 +57,7 @@ func (fs FileServer) ServeDir(contentType string) func(w http.ResponseWriter, r 
 			// max-age=31536000  Store it up to 1 year (browser stores it some days due to limited cache size)
 			// immutable         Only supported by Firefox and Safari
 			w.Header().Set("Cache-Control", "public,max-age=31536000,immutable")
+			w.Header().Set("Content-Type", contentType)
 
 			absPath := path.Join(fs.Dir, r.URL.Path)
 			fs.send(w, r, absPath)
@@ -66,14 +69,14 @@ func (fs FileServer) ServeDir(contentType string) func(w http.ResponseWriter, r 
 func (fs FileServer) ServeImages() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if validPath(w, r) {
+			// Images are supposed never change, else better to create a new image
+			// (or to wait some days the browser clears out data based on LRU).
+			w.Header().Set("Cache-Control", "public,max-age=31536000,immutable")
+
 			absPath, contentType := fs.imagePathAndType(r)
 			if contentType != "" {
 				w.Header().Set("Content-Type", contentType)
 			}
-
-			// Images are supposed never change, else better to create a new image
-			// (or to wait some days the browser clears out data based on LRU).
-			w.Header().Set("Cache-Control", "public,max-age=31536000,immutable")
 
 			fs.send(w, r, absPath)
 		}
