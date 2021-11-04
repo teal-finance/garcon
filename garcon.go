@@ -44,15 +44,13 @@ type Garcon struct {
 	metrics metrics.Metrics
 }
 
-// AppendDevOrigins allow the development origins:
+// DevOrigins provides the development origins:
 //  - yarn run vite --port 3000
 //  - yarn run vite preview --port 5000
 //  - localhost:8085 on multidevices: web autoreload using https://github.com/synw/fwr
 //  - flutter run --web-port=8080
 //  - 192.168.1.x + any port on tablet: mobile app using fast builtin autoreload
-func AppendDevOrigins(origins []string) []string {
-	return append(origins, "http://localhost:", "http://192.168.1.")
-}
+var DevOrigins = []string{"http://localhost:", "http://192.168.1."}
 
 func (s *Garcon) Setup(pprofPort, expPort, reqBurst, reqMinute int, devMode bool) (chain.Chain, func(net.Conn, http.ConnState), error) {
 	pprof.StartServer(pprofPort)
@@ -67,7 +65,7 @@ func (s *Garcon) Setup(pprofPort, expPort, reqBurst, reqMinute int, devMode bool
 	}
 
 	if devMode {
-		s.AllowedOrigins = AppendDevOrigins(s.AllowedOrigins)
+		s.AllowedOrigins = append(s.AllowedOrigins, DevOrigins...)
 	}
 
 	middlewares = middlewares.Append(
