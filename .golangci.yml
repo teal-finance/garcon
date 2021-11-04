@@ -19,7 +19,6 @@ linters:
     - forcetypeassert  # finds forced type assertions
     - funlen           # Tool for detection of long functions
     - gci              # Gci control golang package import order and make it always deterministic.
-    - gochecknoglobals # check that no global variables exist
     - gochecknoinits   # Checks that no init functions are present in Go code
     - gocognit         # Computes and checks the cognitive complexity of functions
     - goconst          # Finds repeated strings that could be replaced by a constant
@@ -41,7 +40,6 @@ linters:
     - ifshort          # Checks that your code uses short syntax for if-statements whenever possible
     - importas         # Enforces consistent import aliases
     - ineffassign      # Detects when assignments to existing variables are not used
-    - lll              # Reports long lines
     - makezero         # Finds slice declarations with non-zero initial length
     - misspell         # Finds commonly misspelled English words in comments
     - nakedret         # Finds naked returns in functions greater than a specified function length
@@ -80,7 +78,9 @@ linters:
     - scopelint        # v1.39 has been replaced by exportloopref (checks for unpinned variables in go programs)
 
     # ANNOYING
+    - gochecknoglobals # check that no global variables exist
     - gomnd            # An analyzer to detect magic numbers
+    - lll              # Reports long lines
     - paralleltest     # paralleltest detects missing usage of t.Parallel() method in your Go test
     - testpackage      # linter that makes you use a separate _test package
     - wrapcheck        # Checks that errors returned from external packages are wrapped
