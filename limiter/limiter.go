@@ -21,6 +21,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/teal-finance/garcon/reqlog"
 	"github.com/teal-finance/garcon/reserr"
 	"golang.org/x/time/rate"
 )
@@ -53,20 +54,11 @@ func New(maxReqBurst, maxReqPerMinute int, devMode bool, resErr reserr.ResErr) R
 	}
 }
 
-// LogRequests logs the incoming HTTP requests.
-func LogRequests(next http.Handler) http.Handler {
-	log.Print("Middleware logger: log requested URLs and remote addresses")
-
-	return http.HandlerFunc(
-		func(w http.ResponseWriter, r *http.Request) {
-			log.Printf("in  %v %v %v", r.Method, r.RemoteAddr, r.RequestURI)
-			next.ServeHTTP(w, r)
-		})
-}
-
 func (rl *ReqLimiter) Limit(next http.Handler) http.Handler {
-	log.Printf("Middleware RateLimiter: burst=%v rate=%v/s",
+	log.Printf("Middleware RateLimiter: burst=%v rate=%v/s with ",
 		rl.initLimiter.Burst(), rl.initLimiter.Limit())
+	log.Print("Middleware RateLimiter also logs the following requester info: " +
+		reqlog.RequesterInfoExplanation)
 
 	go rl.removeOldVisitors()
 
@@ -74,21 +66,21 @@ func (rl *ReqLimiter) Limit(next http.Handler) http.Handler {
 		ip, _, err := net.SplitHostPort(r.RemoteAddr)
 		if err != nil {
 			rl.resErr.Write(w, r, http.StatusInternalServerError, "Internal Server Error #3")
-			log.Printf("in  %v %v %v - Error SplitHostPort %v", r.Method, r.RemoteAddr, r.RequestURI, err)
+			log.Printf("in  %v %v %v - Error SplitHostPort %v", r.RemoteAddr, r.Method, r.RequestURI, err)
 
 			return
 		}
 
 		limiter := rl.getVisitor(ip)
 
-		log.Printf("in  %v %v %v", r.Method, r.RemoteAddr, r.RequestURI)
+		reqlog.LogURLAndRequesterInfo(r)
 
 		if err := limiter.Wait(r.Context()); err != nil {
 			if r.Context().Err() == nil {
 				rl.resErr.Write(w, r, http.StatusTooManyRequests, "Too Many Requests")
-				log.Printf("rej %v %v %v TooManyRequests %v", r.Method, r.RemoteAddr, r.RequestURI, err)
+				log.Printf("rej %v %v %v TooManyRequests %v", r.RemoteAddr, r.Method, r.RequestURI, err)
 			} else {
-				log.Printf("XXX %v %v %v %v", r.Method, r.RemoteAddr, r.RequestURI, err)
+				log.Printf("XXX %v %v %v %v", r.RemoteAddr, r.Method, r.RequestURI, err)
 			}
 
 			return

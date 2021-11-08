@@ -105,13 +105,13 @@ func (m *Metrics) count(next http.Handler) http.Handler {
 		metrics.AddSampleWithLabels([]string{"request_duration"}, float32(duration.Milliseconds()), labels)
 
 		log.Printf("out %v %v %v %v c=%v a=%v i=%v h=%v",
-			r.Method, r.RemoteAddr, r.URL, duration, m.conn, m.active, m.idle, m.hijacked)
+			r.RemoteAddr, r.Method, r.URL, duration, m.conn, m.active, m.idle, m.hijacked)
 	})
 }
 
 // updateConnCounters increments/decrements the number of connections.
 func (m *Metrics) updateConnCounters() func(net.Conn, http.ConnState) {
-	return func(nc net.Conn, cs http.ConnState) {
+	return func(_ net.Conn, cs http.ConnState) {
 		switch cs {
 		// StateNew: the client just connects to TealAPI expecting a request.
 		// Transition to either StateActive or StateClosed.
@@ -139,7 +139,7 @@ func (m *Metrics) updateConnCounters() func(net.Conn, http.ConnState) {
 }
 
 func (m *Metrics) updateConnCountersAtomic() func(net.Conn, http.ConnState) {
-	return func(nc net.Conn, cs http.ConnState) {
+	return func(_ net.Conn, cs http.ConnState) {
 		switch cs {
 		case http.StateNew:
 			atomic.AddInt64(&m.conn, 1)
