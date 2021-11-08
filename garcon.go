@@ -149,7 +149,7 @@ func LogRequests(next http.Handler) http.Handler {
 
 func isSeparator(c rune) bool {
 	switch c {
-	case ',', '\t', '\n', '\v', '\f', '\r':
+	case ',', ' ', '\t', '\n', '\v', '\f', '\r':
 		return true
 	}
 
