@@ -76,8 +76,8 @@ import (
 func main() {
     s := garcon.Garcon{
         Version:        "MyApp-1.2.0",
-        Resp:           "https://my.dns.co/doc",
-        AllowedOrigins: []string{"https://my.dns.co"},
+        Resp:           "https://my-dns.co/doc",
+        AllowedOrigins: []string{"https://my-dns.co"},
         OPAFilenames:   []string{"my-auth.rego"},
     }
 
@@ -93,7 +93,7 @@ func main() {
 ```
 $ go build ./examples/high-level && ./high-level
 2021/10/26 16:55:37 Prometheus export http://localhost:9093
-2021/10/26 16:55:37 CORS: Set origin prefixes: [https://my.dns.co http://localhost: http://192.168.1.]
+2021/10/26 16:55:37 CORS: Set origin prefixes: [https://my-dns.co http://localhost: http://192.168.1.]
 2021/10/26 16:55:37 Middleware CORS: {AllowedOrigins:[] AllowOriginFunc:0x6e6ee0 AllowOriginRequestFunc:<nil> AllowedMethods:[GET] AllowedHeaders:[Origin Accept Content-Type Authorization Cookie] ExposedHeaders:[] MaxAge:60 AllowCredentials:true OptionsPassthrough:false Debug:true}
 2021/10/26 16:55:37 Enable PProf endpoints: http://localhost:8093/debug/pprof
 2021/10/26 16:55:37 Middleware response HTTP header: Set Server MyBackendName-1.2.0
@@ -155,7 +155,7 @@ but with authentication enabled:
 ```
 $ go build ./examples/high-level && ./high-level -auth
 2021/10/26 16:51:30 Prometheus export http://localhost:9093
-2021/10/26 16:51:30 CORS: Set origin prefixes: [https://my.dns.co http://localhost: http://192.168.1.]
+2021/10/26 16:51:30 CORS: Set origin prefixes: [https://my-dns.co http://localhost: http://192.168.1.]
 2021/10/26 16:51:30 Middleware CORS: {AllowedOrigins:[] AllowOriginFunc:0x6e6ee0 AllowOriginRequestFunc:<nil> AllowedMethods:[GET] AllowedHeaders:[Origin Accept Content-Type Authorization Cookie] ExposedHeaders:[] MaxAge:60 AllowCredentials:true OptionsPassthrough:false Debug:true}
 2021/10/26 16:51:30 OPA: load "examples/sample-auth.rego"
 2021/10/26 16:51:30 Enable PProf endpoints: http://localhost:8093/debug/pprof
@@ -188,7 +188,7 @@ Content-Length: 80
 
 {"error":"Unauthorized",
 "path":"/api/v1/items",
-"doc":"https://my.dns.co/doc"}
+"doc":"https://my-dns.co/doc"}
 ```
 
 The corresponding garcon logs:
@@ -239,13 +239,13 @@ The corresponding garcon logs:
 ### 8. With Authorization and Origin headers
 
 ```
-curl -D - http://localhost:8080/api/v1/items -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb2dnZWRJbkFzIjoiYWRtaW4iLCJpYXQiOjE0MjI3Nzk2Mzh9.gzSraSYS8EXBxLN_oWnFSRgCzcmJmMjLiuyu5CSpyHI' -H 'Origin: https://my.dns.co'
+curl -D - http://localhost:8080/api/v1/items -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb2dnZWRJbkFzIjoiYWRtaW4iLCJpYXQiOjE0MjI3Nzk2Mzh9.gzSraSYS8EXBxLN_oWnFSRgCzcmJmMjLiuyu5CSpyHI' -H 'Origin: https://my-dns.co'
 ```
 
 ```yaml
 HTTP/1.1 200 OK
 Access-Control-Allow-Credentials: true
-Access-Control-Allow-Origin: https://my.dns.co
+Access-Control-Allow-Origin: https://my-dns.co
 Content-Type: application/json
 Server: MyBackendName-1.2.0
 Vary: Origin
@@ -260,8 +260,8 @@ The corresponding garcon logs:
 ```
 2021/10/26 17:12:50 in  GET [::1]:53340 /api/v1/items
 [cors] 2021/10/26 17:12:50 Handler: Actual request
-2021/10/26 17:12:50 CORS: Accept https://my.dns.co because starts with prefix https://my.dns.co
-[cors] 2021/10/26 17:12:50   Actual response added headers: map[Access-Control-Allow-Credentials:[true] Access-Control-Allow-Origin:[https://my.dns.co] Server:[MyBackendName-1.2.0] Vary:[Origin]]
+2021/10/26 17:12:50 CORS: Accept https://my-dns.co because starts with prefix https://my-dns.co
+[cors] 2021/10/26 17:12:50   Actual response added headers: map[Access-Control-Allow-Credentials:[true] Access-Control-Allow-Origin:[https://my-dns.co] Server:[MyBackendName-1.2.0] Vary:[Origin]]
 2021/10/26 17:12:50 out GET [::1]:53340 /api/v1/items 385.422µs c=3 a=3 i=2 h=0
 ```
 
@@ -300,7 +300,7 @@ func main() {
 
 func setMiddlewares() (middlewares chain.Chain, connState func(net.Conn, http.ConnState)) {
     // Uniformize error responses with API doc
-    resErr := reserr.New("https://my.dns.co/doc")
+    resErr := reserr.New("https://my-dns.co/doc")
 
     // Start a metrics server in background if export port > 0.
     // The metrics server is for use with Prometheus or another compatible monitoring tool.
@@ -318,7 +318,7 @@ func setMiddlewares() (middlewares chain.Chain, connState func(net.Conn, http.Co
     }
 
     // CORS
-    allowedOrigins := []string{"https://my.dns.co"}
+    allowedOrigins := []string{"https://my-dns.co"}
 
     middlewares = middlewares.Append(
         garcon.LogRequests,

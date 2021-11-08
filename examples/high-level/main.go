@@ -30,20 +30,21 @@ func main() {
 	flag.Parse()
 
 	// other Garcon settings
-	s := garcon.Garcon{
+	g := garcon.Garcon{
 		Version:        "MyBackendName-1.2.0",
-		ResErr:         "https://my.dns.co/doc",
-		AllowedOrigins: []string{"https://my.dns.co"},
+		ResErr:         "https://my-dns.co/doc",
+		AllowedOrigins: []string{"https://my-dns.co"},
+		OPAFilenames:   []string{},
 	}
 
 	if *auth {
-		s.OPAFilenames = []string{authCfg}
+		g.OPAFilenames = []string{authCfg}
 	}
 
 	// handles both REST API and static web files
-	h := handler(s.ResErr)
+	h := handler(g.ResErr)
 
-	err := s.Run(h, mainPort, pprofPort, expPort, burst, reqMinute, devMode)
+	err := g.Run(h, mainPort, pprofPort, expPort, burst, reqMinute, devMode)
 	log.Fatal(err)
 }
 

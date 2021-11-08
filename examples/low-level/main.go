@@ -27,8 +27,8 @@ import (
 )
 
 // Garcon settings
-const apiDoc = "https://my.dns.co/doc"
-const allowedProdOrigin = "https://my.dns.co"
+const apiDoc = "https://my-dns.co/doc"
+const allowedProdOrigin = "https://my-dns.co"
 const allowedDevOrigins = "http://localhost:  http://192.168.1."
 const serverHeader = "MyBackendName-1.2.0"
 const authCfg = "examples/sample-auth.rego"
