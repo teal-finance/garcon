@@ -66,7 +66,7 @@ func (s *Garcon) Setup(pprofPort, expPort, reqBurst, reqMinute int, devMode bool
 	}
 
 	if devMode {
-		s.AllowedOrigins = append(s.AllowedOrigins, DevOrigins...)
+		s.AllowedOrigins = appendUniques(s.AllowedOrigins, DevOrigins)
 	}
 
 	middlewares = middlewares.Append(
@@ -160,4 +160,22 @@ func isSeparator(c rune) bool {
 	}
 
 	return false
+}
+
+func appendIfMissing(slice []string, in string) []string {
+	for _, s := range slice {
+		if s == in {
+			return slice
+		}
+	}
+
+	return append(slice, in)
+}
+
+func appendUniques(slice, inputs []string) []string {
+	for _, in := range inputs {
+		slice = appendIfMissing(slice, in)
+	}
+
+	return slice
 }
