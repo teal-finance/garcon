@@ -66,7 +66,7 @@ func (s *Garcon) Setup(pprofPort, expPort, reqBurst, reqMinute int, devMode bool
 	}
 
 	if devMode {
-		s.AllowedOrigins = appendUniques(s.AllowedOrigins, DevOrigins)
+		s.AllowedOrigins = AppendPrefixes(s.AllowedOrigins, DevOrigins)
 	}
 
 	middlewares = middlewares.Append(
@@ -162,19 +162,27 @@ func isSeparator(c rune) bool {
 	return false
 }
 
-func appendIfMissing(slice []string, in string) []string {
-	for _, s := range slice {
-		if s == in {
+func insertPrefix(slice []string, p string) []string {
+	for i, s := range slice {
+		// check if `s` is a prefix of `p`
+		if len(s) <= len(p) {
+			if s == p[:len(s)] {
+				return slice
+			}
+		} else // is `p` a prefix of `s`?
+		if s[:len(p)] == p {
+			slice[i] = p // replace `s` by `p`
+
 			return slice
 		}
 	}
 
-	return append(slice, in)
+	return append(slice, p)
 }
 
-func appendUniques(slice, inputs []string) []string {
-	for _, in := range inputs {
-		slice = appendIfMissing(slice, in)
+func AppendPrefixes(slice, prefixes []string) []string {
+	for _, p := range prefixes {
+		slice = insertPrefix(slice, p)
 	}
 
 	return slice
