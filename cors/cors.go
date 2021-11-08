@@ -37,9 +37,7 @@ func Handler(origins []string, debug bool) func(next http.Handler) http.Handler 
 		Debug:                  debug, // verbose logs
 	} // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Max-Age
 
-	for i, o := range origins {
-		origins[i] = insertSchema(o)
-	}
+	InsertSchema(origins)
 
 	if len(origins) == 1 {
 		options.AllowOriginFunc = oneOrigin(origins[0])
@@ -52,13 +50,13 @@ func Handler(origins []string, debug bool) func(next http.Handler) http.Handler 
 	return cors.New(options).Handler
 }
 
-func insertSchema(domain string) string {
-	if !strings.HasPrefix(domain, "https://") &&
-		!strings.HasPrefix(domain, "http://") {
-		return "http://" + domain
+func InsertSchema(domains []string) {
+	for i, dns := range domains {
+		if !strings.HasPrefix(dns, "https://") &&
+			!strings.HasPrefix(dns, "http://") {
+			domains[i] = "http://" + dns
+		}
 	}
-
-	return domain
 }
 
 func oneOrigin(addr string) func(origin string) bool {
