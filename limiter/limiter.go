@@ -58,7 +58,7 @@ func (rl *ReqLimiter) Limit(next http.Handler) http.Handler {
 	log.Printf("Middleware RateLimiter: burst=%v rate=%v/s with ",
 		rl.initLimiter.Burst(), rl.initLimiter.Limit())
 	log.Print("Middleware RateLimiter also logs the following requester info: " +
-		reqlog.RequesterInfoExplanation)
+		reqlog.BrowserInfoExplanation)
 
 	go rl.removeOldVisitors()
 
@@ -73,7 +73,7 @@ func (rl *ReqLimiter) Limit(next http.Handler) http.Handler {
 
 		limiter := rl.getVisitor(ip)
 
-		reqlog.LogURLAndRequesterInfo(r)
+		reqlog.LogURLAndBrowserInfo(r)
 
 		if err := limiter.Wait(r.Context()); err != nil {
 			if r.Context().Err() == nil {

@@ -27,41 +27,93 @@ func LogRequests(next http.Handler) http.Handler {
 
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			LogReqIPAndURL(r)
+			LogIPAndURL(r)
 			next.ServeHTTP(w, r)
 		})
 }
 
 // LogVerbose is the middleware to log the incoming HTTP requests and verbose requester information.
 func LogVerbose(next http.Handler) http.Handler {
-	log.Print("Middleware logger: requested URL, remote IP and also: " + RequesterInfoExplanation)
+	log.Print("Middleware logger: requested URL, remote IP and also: " + BrowserInfoExplanation)
 
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			LogURLAndRequesterInfo(r)
+			LogURLAndBrowserInfo(r)
 			next.ServeHTTP(w, r)
 		})
 }
 
-// LogReqIPAndURL logs the requester IP and the requested URL.
-func LogReqIPAndURL(r *http.Request) {
+// LogIPAndURL logs the requester IP and the requested URL.
+func LogIPAndURL(r *http.Request) {
 	log.Printf("in  %v %v %v", r.RemoteAddr, r.Method, r.RequestURI)
 }
 
-// LogURLAndRequesterInfo is similar to LogReqIPAndURL, but also logs much more requester information.
-func LogURLAndRequesterInfo(r *http.Request) {
-	log.Printf("in  %v %v %v R=%q L=%q U=%q A=%q E=%q C=%q",
-		r.RemoteAddr, r.Method, r.RequestURI,
-		r.Header.Get("Referer"), r.Header.Get("Accept-Language"),
-		r.Header.Get("User-Agent"), r.Header.Get("Accept"),
-		r.Header.Get("Accept-Encoding"), r.Header.Get("Accept-Charset"))
+// LogURLAndBrowserInfo extends LogReqIPAndURL by logging much more requester information.
+// Attention! Collecting such requester information is considered as browser fingerprints.
+// When fingerprinting is used to identify users, it is part of the personal data
+// and must comply with GDPR. In that case the website must have a legitimate reason to do so.
+// Before enabling the fingerprinting, the user must understand it and give their freely-given informed consent such as the settings change from “no” to “yes”.
+func LogURLAndBrowserInfo(r *http.Request) {
+	line := "in  " +
+		r.RemoteAddr + " " +
+		r.Method + " " +
+		r.RequestURI + " " +
+		// 1. Accept-Language, the language preferred by the user.
+		r.Header.Get("Accept-Language") + " " +
+		// 2. User-Agent, name and version of the browser and OS.
+		r.Header.Get("User-Agent")
+
+	// 3. R=Referer, the website from which the request originated.
+	if referer := r.Header.Get("Referer"); referer != "" {
+		line += " R=" + referer
+	}
+
+	// 4. A=Accept, the content types the browser prefers.
+	if a := r.Header.Get("Accept"); a != "" {
+		line += " A=" + a
+	}
+
+	// 5. E=Accept-Encoding, the compression formats the browser supports.
+	if ae := r.Header.Get("Accept-Encoding"); ae != "" {
+		line += " E=" + ae
+	}
+
+	// 6. Connection, can be empty, "keep-alive" or "close".
+	if c := r.Header.Get("Connection"); c != "" {
+		line += " " + c
+	}
+
+	// 7, DNT (Do Not Track) is being dropped by web standards and browsers.
+	if r.Header.Get("DNT") != "" {
+		line += " DNT"
+	}
+
+	// 8. Cache-Control, how the browser is caching data.
+	if cc := r.Header.Get("Cache-Control"); cc != "" {
+		line += " " + cc
+	}
+
+	// 9. Authorization and/or Cookie content.
+
+	if a := r.Header.Get("Authorization"); a != "" {
+		line += " " + a
+	}
+
+	if c := r.Header.Get("Cookie"); c != "" {
+		line += " " + c
+	}
+
+	log.Print(line)
 }
 
-// RequesterInfoExplanation provides a description of the logged HTTP headers.
-const RequesterInfoExplanation = `
-R=Referer, the website from which the request originated. 
-L=Accept-Language, the language preferred by the user. 
-U=User-Agent, name and version of the browser and OS. 
-A=Accept, the content types the browser prefers. 
-E=Accept-Encoding, the compression formats the browser supports. 
-C=Accept-Charset, the character-set the browser prefers.`
+// BrowserInfoExplanation provides a description of the logged HTTP headers.
+const BrowserInfoExplanation = `
+1. Accept-Language, the language preferred by the user. 
+2. User-Agent, name and version of the browser and OS. 
+3. R=Referer, the website from which the request originated. 
+4. A=Accept, the content types the browser prefers. 
+5. E=Accept-Encoding, the compression formats the browser supports. 
+6. Connection, can be empty, "keep-alive" or "close". 
+7, DNT (Do Not Track) is being dropped by web standards and browsers. 
+8. Cache-Control, how the browser is caching data. 
+9. Authorization and/or Cookie content.`
