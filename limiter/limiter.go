@@ -33,8 +33,8 @@ type ReqLimiter struct {
 }
 
 type visitor struct {
-	limiter  *rate.Limiter
 	lastSeen time.Time
+	limiter  *rate.Limiter
 }
 
 func New(maxReqBurst, maxReqPerMinute int, devMode bool, resErr reserr.ResErr) ReqLimiter {
