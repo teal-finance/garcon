@@ -28,6 +28,7 @@ import (
 	"github.com/teal-finance/garcon/metrics"
 	"github.com/teal-finance/garcon/opa"
 	"github.com/teal-finance/garcon/pprof"
+	"github.com/teal-finance/garcon/reqlog"
 	"github.com/teal-finance/garcon/reserr"
 )
 
@@ -58,7 +59,7 @@ func (s *Garcon) Setup(pprofPort, expPort, reqBurst, reqMinute int, devMode bool
 	middlewares, connState := s.metrics.StartServer(expPort, devMode)
 
 	if reqMinute == 0 {
-		middlewares = middlewares.Append(LogRequests)
+		middlewares = middlewares.Append(reqlog.LogVerbose)
 	} else {
 		reqLimiter := limiter.New(reqBurst, reqMinute, devMode, s.ResErr)
 		middlewares = middlewares.Append(reqLimiter.Limit)
@@ -136,26 +137,6 @@ func ServerHeader(version string) func(next http.Handler) http.Handler {
 	}
 }
 
-// LogRequests logs the incoming HTTP requests.
-func LogRequests(next http.Handler) http.Handler {
-	log.Print("Middleware logger: log requested URLs and remote addresses")
-
-	return http.HandlerFunc(
-		func(w http.ResponseWriter, r *http.Request) {
-			log.Printf("in  %v %v %v", r.Method, r.RemoteAddr, r.RequestURI)
-			next.ServeHTTP(w, r)
-		})
-}
-
-func isSeparator(c rune) bool {
-	switch c {
-	case ',', ' ', '\t', '\n', '\v', '\f', '\r':
-		return true
-	}
-
-	return false
-}
-
 // SplitClean splits the values and trim them.
 func SplitClean(values string) []string {
 	splitValues := strings.FieldsFunc(values, isSeparator)
@@ -170,4 +151,13 @@ func SplitClean(values string) []string {
 	}
 
 	return cleanValues
+}
+
+func isSeparator(c rune) bool {
+	switch c {
+	case ',', ' ', '\t', '\n', '\v', '\f', '\r':
+		return true
+	}
+
+	return false
 }

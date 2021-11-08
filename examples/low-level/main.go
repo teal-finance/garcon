@@ -23,6 +23,7 @@ import (
 	"github.com/teal-finance/garcon/metrics"
 	"github.com/teal-finance/garcon/opa"
 	"github.com/teal-finance/garcon/pprof"
+	"github.com/teal-finance/garcon/reqlog"
 	"github.com/teal-finance/garcon/reserr"
 )
 
@@ -74,7 +75,7 @@ func setMiddlewares(resErr reserr.ResErr) (middlewares chain.Chain, connState fu
 	allowedOrigins := garcon.SplitClean(corsConfig)
 
 	middlewares = middlewares.Append(
-		garcon.LogRequests,
+		reqlog.LogRequests,
 		reqLimiter.Limit,
 		garcon.ServerHeader(serverHeader),
 		cors.Handler(allowedOrigins, devMode),
@@ -140,7 +141,7 @@ func handler(resErr reserr.ResErr) http.Handler {
 	return r
 }
 
-func items(w http.ResponseWriter, r *http.Request) {
+func items(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	_, _ = w.Write([]byte(`["item1","item2","item3"]`))
 }
