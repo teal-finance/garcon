@@ -93,7 +93,7 @@ func (opa Policy) Auth(next http.Handler) http.Handler {
 		rs, err := rg.Eval(context.Background())
 		if err != nil || len(rs) == 0 {
 			resErr.Write(w, r, http.StatusInternalServerError, "Internal Server Error #1")
-			log.Print("ERROR OPA Eval: ", err)
+			log.Print("ERR OPA Eval: ", err)
 
 			return
 		}
@@ -101,7 +101,7 @@ func (opa Policy) Auth(next http.Handler) http.Handler {
 		allow, ok := rs[0].Expressions[0].Value.(bool)
 		if !ok {
 			resErr.Write(w, r, http.StatusInternalServerError, "Internal Server Error #2")
-			log.Print("ERROR missing OPA data in ", rs)
+			log.Print("ERR missing OPA data in ", rs)
 
 			return
 		}

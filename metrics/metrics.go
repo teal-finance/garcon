@@ -70,13 +70,13 @@ func (m *Metrics) StartServer(port int, devMode bool) (chain.Chain, func(net.Con
 func handler() http.Handler {
 	sink, err := prometheus.NewPrometheusSink()
 	if err != nil {
-		log.Print("ERROR: NewPrometheusSink cannot register sink because ", err)
+		log.Print("ERR: NewPrometheusSink cannot register sink because ", err)
 
 		return nil
 	}
 
 	if _, err := metrics.NewGlobal(metrics.DefaultConfig("Rainbow"), sink); err != nil {
-		log.Print("ERROR: Prometheus export is not able to provide metrics because ", err)
+		log.Print("ERR: Prometheus export is not able to provide metrics because ", err)
 
 		return nil
 	}
@@ -104,13 +104,13 @@ func (m *Metrics) count(next http.Handler) http.Handler {
 		duration := time.Since(start)
 		metrics.AddSampleWithLabels([]string{"request_duration"}, float32(duration.Milliseconds()), labels)
 
-		log.Printf("out %v %v %v %v c=%v a=%v i=%v h=%v",
-			r.RemoteAddr, r.Method, r.URL, duration, m.conn, m.active, m.idle, m.hijacked)
+		log.Print("out ", r.RemoteAddr, " ", r.Method, " ", r.URL, " ", duration,
+			" c=", m.conn, " a=", m.active, " i=", m.idle, " h=", m.hijacked)
 	})
 }
 
 // updateConnCounters increments/decrements the number of connections.
-func (m *Metrics) updateConnCounters() func(net.Conn, http.ConnState) {
+func (m *Metrics) updateConnCounters() (connState func(net.Conn, http.ConnState)) {
 	return func(_ net.Conn, cs http.ConnState) {
 		switch cs {
 		// StateNew: the client just connects to TealAPI expecting a request.
@@ -138,7 +138,7 @@ func (m *Metrics) updateConnCounters() func(net.Conn, http.ConnState) {
 	}
 }
 
-func (m *Metrics) updateConnCountersAtomic() func(net.Conn, http.ConnState) {
+func (m *Metrics) updateConnCountersAtomic() (connState func(net.Conn, http.ConnState)) {
 	return func(_ net.Conn, cs http.ConnState) {
 		switch cs {
 		case http.StateNew:

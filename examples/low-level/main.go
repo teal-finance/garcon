@@ -2,8 +2,8 @@
 // No Rights Reserved - (CC) ZERO - (0) PUBLIC DOMAIN
 //
 // To the extent possible under law, the Teal.Finance contributors
-// have waived all copyright and related or neighboring rights
-// to this file "full-example_test.go" to be copied without restrictions.
+// have waived all copyright and related or neighboring rights to this
+// example file "low-level/main.go" to be modified without restrictions.
 // Refer to https://creativecommons.org/publicdomain/zero/1.0
 
 package main
@@ -18,12 +18,12 @@ import (
 	"github.com/teal-finance/garcon"
 	"github.com/teal-finance/garcon/chain"
 	"github.com/teal-finance/garcon/cors"
-	"github.com/teal-finance/garcon/fileserver"
 	"github.com/teal-finance/garcon/limiter"
 	"github.com/teal-finance/garcon/metrics"
 	"github.com/teal-finance/garcon/opa"
 	"github.com/teal-finance/garcon/pprof"
 	"github.com/teal-finance/garcon/reserr"
+	"github.com/teal-finance/garcon/webserver"
 )
 
 // Garcon settings
@@ -123,11 +123,11 @@ func handler(resErr reserr.ResErr) http.Handler {
 	r := chi.NewRouter()
 
 	// Static website files
-	fs := fileserver.FileServer{Dir: "examples/www", ResErr: resErr}
-	r.Get("/", fs.ServeFile("index.html", "text/html; charset=utf-8"))
-	r.Get("/js/*", fs.ServeDir("text/javascript; charset=utf-8"))
-	r.Get("/css/*", fs.ServeDir("text/css; charset=utf-8"))
-	r.Get("/images/*", fs.ServeImages())
+	ws := webserver.WebServer{Dir: "examples/www", ResErr: resErr}
+	r.Get("/", ws.ServeFile("index.html", "text/html; charset=utf-8"))
+	r.Get("/js/*", ws.ServeDir("text/javascript; charset=utf-8"))
+	r.Get("/css/*", ws.ServeDir("text/css; charset=utf-8"))
+	r.Get("/images/*", ws.ServeImages())
 
 	// API
 	r.Get("/api/v1/items", items)

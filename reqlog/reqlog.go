@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-// Package reqlog logs incoming request URL and requester information.
+// Package reqlog logs incoming request URL and browser fingerprints.
 package reqlog
 
 import (
@@ -27,33 +27,33 @@ func LogRequests(next http.Handler) http.Handler {
 
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			LogIPAndURL(r)
+			LogIPMethodURL(r)
 			next.ServeHTTP(w, r)
 		})
 }
 
-// LogVerbose is the middleware to log the incoming HTTP requests and verbose requester information.
+// LogVerbose is the middleware to log the incoming HTTP requests and verbose browser fingerprints.
 func LogVerbose(next http.Handler) http.Handler {
-	log.Print("Middleware logger: requested URL, remote IP and also: " + BrowserInfoExplanation)
+	log.Print("Middleware logger: requested URL, remote IP and also: " + FingerprintExplanation)
 
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			LogURLAndBrowserInfo(r)
+			log.Print(IPMethodURLFingerprint(r))
 			next.ServeHTTP(w, r)
 		})
 }
 
-// LogIPAndURL logs the requester IP and the requested URL.
-func LogIPAndURL(r *http.Request) {
-	log.Printf("in  %v %v %v", r.RemoteAddr, r.Method, r.RequestURI)
+// LogIPMethodURL logs the requester IP and the requested URL.
+func LogIPMethodURL(r *http.Request) {
+	log.Print("in  ", r.RemoteAddr, " ", r.Method, " ", r.RequestURI)
 }
 
-// LogURLAndBrowserInfo extends LogReqIPAndURL by logging much more requester information.
-// Attention! Collecting such requester information is considered as browser fingerprints.
-// When fingerprinting is used to identify users, it is part of the personal data
-// and must comply with GDPR. In that case the website must have a legitimate reason to do so.
-// Before enabling the fingerprinting, the user must understand it and give their freely-given informed consent such as the settings change from “no” to “yes”.
-func LogURLAndBrowserInfo(r *http.Request) {
+// IPMethodURLFingerprint extends LogReqIPAndURL by logging browser fingerprints.
+// Attention! When fingerprinting is used to identify users, it is part of the personal data
+// and must comply with GDPR. In that case, the website must have a legitimate reason to do so.
+// Before enabling the fingerprinting, the user must understand it
+// and give their freely-given informed consent such as the settings change from “no” to “yes”.
+func IPMethodURLFingerprint(r *http.Request) string {
 	line := "in  " +
 		r.RemoteAddr + " " +
 		r.Method + " " +
@@ -103,17 +103,17 @@ func LogURLAndBrowserInfo(r *http.Request) {
 		line += " " + c
 	}
 
-	log.Print(line)
+	return line
 }
 
-// BrowserInfoExplanation provides a description of the logged HTTP headers.
-const BrowserInfoExplanation = `
+// FingerprintExplanation provides a description of the logged HTTP headers.
+const FingerprintExplanation = `
 1. Accept-Language, the language preferred by the user. 
 2. User-Agent, name and version of the browser and OS. 
 3. R=Referer, the website from which the request originated. 
 4. A=Accept, the content types the browser prefers. 
 5. E=Accept-Encoding, the compression formats the browser supports. 
 6. Connection, can be empty, "keep-alive" or "close". 
-7, DNT (Do Not Track) is being dropped by web standards and browsers. 
+7. DNT (Do Not Track) can be used by Firefox (dropped by web standards). 
 8. Cache-Control, how the browser is caching data. 
 9. Authorization and/or Cookie content.`

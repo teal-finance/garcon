@@ -24,6 +24,7 @@ import (
 
 	"github.com/teal-finance/garcon/chain"
 	"github.com/teal-finance/garcon/cors"
+	"github.com/teal-finance/garcon/jwtperm"
 	"github.com/teal-finance/garcon/limiter"
 	"github.com/teal-finance/garcon/metrics"
 	"github.com/teal-finance/garcon/opa"
@@ -32,74 +33,185 @@ import (
 	"github.com/teal-finance/garcon/reserr"
 )
 
-type Garcon struct {
-	Version string
-	ResErr  reserr.ResErr
-
-	// CORS
-	AllowedOrigins []string // used for CORS
-
-	// OPA
-	OPAFilenames []string
-
-	metrics metrics.Metrics
-}
-
 // DevOrigins provides the development origins:
-//  - yarn run vite --port 3000
-//  - yarn run vite preview --port 5000
-//  - localhost:8085 on multidevices: web autoreload using https://github.com/synw/fwr
-//  - flutter run --web-port=8080
-//  - 192.168.1.x + any port on tablet: mobile app using fast builtin autoreload
+// - yarn run vite --port 3000
+// - yarn run vite preview --port 5000
+// - localhost:8085 on multidevices: web autoreload using https://github.com/synw/fwr
+// - flutter run --web-port=8080
+// - 192.168.1.x + any port on tablet: mobile app using fast builtin autoreload.
 var DevOrigins = []string{"http://localhost:", "http://192.168.1."}
 
-func (s *Garcon) Setup(pprofPort, expPort, reqBurst, reqMinute int, devMode bool) (chain.Chain, func(net.Conn, http.ConnState), error) {
-	pprof.StartServer(pprofPort)
+type Garcon struct {
+	ConnState      func(net.Conn, http.ConnState)
+	JWTChecker     *jwtperm.Checker
+	ResErr         reserr.ResErr
+	AllowedOrigins []string
+	Middlewares    chain.Chain
+	metrics        metrics.Metrics
+}
 
-	middlewares, connState := s.metrics.StartServer(expPort, devMode)
+func New(opts ...Option) (*Garcon, error) {
+	s := &settings{
+		origins:      nil,
+		docURL:       "",
+		version:      "",
+		secretKey:    "",
+		planPerm:     nil,
+		opaFilenames: nil,
+		pprofPort:    0,
+		expPort:      0,
+		reqBurst:     0,
+		reqMinute:    0,
+		devMode:      false,
+	}
 
-	if reqMinute == 0 {
-		middlewares = middlewares.Append(reqlog.LogVerbose)
+	for _, opt := range opts {
+		opt(s)
+	}
+
+	pprof.StartServer(s.pprofPort)
+
+	return s.setup()
+}
+
+type Option func(*settings)
+
+func WithOrigins(origins ...string) Option {
+	return func(s *settings) {
+		s.origins = origins
+	}
+}
+
+func WithDocURL(url string) Option {
+	return func(s *settings) {
+		s.docURL = url
+	}
+}
+
+func WithServerHeader(version string) Option {
+	return func(s *settings) {
+		s.version = version
+	}
+}
+
+func WithJWT(secretKey string, planPerm ...interface{}) Option {
+	return func(s *settings) {
+		s.secretKey = secretKey
+		s.planPerm = planPerm
+	}
+}
+
+func WithOPA(opaFilenames ...string) Option {
+	return func(s *settings) {
+		s.opaFilenames = opaFilenames
+	}
+}
+
+func WithLimiter(reqBurst, reqMinute int) Option {
+	return func(s *settings) {
+		s.reqBurst = reqBurst
+		s.reqMinute = reqMinute
+	}
+}
+
+func WithPProf(port int) Option {
+	return func(s *settings) {
+		s.pprofPort = port
+	}
+}
+
+func WithProm(port int) Option {
+	return func(s *settings) {
+		s.expPort = port
+	}
+}
+
+func WithDev(modes ...bool) Option {
+	devMode := true
+	for _, m := range modes {
+		devMode = m
+	}
+
+	return func(s *settings) {
+		s.devMode = devMode
+	}
+}
+
+type settings struct {
+	origins      []string
+	docURL       string
+	version      string
+	secretKey    string
+	planPerm     []interface{}
+	opaFilenames []string
+	pprofPort    int
+	expPort      int
+	reqBurst     int
+	reqMinute    int
+	devMode      bool
+}
+
+func (s *settings) setup() (*Garcon, error) {
+	if s.origins == nil {
+		s.origins = DevOrigins
+	} else if s.devMode {
+		s.origins = AppendPrefixes(s.origins, DevOrigins)
+	}
+
+	if len(s.docURL) > 0 {
+		if strings.HasPrefix(s.docURL, s.origins[0]) || strings.Contains(s.docURL, "://") {
+			// do nothing
+		} else {
+			s.docURL = s.origins[0] + s.docURL
+		}
+	}
+
+	g := Garcon{
+		AllowedOrigins: s.origins,
+		ResErr:         reserr.New(s.docURL),
+		metrics:        metrics.Metrics{},
+		Middlewares:    nil,
+		ConnState:      nil,
+		JWTChecker:     nil,
+	}
+
+	g.Middlewares, g.ConnState = g.metrics.StartServer(s.expPort, s.devMode)
+
+	if s.reqMinute == 0 {
+		g.Middlewares = g.Middlewares.Append(reqlog.LogVerbose)
 	} else {
-		reqLimiter := limiter.New(reqBurst, reqMinute, devMode, s.ResErr)
-		middlewares = middlewares.Append(reqLimiter.Limit)
+		reqLimiter := limiter.New(s.reqBurst, s.reqMinute, s.devMode, g.ResErr)
+		g.Middlewares = g.Middlewares.Append(reqLimiter.Limit)
 	}
 
-	if devMode {
-		s.AllowedOrigins = AppendPrefixes(s.AllowedOrigins, DevOrigins)
-	}
-
-	middlewares = middlewares.Append(
-		ServerHeader(s.Version),
-		cors.Handler(s.AllowedOrigins, devMode),
+	g.Middlewares = g.Middlewares.Append(
+		ServerHeader(s.version),
+		cors.Handler(g.AllowedOrigins, s.devMode),
 	)
 
-	// Endpoint authentication rules (Open Policy Agent)
-	policy, err := opa.New(s.OPAFilenames, s.ResErr)
+	g.JWTChecker = g.NewJWTChecker(s.secretKey, s.planPerm...)
+
+	// Authentication rules (Open Policy Agent)
+	policy, err := opa.New(s.opaFilenames, g.ResErr)
 	if err != nil {
-		return middlewares, connState, err
+		return &g, err
 	}
 
 	if policy.Ready() {
-		middlewares = middlewares.Append(policy.Auth)
+		g.Middlewares = g.Middlewares.Append(policy.Auth)
 	}
 
-	return middlewares, connState, nil
+	return &g, nil
 }
 
 // RunServer runs the HTTP server(s) in foreground.
 // Optionally it also starts a metrics server in background (if export port > 0).
 // The metrics server is for use with Prometheus or another compatible monitoring tool.
-func (s *Garcon) Run(h http.Handler, port, pprofPort, expPort, reqBurst, reqMinute int, devMode bool) error {
-	middlewares, connState, err := s.Setup(pprofPort, expPort, reqBurst, reqMinute, devMode)
-	if err != nil {
-		return err
-	}
-
+func (g *Garcon) Run(h http.Handler, port int) error {
 	// main garcon: REST API or other web servers
 	server := http.Server{
 		Addr:              ":" + strconv.Itoa(port),
-		Handler:           middlewares.Then(h),
+		Handler:           g.Middlewares.Then(h),
 		TLSConfig:         nil,
 		ReadTimeout:       1 * time.Second,
 		ReadHeaderTimeout: 1 * time.Second,
@@ -107,7 +219,7 @@ func (s *Garcon) Run(h http.Handler, port, pprofPort, expPort, reqBurst, reqMinu
 		IdleTimeout:       1 * time.Second,
 		MaxHeaderBytes:    444, // 444 bytes should be enough
 		TLSNextProto:      nil,
-		ConnState:         connState,
+		ConnState:         g.ConnState,
 		ErrorLog:          log.Default(),
 		BaseContext:       nil,
 		ConnContext:       nil,
@@ -115,13 +227,17 @@ func (s *Garcon) Run(h http.Handler, port, pprofPort, expPort, reqBurst, reqMinu
 
 	log.Print("Server listening on http://localhost", server.Addr)
 
-	err = server.ListenAndServe()
+	err := server.ListenAndServe()
 
-	log.Print("ERROR: Install ncat and ss: sudo apt install ncat iproute2")
-	log.Printf("ERROR: Try to listen port %v: sudo ncat -l %v", port, port)
-	log.Printf("ERROR: Get the process using port %v: sudo ss -pan | grep %v", port, port)
+	log.Print("ERR: Install ncat and ss: sudo apt install ncat iproute2")
+	log.Printf("ERR: Try to listen port %v: sudo ncat -l %v", port, port)
+	log.Printf("ERR: Get the process using port %v: sudo ss -pan | grep %v", port, port)
 
 	return err
+}
+
+func (g *Garcon) NewJWTChecker(secretKey string, planPerm ...interface{}) *jwtperm.Checker {
+	return jwtperm.New(g.AllowedOrigins, g.ResErr, secretKey, planPerm...)
 }
 
 // ServerHeader sets the Server HTTP header in the response.
@@ -162,6 +278,14 @@ func isSeparator(c rune) bool {
 	return false
 }
 
+func AppendPrefixes(slice, prefixes []string) []string {
+	for _, p := range prefixes {
+		slice = insertPrefix(slice, p)
+	}
+
+	return slice
+}
+
 func insertPrefix(slice []string, p string) []string {
 	for i, s := range slice {
 		// check if `s` is a prefix of `p`
@@ -169,8 +293,8 @@ func insertPrefix(slice []string, p string) []string {
 			if s == p[:len(s)] {
 				return slice
 			}
-		} else // is `p` a prefix of `s`?
-		if s[:len(p)] == p {
+		} else // is `p` a prefix of `s`?  (preserve i==0)
+		if i > 0 && s[:len(p)] == p {
 			slice[i] = p // replace `s` by `p`
 
 			return slice
@@ -178,12 +302,4 @@ func insertPrefix(slice []string, p string) []string {
 	}
 
 	return append(slice, p)
-}
-
-func AppendPrefixes(slice, prefixes []string) []string {
-	for _, p := range prefixes {
-		slice = insertPrefix(slice, p)
-	}
-
-	return slice
 }

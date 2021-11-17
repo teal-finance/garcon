@@ -31,11 +31,11 @@ func Handler(origins []string, debug bool) func(next http.Handler) http.Handler 
 		AllowedMethods:         []string{http.MethodGet},
 		AllowedHeaders:         []string{"Origin", "Accept", "Content-Type", "Authorization", "Cookie"},
 		ExposedHeaders:         []string{},
-		MaxAge:                 60,
+		MaxAge:                 24 * 3600, // https://developer.mozilla.org/docs/Web/HTTP/Headers/Access-Control-Max-Age
 		AllowCredentials:       true,
 		OptionsPassthrough:     false,
 		Debug:                  debug, // verbose logs
-	} // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Max-Age
+	}
 
 	InsertSchema(origins)
 
@@ -45,21 +45,22 @@ func Handler(origins []string, debug bool) func(next http.Handler) http.Handler 
 		options.AllowOriginFunc = multipleOriginPrefixes(origins)
 	}
 
-	log.Printf("Middleware CORS: %+v", options)
+	log.Printf("CORS: Methods=%v Headers=%v Credentials=%v MaxAge=%v",
+		options.AllowedMethods, options.AllowedHeaders, options.AllowCredentials, options.MaxAge)
 
 	return cors.New(options).Handler
 }
 
-func InsertSchema(domains []string) {
-	for i, dns := range domains {
-		if !strings.HasPrefix(dns, "https://") &&
-			!strings.HasPrefix(dns, "http://") {
-			domains[i] = "http://" + dns
+func InsertSchema(origins []string) {
+	for i, o := range origins {
+		if !strings.HasPrefix(o, "https://") &&
+			!strings.HasPrefix(o, "http://") {
+			origins[i] = "http://" + o
 		}
 	}
 }
 
-func oneOrigin(addr string) func(origin string) bool {
+func oneOrigin(addr string) func(string) bool {
 	log.Print("CORS: Set one origin: ", addr)
 
 	return func(origin string) bool {
@@ -73,15 +74,11 @@ func multipleOriginPrefixes(addrPrefixes []string) func(origin string) bool {
 	return func(origin string) bool {
 		for _, prefix := range addrPrefixes {
 			if strings.HasPrefix(origin, prefix) {
-				log.Printf("CORS: Accept %v because starts with prefix %v", origin, prefix)
-
 				return true
 			}
-
-			log.Printf("CORS: %v does not begin with %v", origin, prefix)
 		}
 
-		log.Printf("CORS: Refuse %v because different from %v", origin, addrPrefixes)
+		log.Print("CORS: Refuse ", origin, " without prefixes ", addrPrefixes)
 
 		return false
 	}

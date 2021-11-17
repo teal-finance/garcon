@@ -12,7 +12,7 @@
 // of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 // See the GNU General Public License for more details.
 
-package fileserver
+package webserver
 
 import (
 	"fmt"
@@ -27,14 +27,14 @@ import (
 	"github.com/teal-finance/garcon/reserr"
 )
 
-type FileServer struct {
+type WebServer struct {
 	Dir    string
 	ResErr reserr.ResErr
 }
 
 // ServeFile handles one specific file (and its specific Content-Type).
-func (fs FileServer) ServeFile(urlPath, contentType string) func(w http.ResponseWriter, r *http.Request) {
-	absPath := path.Join(fs.Dir, urlPath)
+func (ws WebServer) ServeFile(urlPath, contentType string) func(w http.ResponseWriter, r *http.Request) {
+	absPath := path.Join(ws.Dir, urlPath)
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Set aggressive "Cache-Control" because ServeFile() is often used
@@ -42,12 +42,12 @@ func (fs FileServer) ServeFile(urlPath, contentType string) func(w http.Response
 		w.Header().Set("Cache-Control", "public,max-age=31536000,immutable")
 		w.Header().Set("Content-Type", contentType)
 
-		fs.send(w, r, absPath)
+		ws.send(w, r, absPath)
 	}
 }
 
 // ServeDir handles the static files using the same Content-Type.
-func (fs FileServer) ServeDir(contentType string) func(w http.ResponseWriter, r *http.Request) {
+func (ws WebServer) ServeDir(contentType string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if validPath(w, r) {
 			// JS and CSS files should contain a [hash].
@@ -59,26 +59,26 @@ func (fs FileServer) ServeDir(contentType string) func(w http.ResponseWriter, r 
 			w.Header().Set("Cache-Control", "public,max-age=31536000,immutable")
 			w.Header().Set("Content-Type", contentType)
 
-			absPath := path.Join(fs.Dir, r.URL.Path)
-			fs.send(w, r, absPath)
+			absPath := path.Join(ws.Dir, r.URL.Path)
+			ws.send(w, r, absPath)
 		}
 	}
 }
 
 // ServeImages detects the Content-Type depending on the image extension.
-func (fs FileServer) ServeImages() func(w http.ResponseWriter, r *http.Request) {
+func (ws WebServer) ServeImages() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if validPath(w, r) {
 			// Images are supposed never change, else better to create a new image
 			// (or to wait some days the browser clears out data based on LRU).
 			w.Header().Set("Cache-Control", "public,max-age=31536000,immutable")
 
-			absPath, contentType := fs.imagePathAndType(r)
+			absPath, contentType := ws.imagePathAndType(r)
 			if contentType != "" {
 				w.Header().Set("Content-Type", contentType)
 			}
 
-			fs.send(w, r, absPath)
+			ws.send(w, r, absPath)
 		}
 	}
 }
@@ -87,7 +87,7 @@ func (fs FileServer) ServeImages() func(w http.ResponseWriter, r *http.Request) 
 func validPath(w http.ResponseWriter, r *http.Request) bool {
 	if strings.Contains(r.URL.Path, "..") {
 		reserr.Write(w, r, http.StatusBadRequest, "Invalid URL Path Containing '..'")
-		log.Print("WARN Fileserver: reject path with '..' ", r.URL.Path)
+		log.Print("WRN WebServer: reject path with '..' ", r.URL.Path)
 
 		return false
 	}
@@ -95,7 +95,7 @@ func validPath(w http.ResponseWriter, r *http.Request) bool {
 	return true
 }
 
-func (fs FileServer) send(w http.ResponseWriter, r *http.Request, absPath string) {
+func (ws WebServer) send(w http.ResponseWriter, r *http.Request, absPath string) {
 	var (
 		file *os.File
 		err  error
@@ -117,23 +117,23 @@ func (fs FileServer) send(w http.ResponseWriter, r *http.Request, absPath string
 	if file == nil {
 		file, err = os.Open(absPath)
 		if err != nil {
-			fs.ResErr.Write(w, r, http.StatusNotFound, "Page not found")
-			log.Print("WARN Fileserver: ", err)
+			ws.ResErr.Write(w, r, http.StatusNotFound, "Page not found")
+			log.Print("WRN WebServer: ", err)
 
 			return
 		}
 	}
 
 	defer func() {
-		if err := file.Close(); err != nil {
-			log.Print("WARN Fileserver: Close() ", err)
+		if e := file.Close(); e != nil {
+			log.Print("WRN WebServer: Close() ", e)
 		}
 	}()
 
 	fi, err := file.Stat()
 	if err != nil {
-		fs.ResErr.Write(w, r, http.StatusInternalServerError, "Internal Server Error")
-		log.Printf("WARN Fileserver: Stat(%v) %v", absPath, err)
+		ws.ResErr.Write(w, r, http.StatusInternalServerError, "Internal Server Error")
+		log.Print("WRN WebServer: Stat(", absPath, ") ", err)
 
 		return
 	}
@@ -144,9 +144,9 @@ func (fs FileServer) send(w http.ResponseWriter, r *http.Request, absPath string
 	// to handle the headers Range If-Range Etag and Content-Range.
 
 	if n, err := io.Copy(w, file); err != nil {
-		log.Printf("WARN Fileserver: Copy(%v) %v", absPath, err)
+		log.Print("WRN WebServer: Copy(", absPath, ") ", err)
 	} else {
-		log.Printf("Fileserver sent %v %v", absPath, IEC64(n))
+		log.Print("WebServer sent ", absPath, " ", IEC64(n))
 	}
 }
 
@@ -170,7 +170,7 @@ func IEC64(bytes int64) string {
 
 // imagePathAndType returns the path/filename and the Content-Type of the image.
 // If the client (browser) supports AVIF, imagePathAndType replaces the requested image by the AVIF one.
-func (fs FileServer) imagePathAndType(r *http.Request) (absPath, contentType string) {
+func (ws WebServer) imagePathAndType(r *http.Request) (absPath, contentType string) {
 	extPos := extIndex(r.URL.Path)
 
 	// We only check the first Header "Accept":
@@ -183,18 +183,18 @@ func (fs FileServer) imagePathAndType(r *http.Request) (absPath, contentType str
 	const avifContentType = "image/avif"
 	if strings.Contains(scheme, avifContentType) {
 		avifPath := r.URL.Path[:extPos] + "avif"
-		absPath := path.Join(fs.Dir, avifPath)
+		absPath = path.Join(ws.Dir, avifPath)
 
 		_, err := os.Stat(absPath)
 		if err == nil {
 			return absPath, avifContentType
 		}
 
-		log.Printf("Fileserver supports Content-Type=%q but cannot access %q: %v",
-			avifContentType, absPath, err)
+		log.Printf("WRN WebServer supports Content-Type=%q "+
+			"but cannot access %q %v", avifContentType, absPath, err)
 	}
 
-	absPath = path.Join(fs.Dir, r.URL.Path)
+	absPath = path.Join(ws.Dir, r.URL.Path)
 
 	ext := r.URL.Path[extPos:]
 	contentType = imageContentType(ext)
@@ -225,27 +225,28 @@ func imageContentType(ext string) (contentType string) {
 	case "svg":
 		return "image/svg+xml"
 	default:
-		log.Print("Fileserver does not support image extension: ", ext)
+		log.Print("WRN WebServer does not support image extension: ", ext)
 
 		return ""
 	}
 }
 
-// Extension  MIME types
+// Extension  MIME type
 // ---------  --------------------------------
-//  "html":   "text/html; charset=utf-8",
-//  "css":    "text/css; charset=utf-8",
-//  "js":     "text/javascript; charset=utf-8",
-//  "woff2":  "font/woff2",
-//  "csv":    "text/csv",
-//  "json":   "application/json",
-//  "md":     "text/markdown",
-//  "pdf":    "application/pdf",
-//  "xml":    "text/xml; charset=utf-8",
-//  "yaml":   "text/x-yaml",
-//  "svg":    "image/svg+xml",
-//  "avif":   "image/avif",
-//  "gif":    "image/gif",
-//  "webp":   "image/webp",
-//  "png":    "image/png",
-//  "jpg":    "image/jpeg",
+//  .html     text/html; charset=utf-8
+//  .css      text/css; charset=utf-8
+//  .csv      text/csv; charset=utf-8
+//  .xml      text/xml; charset=utf-8
+//  .js       text/javascript; charset=utf-8
+//  .md       text/markdown; charset=utf-8
+//  .yaml     text/x-yaml; charset=utf-8
+//  .json     application/json; charset=utf-8
+//  .pdf      application/pdf
+//  .woff2    font/woff2
+//  .avif     image/avif
+//  .gif      image/gif
+//  .ico      image/x-icon
+//  .jpg      image/jpeg
+//  .png      image/png
+//  .svg      image/svg+xml
+//  .webp     image/webp

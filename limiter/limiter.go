@@ -55,10 +55,8 @@ func New(maxReqBurst, maxReqPerMinute int, devMode bool, resErr reserr.ResErr) R
 }
 
 func (rl *ReqLimiter) Limit(next http.Handler) http.Handler {
-	log.Printf("Middleware RateLimiter: burst=%v rate=%v/s with ",
-		rl.initLimiter.Burst(), rl.initLimiter.Limit())
-	log.Print("Middleware RateLimiter also logs the following requester info: " +
-		reqlog.BrowserInfoExplanation)
+	log.Printf("Middleware RateLimiter + Logger: burst=%v rate=%v/s fingerprints:%v",
+		rl.initLimiter.Burst(), rl.initLimiter.Limit(), reqlog.FingerprintExplanation)
 
 	go rl.removeOldVisitors()
 
@@ -66,21 +64,21 @@ func (rl *ReqLimiter) Limit(next http.Handler) http.Handler {
 		ip, _, err := net.SplitHostPort(r.RemoteAddr)
 		if err != nil {
 			rl.resErr.Write(w, r, http.StatusInternalServerError, "Internal Server Error #3")
-			log.Printf("in  %v %v %v - Error SplitHostPort %v", r.RemoteAddr, r.Method, r.RequestURI, err)
+			log.Print("in  ", r.RemoteAddr, " ", r.Method, " ", r.RequestURI, " ERR SplitHostPort ", err)
 
 			return
 		}
 
 		limiter := rl.getVisitor(ip)
 
-		reqlog.LogURLAndBrowserInfo(r)
+		log.Print(reqlog.IPMethodURLFingerprint(r))
 
 		if err := limiter.Wait(r.Context()); err != nil {
 			if r.Context().Err() == nil {
 				rl.resErr.Write(w, r, http.StatusTooManyRequests, "Too Many Requests")
-				log.Printf("rej %v %v %v TooManyRequests %v", r.RemoteAddr, r.Method, r.RequestURI, err)
+				log.Print("WRN ", r.RemoteAddr, " ", r.Method, " ", r.RequestURI, "TooManyRequests ", err)
 			} else {
-				log.Printf("XXX %v %v %v %v", r.RemoteAddr, r.Method, r.RequestURI, err)
+				log.Print("WRM ", r.RemoteAddr, " ", r.Method, " ", r.RequestURI, " ", err)
 			}
 
 			return
