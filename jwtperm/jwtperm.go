@@ -428,7 +428,7 @@ func (ck *Checker) permFromRefreshBytes(claimsJSON []byte) (perm Perm, errMsg st
 		return perm, err.Error()
 	}
 
-	log.Print("JWT Claims: ", claims)
+	log.Print("JWT Claims: ", *claims)
 
 	perm = ck.permFromRefreshClaims(claims)
 
