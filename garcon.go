@@ -50,122 +50,59 @@ type Garcon struct {
 	metrics        metrics.Metrics
 }
 
+type settings struct {
+	origins      []string
+	docURL       string
+	nameVersion  string
+	secretKey    string
+	planPerm     []interface{}
+	opaFilenames []string
+	pprofPort    int
+	expPort      int
+	reqLogs      int
+	reqBurst     int
+	reqMinute    int
+	devMode      bool
+}
+
 func New(opts ...Option) (*Garcon, error) {
-	s := &settings{
-		origins:      nil,
+	s := settings{
+		origins:      DevOrigins,
 		docURL:       "",
-		version:      "",
+		nameVersion:  "",
 		secretKey:    "",
 		planPerm:     nil,
 		opaFilenames: nil,
 		pprofPort:    0,
 		expPort:      0,
+		reqLogs:      0,
 		reqBurst:     0,
 		reqMinute:    0,
 		devMode:      false,
 	}
 
 	for _, opt := range opts {
-		opt(s)
+		opt(&s)
 	}
 
 	pprof.StartServer(s.pprofPort)
 
-	return s.setup()
-}
-
-type Option func(*settings)
-
-func WithOrigins(origins ...string) Option {
-	return func(s *settings) {
-		s.origins = origins
-	}
-}
-
-func WithDocURL(url string) Option {
-	return func(s *settings) {
-		s.docURL = url
-	}
-}
-
-func WithServerHeader(version string) Option {
-	return func(s *settings) {
-		s.version = version
-	}
-}
-
-func WithJWT(secretKey string, planPerm ...interface{}) Option {
-	return func(s *settings) {
-		s.secretKey = secretKey
-		s.planPerm = planPerm
-	}
-}
-
-func WithOPA(opaFilenames ...string) Option {
-	return func(s *settings) {
-		s.opaFilenames = opaFilenames
-	}
-}
-
-func WithLimiter(reqBurst, reqMinute int) Option {
-	return func(s *settings) {
-		s.reqBurst = reqBurst
-		s.reqMinute = reqMinute
-	}
-}
-
-func WithPProf(port int) Option {
-	return func(s *settings) {
-		s.pprofPort = port
-	}
-}
-
-func WithProm(port int) Option {
-	return func(s *settings) {
-		s.expPort = port
-	}
-}
-
-func WithDev(modes ...bool) Option {
-	devMode := true
-	for _, m := range modes {
-		devMode = m
-	}
-
-	return func(s *settings) {
-		s.devMode = devMode
-	}
-}
-
-type settings struct {
-	origins      []string
-	docURL       string
-	version      string
-	secretKey    string
-	planPerm     []interface{}
-	opaFilenames []string
-	pprofPort    int
-	expPort      int
-	reqBurst     int
-	reqMinute    int
-	devMode      bool
-}
-
-func (s *settings) setup() (*Garcon, error) {
 	if s.origins == nil {
 		s.origins = DevOrigins
 	} else if s.devMode {
 		s.origins = AppendPrefixes(s.origins, DevOrigins)
 	}
 
-	if len(s.docURL) > 0 {
-		if strings.HasPrefix(s.docURL, s.origins[0]) || strings.Contains(s.docURL, "://") {
-			// do nothing
-		} else {
-			s.docURL = s.origins[0] + s.docURL
-		}
+	if len(s.docURL) > 0 &&
+		!strings.HasPrefix(s.docURL, s.origins[0]) &&
+		!strings.Contains(s.docURL, "://") {
+		s.docURL = s.origins[0] + s.docURL
 	}
 
+	return s.new()
+}
+
+func (s settings) new() (*Garcon, error) {
 	g := Garcon{
 		AllowedOrigins: s.origins,
 		ResErr:         reserr.New(s.docURL),
@@ -177,15 +114,22 @@ func (s *settings) setup() (*Garcon, error) {
 
 	g.Middlewares, g.ConnState = g.metrics.StartServer(s.expPort, s.devMode)
 
-	if s.reqMinute == 0 {
+	switch s.reqLogs {
+	case 0:
+		break // do not log incoming HTTP requests
+	case 1:
+		g.Middlewares = g.Middlewares.Append(reqlog.LogRequests)
+	case 2:
 		g.Middlewares = g.Middlewares.Append(reqlog.LogVerbose)
-	} else {
+	}
+
+	if s.reqMinute > 0 {
 		reqLimiter := limiter.New(s.reqBurst, s.reqMinute, s.devMode, g.ResErr)
 		g.Middlewares = g.Middlewares.Append(reqLimiter.Limit)
 	}
 
 	g.Middlewares = g.Middlewares.Append(
-		ServerHeader(s.version),
+		ServerHeader(s.nameVersion),
 		cors.Handler(g.AllowedOrigins, s.devMode),
 	)
 
@@ -202,6 +146,108 @@ func (s *settings) setup() (*Garcon, error) {
 	}
 
 	return &g, nil
+}
+
+type Option func(*settings)
+
+func WithOrigins(origins ...string) Option {
+	return func(s *settings) {
+		s.origins = origins
+	}
+}
+
+func WithDocURL(pathOrURL string) Option {
+	return func(s *settings) {
+		s.docURL = pathOrURL
+	}
+}
+
+func WithServerHeader(nameVersion string) Option {
+	return func(s *settings) {
+		s.nameVersion = nameVersion
+	}
+}
+
+func WithJWT(secretKey string, planPerm ...interface{}) Option {
+	return func(s *settings) {
+		s.secretKey = secretKey
+		s.planPerm = planPerm
+	}
+}
+
+func WithOPA(opaFilenames ...string) Option {
+	return func(s *settings) {
+		s.opaFilenames = opaFilenames
+	}
+}
+
+func WithReqLogs(verbosity ...int) Option {
+	v := 1
+
+	if len(verbosity) > 0 {
+		if len(verbosity) >= 2 {
+			log.Panic("garcon.WithReqLogs() must be called with zero or one argument")
+		}
+
+		v = verbosity[0]
+		if v < 0 || v > 2 {
+			log.Panicf("garcon.WithReqLogs(verbosity=%v) currently accepts values [0, 1, 2] only", v)
+		}
+	}
+
+	return func(s *settings) {
+		s.reqLogs = v
+	}
+}
+
+func WithLimiter(values ...int) Option {
+	var burst, perMinute int
+
+	switch len(values) {
+	case 0:
+		burst = 20
+		perMinute = 4 * burst
+	case 1:
+		burst = values[0]
+		perMinute = 4 * burst
+	case 2:
+		burst = values[0]
+		perMinute = values[1]
+	default:
+		log.Panic("garcon.WithLimiter() must be called with less than three arguments")
+	}
+
+	return func(s *settings) {
+		s.reqBurst = burst
+		s.reqMinute = perMinute
+	}
+}
+
+func WithPProf(port int) Option {
+	return func(s *settings) {
+		s.pprofPort = port
+	}
+}
+
+func WithProm(port int) Option {
+	return func(s *settings) {
+		s.expPort = port
+	}
+}
+
+func WithDev(enable ...bool) Option {
+	devMode := true
+	if len(enable) > 0 {
+		devMode = enable[0]
+
+		if len(enable) >= 2 {
+			log.Panic("garcon.WithDev() must be called with zero or one argument")
+		}
+	}
+
+	return func(s *settings) {
+		s.devMode = devMode
+	}
 }
 
 // RunServer runs the HTTP server(s) in foreground.
