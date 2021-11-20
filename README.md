@@ -96,26 +96,17 @@ go build -race ./examples/high-level && ./high-level
 ```
 
 ```log
-2021/11/20 05:37:05 Prometheus export http://localhost:9093
-2021/11/20 05:37:05 CORS: Set origin prefixes: [http://localhost:8080 http://localhost: http://192.168.1.]
-2021/11/20 05:37:05 CORS: Methods=[GET] Headers=[Origin Accept Content-Type Authorization Cookie] Credentials=true MaxAge=86400
-2021/11/20 05:37:05 JWT not required for dev. origins: [http://localhost:8080 http://localhost: http://192.168.1.]
-2021/11/20 05:37:05 Enable PProf endpoints: http://localhost:8093/debug/pprof
-2021/11/20 05:37:05 Create cookie plan=FreePlan domain=localhost secure=false jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lc3BhY2UiOiJGcmVlUGxhbiIsInVzZXJuYW1lIjoiIiwiZXhwIjoxNjY4OTE5MDI1fQ.rTkWhqRljIkMlaQWhNsFet-HXKP8AE4AJqPXoN_yiPw
-2021/11/20 05:37:05 Create cookie plan=PremiumPlan domain=localhost secure=false jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lc3BhY2UiOiJQcmVtaXVtUGxhbiIsInVzZXJuYW1lIjoiIiwiZXhwIjoxNjY4OTE5MDI1fQ.XJAcJm9fvHnap7nX959hp_wsjTWgI1lxmyLh4dNhjjY
-2021/11/20 05:37:05 Middleware response HTTP header: Set Server MyBackendName-1.2.0
-2021/11/20 05:37:05 Middleware RateLimiter + Logger: burst=100 rate=5/s
-2021/11/20 05:37:05 Middleware logger: requested URL, remote IP and also: 
-1. Accept-Language, the language preferred by the user. 
-2. User-Agent, name and version of the browser and OS. 
-3. R=Referer, the website from which the request originated. 
-4. A=Accept, the content types the browser prefers. 
-5. E=Accept-Encoding, the compression formats the browser supports. 
-6. Connection, can be empty, "keep-alive" or "close". 
-7. DNT (Do Not Track) can be used by Firefox (dropped by web standards). 
-8. Cache-Control, how the browser is caching data. 
-9. Authorization and/or Cookie content.
-2021/11/20 05:37:05 Server listening on http://localhost:8080
+2021/11/20 06:01:15 Enable PProf endpoints: http://localhost:8093/debug/pprof
+2021/11/20 06:01:15 Prometheus export http://localhost:9093
+2021/11/20 06:01:15 CORS: Set origin prefixes: [http://localhost:8080 http://localhost: http://192.168.1.]
+2021/11/20 06:01:15 CORS: Methods=[GET] Headers=[Origin Accept Content-Type Authorization Cookie] Credentials=true MaxAge=86400
+2021/11/20 06:01:15 JWT not required for dev. origins: [http://localhost:8080 http://localhost: http://192.168.1.]
+2021/11/20 06:01:15 Create cookie plan=FreePlan domain=localhost secure=false jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lc3BhY2UiOiJGcmVlUGxhbiIsInVzZXJuYW1lIjoiIiwiZXhwIjoxNjY4OTIwNDc1fQ.48-nhD1hPI5C02u9-ZfsaLuhQ3QEYoA6en1UWqopBFM
+2021/11/20 06:01:15 Create cookie plan=PremiumPlan domain=localhost secure=false jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lc3BhY2UiOiJQcmVtaXVtUGxhbiIsInVzZXJuYW1lIjoiIiwiZXhwIjoxNjY4OTIwNDc1fQ.bnhUEaLh_PAKABr-Pzcuv5phYCC_cC7bkECQszhB6NQ
+2021/11/20 06:01:15 Middleware response HTTP header: Set Server MyBackendName-1.2.0
+2021/11/20 06:01:15 Middleware RateLimiter: burst=100 rate=5/s
+2021/11/20 06:01:15 Middleware logger: requester IP and requested URL
+2021/11/20 06:01:15 Server listening on http://localhost:8080
 ```
 
 ### 2. Embedded PProf server
@@ -197,17 +188,23 @@ go build -race ./examples/high-level && ./high-level -auth
 ```
 
 ```log
-2021/11/20 05:38:58 Prometheus export http://localhost:9093
-2021/11/20 05:38:58 CORS: Set origin prefixes: [http://localhost:8080 http://localhost: http://192.168.1.]
-2021/11/20 05:38:58 CORS: Methods=[GET] Headers=[Origin Accept Content-Type Authorization Cookie] Credentials=true MaxAge=86400
-2021/11/20 05:38:58 JWT not required for dev. origins: [http://localhost:8080 http://localhost: http://192.168.1.]
-2021/11/20 05:38:58 Enable PProf endpoints: http://localhost:8093/debug/pprof
-2021/11/20 05:38:58 Create cookie plan=FreePlan domain=localhost secure=false jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lc3BhY2UiOiJGcmVlUGxhbiIsInVzZXJuYW1lIjoiIiwiZXhwIjoxNjY4OTE5MTM4fQ.PUSoXQ1OJPrVLHdIJgYGfTjesvLfFW9_HoSdfSKOGtk
-2021/11/20 05:38:58 Create cookie plan=PremiumPlan domain=localhost secure=false jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lc3BhY2UiOiJQcmVtaXVtUGxhbiIsInVzZXJuYW1lIjoiIiwiZXhwIjoxNjY4OTE5MTM4fQ.mresv-P8cDzT7Uj9gA8For-5W54WR4pgBPWwDvdwGcQ
-2021/11/20 05:38:58 Middleware response HTTP header: Set Server MyBackendName-1.2.0
-2021/11/20 05:38:58 Middleware RateLimiter + Logger: burst=100 rate=5/s
-2021/11/20 05:38:58 Middleware logger: requester IP and requested URL
-2021/11/20 05:38:58 Server listening on http://localhost:8080
+2021/11/20 06:01:46 Prometheus export http://localhost:9093
+2021/11/20 06:01:46 CORS: Set origin prefixes: [http://localhost:8080 http://localhost: http://192.168.1.]
+2021/11/20 06:01:46 CORS: Methods=[GET] Headers=[Origin Accept Content-Type Authorization Cookie] Credentials=true MaxAge=86400
+2021/11/20 06:01:46 JWT not required for dev. origins: [http://localhost:8080 http://localhost: http://192.168.1.]
+2021/11/20 06:01:46 Enable PProf endpoints: http://localhost:8093/debug/pprof
+2021/11/20 06:01:46 Create cookie plan=FreePlan domain=localhost secure=false jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lc3BhY2UiOiJGcmVlUGxhbiIsInVzZXJuYW1lIjoiIiwiZXhwIjoxNjY4OTIwNTA2fQ.FD3k6J6yW62J7X8o-6_DEGRpt6LJt_iISSQe3qu7dLA
+2021/11/20 06:01:46 Create cookie plan=PremiumPlan domain=localhost secure=false jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lc3BhY2UiOiJQcmVtaXVtUGxhbiIsInVzZXJuYW1lIjoiIiwiZXhwIjoxNjY4OTIwNTA2fQ.sctH-Htep4qnsBFK_5zdPeqLaxKawSg-9SPKslsUs3I
+2021/11/20 06:01:46 OPA: load "examples/sample-auth.rego"
+2021/11/20 06:01:46 Middleware OPA: map[sample-auth.rego:package auth
+
+default allow = false
+tokens := {"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lc3BhY2UiOiJGcmVlUGxhbiIsInVzZXJuYW1lIjoiIiwiZXhwIjoxNjY4Njk1OTU2fQ.45Ku3S7ljXKtrbxwg_sAJam12RMHenC2GYlAa-nXcgo"} { true }
+allow = true { __local0__ = input.token; data.auth.tokens[__local0__] }]
+2021/11/20 06:01:46 Middleware response HTTP header: Set Server MyBackendName-1.2.0
+2021/11/20 06:01:46 Middleware RateLimiter: burst=100 rate=5/s
+2021/11/20 06:01:46 Middleware logger: requester IP and requested URL
+2021/11/20 06:01:46 Server listening on http://localhost:8080
 ```
 
 ### 6. Default HTTP request headers

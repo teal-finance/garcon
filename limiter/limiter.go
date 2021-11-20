@@ -54,7 +54,7 @@ func New(maxReqBurst, maxReqPerMinute int, devMode bool, resErr reserr.ResErr) R
 }
 
 func (rl *ReqLimiter) Limit(next http.Handler) http.Handler {
-	log.Printf("Middleware RateLimiter + Logger: burst=%v rate=%v/s",
+	log.Printf("Middleware RateLimiter: burst=%v rate=%v/s",
 		rl.initLimiter.Burst(), rl.initLimiter.Limit())
 
 	go rl.removeOldVisitors()
