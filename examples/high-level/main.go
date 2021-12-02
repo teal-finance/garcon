@@ -66,7 +66,7 @@ func main() {
 	}
 
 	// handles both REST API and static web files
-	h := handler(g.ResErr, g.JWTChecker)
+	h := handler(g.ResErr, g.JWT)
 
 	err = g.Run(h, mainPort)
 	log.Fatal(err)
@@ -78,15 +78,15 @@ func handler(resErr reserr.ResErr, jc *jwtperm.Checker) http.Handler {
 
 	// Static website files
 	ws := webserver.WebServer{Dir: "examples/www", ResErr: resErr}
-	r.With(jc.SetCookie).Get("/", ws.ServeFile("index.html", "text/html; charset=utf-8"))
-	r.With(jc.SetCookie).Get("/favicon.ico", ws.ServeFile("favicon.ico", "image/x-icon"))
-	r.With(jc.ChkCookie).Get("/js/*", ws.ServeDir("text/javascript; charset=utf-8"))
-	r.With(jc.ChkCookie).Get("/css/*", ws.ServeDir("text/css; charset=utf-8"))
-	r.With(jc.ChkCookie).Get("/images/*", ws.ServeImages())
+	r.With(jc.Set).Get("/", ws.ServeFile("index.html", "text/html; charset=utf-8"))
+	r.With(jc.Set).Get("/favicon.ico", ws.ServeFile("favicon.ico", "image/x-icon"))
+	r.With(jc.Chk).Get("/js/*", ws.ServeDir("text/javascript; charset=utf-8"))
+	r.With(jc.Chk).Get("/css/*", ws.ServeDir("text/css; charset=utf-8"))
+	r.With(jc.Chk).Get("/images/*", ws.ServeImages())
 
 	// API
-	r.With(jc.Check).Get("/api/v1/items", items)
-	r.With(jc.Check).Get("/api/v1/ducks", resErr.NotImplemented)
+	r.With(jc.Vet).Get("/api/v1/items", items)
+	r.With(jc.Vet).Get("/api/v1/ducks", resErr.NotImplemented)
 
 	// Other endpoints
 	r.NotFound(resErr.InvalidPath)

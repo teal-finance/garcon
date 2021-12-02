@@ -43,7 +43,7 @@ var DevOrigins = []string{"http://localhost:", "http://192.168.1."}
 
 type Garcon struct {
 	ConnState      func(net.Conn, http.ConnState)
-	JWTChecker     *jwtperm.Checker
+	JWT            *jwtperm.Checker
 	ResErr         reserr.ResErr
 	AllowedOrigins []string
 	Middlewares    chain.Chain
@@ -109,7 +109,7 @@ func (s settings) new() (*Garcon, error) {
 		metrics:        metrics.Metrics{},
 		Middlewares:    nil,
 		ConnState:      nil,
-		JWTChecker:     nil,
+		JWT:            nil,
 	}
 
 	g.Middlewares, g.ConnState = g.metrics.StartServer(s.expPort, s.devMode)
@@ -133,7 +133,7 @@ func (s settings) new() (*Garcon, error) {
 		cors.Handler(g.AllowedOrigins, s.devMode),
 	)
 
-	g.JWTChecker = g.NewJWTChecker(s.secretKey, s.planPerm...)
+	g.JWT = g.NewJWTChecker(s.secretKey, s.planPerm...)
 
 	// Authentication rules (Open Policy Agent)
 	policy, err := opa.New(s.opaFilenames, g.ResErr)
