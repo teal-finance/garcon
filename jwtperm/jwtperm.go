@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-// Package jwt delivers and checks the JWT permissions
+// Package jwtperm delivers and checks the JWT permissions
 package jwtperm
 
 import (
@@ -28,8 +28,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dgrijalva/jwt-go"
-	"github.com/synw/quid/quidlib/tokens"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/teal-finance/garcon/reserr"
 )
 
@@ -150,7 +149,7 @@ func extractDomains(addresses []string) (secure bool, dns string, devOrigins []s
 }
 
 func createCookie(plan, dns, secretKey string, secure bool) http.Cookie {
-	_, jwt, err := tokens.GenRefreshToken(plan, secretKey, "1y", "", "1y")
+	_, jwt, err := genRefreshToken(plan, secretKey, "1y", "", "1y")
 	if err != nil || jwt == "" {
 		log.Panic("Cannot create JWT: ", err)
 	}
@@ -351,7 +350,7 @@ func (ck *Checker) permFromJWT(jwt string) (perm Perm, errMsg string) {
 	return perm, "" // Success
 }
 
-func (ck *Checker) permFromRefreshClaims(claims *tokens.StandardRefreshClaims) Perm {
+func (ck *Checker) permFromRefreshClaims(claims *RefreshClaims) Perm {
 	for i, p := range ck.plans {
 		if p == claims.Namespace {
 			log.Print("JWT has the ", p, " Namespace")
@@ -410,17 +409,17 @@ func (ck *Checker) verifySignature(parts []string) (errMsg string) {
 }
 
 func (ck *Checker) permFromRefreshBytes(claimsJSON []byte) (perm Perm, errMsg string) {
-	claims := &tokens.StandardRefreshClaims{
+	claims := &RefreshClaims{
 		Namespace: "",
 		UserName:  "",
-		StandardClaims: jwt.StandardClaims{
-			Audience:  "",
-			ExpiresAt: 0,
-			Id:        invalidCookie,
-			IssuedAt:  0,
+		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    "",
-			NotBefore: 0,
 			Subject:   "",
+			Audience:  nil,
+			ExpiresAt: nil,
+			NotBefore: nil,
+			IssuedAt:  nil,
+			ID:        invalidCookie,
 		},
 	}
 
