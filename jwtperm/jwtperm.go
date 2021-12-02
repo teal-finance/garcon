@@ -173,7 +173,7 @@ func createCookie(plan, dns, secretKey string, secure bool) http.Cookie {
 	}
 }
 
-// SetCookie adds the first cookie within the HTTP response header.
+// SetCookie sets a cookie (if not present/valid) within the HTTP response header.
 func (ck *Checker) SetCookie(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if ck.hasValidCookie(r) {
@@ -188,20 +188,26 @@ func (ck *Checker) SetCookie(next http.Handler) http.Handler {
 	})
 }
 
+// ChkCookie accepts the HTTP request only it contains a valid Cookie.
 func (ck *Checker) ChkCookie(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		perm, errMsg := ck.permFromCookie(r)
 		if errMsg != "" {
-			ck.resErr.Write(w, r, http.StatusUnauthorized, errMsg)
+			if ck.isDevOrigin(r) {
+				perm = ck.perms[0]
+			} else {
+				ck.resErr.Write(w, r, http.StatusUnauthorized, errMsg)
 
-			return
+				return
+			}
 		}
 
 		next.ServeHTTP(w, perm.storeInContext(r))
 	})
 }
 
-func (ck *Checker) ChkJWT(next http.Handler) http.Handler {
+// Check accepts the HTTP request only if a valid JWT is in the Cookie or in the first "Autorisation" header.
+func (ck *Checker) Check(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		perm, errMsg := ck.permFromBearerOrCookie(r)
 		if errMsg != "" {
