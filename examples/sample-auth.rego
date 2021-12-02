@@ -3,7 +3,7 @@ package auth
 default allow = false
 
 tokens := {
-    "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lc3BhY2UiOiJGcmVlUGxhbiIsInVzZXJuYW1lIjoiIiwiZXhwIjoxNjY4Njk1OTU2fQ.45Ku3S7ljXKtrbxwg_sAJam12RMHenC2GYlAa-nXcgo",
+    "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuIjoiRnJlZVBsYW4iLCJleHAiOjE2Njk5NjQ0ODh9.elDm_t4vezVgEmS8UFFo_spLJTts7JWybzbyO_aYV3Y",
 }
 
 allow {

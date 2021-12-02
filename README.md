@@ -96,17 +96,17 @@ go build -race ./examples/high-level && ./high-level
 ```
 
 ```log
-2021/11/20 06:01:15 Enable PProf endpoints: http://localhost:8093/debug/pprof
-2021/11/20 06:01:15 Prometheus export http://localhost:9093
-2021/11/20 06:01:15 CORS: Set origin prefixes: [http://localhost:8080 http://localhost: http://192.168.1.]
-2021/11/20 06:01:15 CORS: Methods=[GET] Headers=[Origin Accept Content-Type Authorization Cookie] Credentials=true MaxAge=86400
-2021/11/20 06:01:15 JWT not required for dev. origins: [http://localhost:8080 http://localhost: http://192.168.1.]
-2021/11/20 06:01:15 Create cookie plan=FreePlan domain=localhost secure=false jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lc3BhY2UiOiJGcmVlUGxhbiIsInVzZXJuYW1lIjoiIiwiZXhwIjoxNjY4OTIwNDc1fQ.48-nhD1hPI5C02u9-ZfsaLuhQ3QEYoA6en1UWqopBFM
-2021/11/20 06:01:15 Create cookie plan=PremiumPlan domain=localhost secure=false jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lc3BhY2UiOiJQcmVtaXVtUGxhbiIsInVzZXJuYW1lIjoiIiwiZXhwIjoxNjY4OTIwNDc1fQ.bnhUEaLh_PAKABr-Pzcuv5phYCC_cC7bkECQszhB6NQ
-2021/11/20 06:01:15 Middleware response HTTP header: Set Server MyBackendName-1.2.0
-2021/11/20 06:01:15 Middleware RateLimiter: burst=100 rate=5/s
-2021/11/20 06:01:15 Middleware logger: requester IP and requested URL
-2021/11/20 06:01:15 Server listening on http://localhost:8080
+2021/12/02 08:01:28 Prometheus export http://localhost:9093
+2021/12/02 08:01:28 CORS: Set origin prefixes: [http://localhost:8080 http://localhost: http://192.168.1.]
+2021/12/02 08:01:28 CORS: Methods=[GET] Headers=[Origin Accept Content-Type Authorization Cookie] Credentials=true MaxAge=86400
+2021/12/02 08:01:28 JWT not required for dev. origins: [http://localhost:8080 http://localhost: http://192.168.1.]
+2021/12/02 08:01:28 Enable PProf endpoints: http://localhost:8093/debug/pprof
+2021/12/02 08:01:28 Create cookie plan=FreePlan domain=localhost secure=false jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuIjoiRnJlZVBsYW4iLCJleHAiOjE2Njk5NjQ0ODh9.elDm_t4vezVgEmS8UFFo_spLJTts7JWybzbyO_aYV3Y
+2021/12/02 08:01:28 Create cookie plan=PremiumPlan domain=localhost secure=false jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuIjoiUHJlbWl1bVBsYW4iLCJleHAiOjE2Njk5NjQ0ODh9.ZJG6xSVUZAEUuMbZLPbGrV6nPoAIZQJA89_OE2pZmPE
+2021/12/02 08:01:28 Middleware response HTTP header: Set Server MyBackendName-1.2.0
+2021/12/02 08:01:28 Middleware RateLimiter: burst=100 rate=5/s
+2021/12/02 08:01:28 Middleware logger: requester IP and requested URL
+2021/12/02 08:01:28 Server listening on http://localhost:8080
 ```
 
 ### 2. Embedded PProf server
@@ -188,23 +188,23 @@ go build -race ./examples/high-level && ./high-level -auth
 ```
 
 ```log
-2021/11/20 06:01:46 Prometheus export http://localhost:9093
-2021/11/20 06:01:46 CORS: Set origin prefixes: [http://localhost:8080 http://localhost: http://192.168.1.]
-2021/11/20 06:01:46 CORS: Methods=[GET] Headers=[Origin Accept Content-Type Authorization Cookie] Credentials=true MaxAge=86400
-2021/11/20 06:01:46 JWT not required for dev. origins: [http://localhost:8080 http://localhost: http://192.168.1.]
-2021/11/20 06:01:46 Enable PProf endpoints: http://localhost:8093/debug/pprof
-2021/11/20 06:01:46 Create cookie plan=FreePlan domain=localhost secure=false jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lc3BhY2UiOiJGcmVlUGxhbiIsInVzZXJuYW1lIjoiIiwiZXhwIjoxNjY4OTIwNTA2fQ.FD3k6J6yW62J7X8o-6_DEGRpt6LJt_iISSQe3qu7dLA
-2021/11/20 06:01:46 Create cookie plan=PremiumPlan domain=localhost secure=false jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lc3BhY2UiOiJQcmVtaXVtUGxhbiIsInVzZXJuYW1lIjoiIiwiZXhwIjoxNjY4OTIwNTA2fQ.sctH-Htep4qnsBFK_5zdPeqLaxKawSg-9SPKslsUs3I
-2021/11/20 06:01:46 OPA: load "examples/sample-auth.rego"
-2021/11/20 06:01:46 Middleware OPA: map[sample-auth.rego:package auth
+2021/12/02 08:09:47 Prometheus export http://localhost:9093
+2021/12/02 08:09:47 CORS: Set origin prefixes: [http://localhost:8080 http://localhost: http://192.168.1.]
+2021/12/02 08:09:47 CORS: Methods=[GET] Headers=[Origin Accept Content-Type Authorization Cookie] Credentials=true MaxAge=86400
+2021/12/02 08:09:47 JWT not required for dev. origins: [http://localhost:8080 http://localhost: http://192.168.1.]
+2021/12/02 08:09:47 Enable PProf endpoints: http://localhost:8093/debug/pprof
+2021/12/02 08:09:47 Create cookie plan=FreePlan domain=localhost secure=false jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuIjoiRnJlZVBsYW4iLCJleHAiOjE2Njk5NjQ5ODd9.5tJk2NoHxkG0o_owtMleBcUaR8z1vRx4rxRRqtZUc_Q
+2021/12/02 08:09:47 Create cookie plan=PremiumPlan domain=localhost secure=false jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuIjoiUHJlbWl1bVBsYW4iLCJleHAiOjE2Njk5NjQ5ODd9.ifKhbmxQQ64NweL5aQDb_42tvKHwqiEKD-vxHO3KzsM
+2021/12/02 08:09:47 OPA: load "examples/sample-auth.rego"
+2021/12/02 08:09:47 Middleware OPA: map[sample-auth.rego:package auth
 
 default allow = false
-tokens := {"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lc3BhY2UiOiJGcmVlUGxhbiIsInVzZXJuYW1lIjoiIiwiZXhwIjoxNjY4Njk1OTU2fQ.45Ku3S7ljXKtrbxwg_sAJam12RMHenC2GYlAa-nXcgo"} { true }
+tokens := {"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuIjoiRnJlZVBsYW4iLCJleHAiOjE2Njk5NjQ0ODh9.elDm_t4vezVgEmS8UFFo_spLJTts7JWybzbyO_aYV3Y"} { true }
 allow = true { __local0__ = input.token; data.auth.tokens[__local0__] }]
-2021/11/20 06:01:46 Middleware response HTTP header: Set Server MyBackendName-1.2.0
-2021/11/20 06:01:46 Middleware RateLimiter: burst=100 rate=5/s
-2021/11/20 06:01:46 Middleware logger: requester IP and requested URL
-2021/11/20 06:01:46 Server listening on http://localhost:8080
+2021/12/02 08:09:47 Middleware response HTTP header: Set Server MyBackendName-1.2.0
+2021/12/02 08:09:47 Middleware RateLimiter: burst=100 rate=5/s
+2021/12/02 08:09:47 Middleware logger: requester IP and requested URL
+2021/12/02 08:09:47 Server listening on http://localhost:8080
 ```
 
 ### 6. Default HTTP request headers
@@ -221,7 +221,7 @@ Content-Type: application/json
 Server: MyBackendName-1.2.0
 Vary: Origin
 X-Content-Type-Options: nosniff
-Date: Wed, 17 Nov 2021 14:47:44 GMT
+Date: Thu, 02 Dec 2021 07:06:20 GMT
 Content-Length: 84
 
 {"error":"Unauthorized",
@@ -232,11 +232,11 @@ Content-Length: 84
 The corresponding garcon logs:
 
 ```log
-2021/11/17 15:47:44 in  127.0.0.1:35246 GET /api/v1/items  curl/7.79.1 A=*/*
-[cors] 2021/11/17 15:47:44 Handler: Actual request
-[cors] 2021/11/17 15:47:44   Actual request no headers added: missing origin
-2021/11/17 15:47:44 OPA unauthorize 127.0.0.1:35246 /api/v1/items
-2021/11/17 15:47:44 out 127.0.0.1:35246 GET /api/v1/items 1.576138ms c=1 a=1 i=0 h=0
+2021/12/02 08:06:20 in  127.0.0.1:42888 GET /api/v1/items
+[cors] 2021/12/02 08:06:20 Handler: Actual request
+[cors] 2021/12/02 08:06:20   Actual request no headers added: missing origin
+2021/12/02 08:06:20 OPA unauthorize 127.0.0.1:42888 /api/v1/items
+2021/12/02 08:06:20 out 127.0.0.1:42888 GET /api/v1/items 1.426916ms c=1 a=1 i=0 h=0
 ```
 
 The CORS logs can be disabled by passing `debug=false` in `cors.Handler(origins, false)`.
@@ -251,7 +251,7 @@ The values `c=1 a=1 i=0 h=0` measure the web traffic:
 ### 7. With Authorization header
 
 ```sh
-curl -D - http://localhost:8080/api/v1/items -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lc3BhY2UiOiJGcmVlUGxhbiIsInVzZXJuYW1lIjoiIiwiZXhwIjoxNjY4Njk1OTU2fQ.45Ku3S7ljXKtrbxwg_sAJam12RMHenC2GYlAa-nXcgo'
+curl -D - http://localhost:8080/api/v1/items -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuIjoiRnJlZVBsYW4iLCJleHAiOjE2Njk5NjQ0ODh9.elDm_t4vezVgEmS8UFFo_spLJTts7JWybzbyO_aYV3Y'
 ```
 
 ```yaml
@@ -259,7 +259,7 @@ HTTP/1.1 200 OK
 Content-Type: application/json
 Server: MyBackendName-1.2.0
 Vary: Origin
-Date: Wed, 17 Nov 2021 14:48:51 GMT
+Date: Thu, 02 Dec 2021 07:10:37 GMT
 Content-Length: 25
 
 ["item1","item2","item3"]
@@ -268,19 +268,19 @@ Content-Length: 25
 The corresponding garcon logs:
 
 ```log
-2021/11/17 15:48:51 in  127.0.0.1:35250 GET /api/v1/items  curl/7.79.1 A=*/* Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lc3BhY2UiOiJGcmVlUGxhbiIsInVzZXJuYW1lIjoiIiwiZXhwIjoxNjY4Njk1OTU2fQ.45Ku3S7ljXKtrbxwg_sAJam12RMHenC2GYlAa-nXcgo
-[cors] 2021/11/17 15:48:51 Handler: Actual request
-[cors] 2021/11/17 15:48:51   Actual request no headers added: missing origin
-2021/11/17 15:48:51 Authorization header has JWT: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lc3BhY2UiOiJGcmVlUGxhbiIsInVzZXJuYW1lIjoiIiwiZXhwIjoxNjY4Njk1OTU2fQ.45Ku3S7ljXKtrbxwg_sAJam12RMHenC2GYlAa-nXcgo
-2021/11/17 15:48:51 JWT Claims: &{FreePlan  { 1668695956 invalid cookie 0  0 }}
-2021/11/17 15:48:51 JWT has the FreePlan Namespace
-2021/11/17 15:48:51 JWT Permission: {10}
-2021/11/17 15:48:51 out 127.0.0.1:35250 GET /api/v1/items 1.625788ms c=2 a=2 i=1 h=0
+2021/12/02 08:10:37 in  127.0.0.1:42892 GET /api/v1/items
+[cors] 2021/12/02 08:10:37 Handler: Actual request
+[cors] 2021/12/02 08:10:37   Actual request no headers added: missing origin
+2021/12/02 08:10:37 Authorization header has JWT: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuIjoiRnJlZVBsYW4iLCJleHAiOjE2Njk5NjQ0ODh9.elDm_t4vezVgEmS8UFFo_spLJTts7JWybzbyO_aYV3Y
+2021/12/02 08:10:37 JWT Claims: {FreePlan  {  [] 2022-12-02 08:01:28 +0100 CET <nil> <nil> invalid cookie}}
+2021/12/02 08:10:37 JWT has the FreePlan Namespace
+2021/12/02 08:10:37 JWT Permission: {10}
+2021/12/02 08:10:37 out 127.0.0.1:42892 GET /api/v1/items 1.984568ms c=1 a=1 i=0 h=0
 ```
 
 ## Low-level
 
-**WARNING: This chapter is outdated!**
+:warning: **WARNING: This chapter is outdated!** :warning:
 
 See the [low-level example](examples/low-level/main.go).
 
@@ -439,5 +439,6 @@ See the [LICENSE](LICENSE) file.
 
 Except:
 
-* the example files under CC0-1.0 (Creative Commons Zero v1.0 Universal) ;
+* the [example](examples) files under CC0-1.0 (Creative Commons Zero v1.0 Universal) ;
 * the file [chain.go](chain/chain.go) (fork) under the MIT License.
+* the file [cookie.go](jwtperm/cookie.go) (fork) under the MIT License.
