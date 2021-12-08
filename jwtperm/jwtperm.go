@@ -189,11 +189,9 @@ func createCookie(plan, dns string, secure bool, secretKey []byte) http.Cookie {
 // Set sets a HttpOnly cookie (if not present and valid) in the HTTP response header.
 func (ck *Checker) Set(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if ck.hasValidCookie(r) {
-			log.Print("JWT cookie already present and valid")
-		} else {
+		if !ck.hasValidCookie(r) {
 			ck.cookies[0].Expires = time.Now().Add(oneYearInNS)
-			log.Print("JWT: Set cookie ", ck.cookies[0])
+			log.Print("Set cookie ", ck.cookies[0])
 			http.SetCookie(w, &ck.cookies[0])
 		}
 
