@@ -36,26 +36,26 @@ func standardRefreshClaims(namespace, user string, timeout time.Time) *RefreshCl
 	}
 }
 
-func genRefreshToken(namespace, refreshKey, maxTTL, user, timeout string) (bool, string, error) {
+func genRefreshToken(namespace string, refreshKey []byte, timeout, maxTTL, user string) (string, error) {
 	isAuthorized, err := isTimeoutAuthorized(timeout, maxTTL)
 	if err != nil {
-		return false, "", err
+		return "", err
 	}
 
 	if !isAuthorized {
-		return false, "", nil
+		return "", nil
 	}
 
 	to, _ := tparse.ParseNow(time.RFC3339, "now+"+timeout)
 	claims := standardRefreshClaims(namespace, user, to.UTC())
 	t := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
-	token, err := t.SignedString([]byte(refreshKey))
+	token, err := t.SignedString(refreshKey)
 	if err != nil {
-		return false, "", err
+		return "", err
 	}
 
-	return true, token, nil
+	return token, nil
 }
 
 func isTimeoutAuthorized(timeout, maxTimeout string) (bool, error) {

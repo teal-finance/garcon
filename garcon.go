@@ -18,6 +18,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -50,11 +51,11 @@ type Garcon struct {
 	metrics        metrics.Metrics
 }
 
-type settings struct {
+type parameters struct {
 	origins      []string
 	docURL       string
 	nameVersion  string
-	secretKey    string
+	secretKey    []byte
 	planPerm     []interface{}
 	opaFilenames []string
 	pprofPort    int
@@ -66,11 +67,11 @@ type settings struct {
 }
 
 func New(opts ...Option) (*Garcon, error) {
-	s := settings{
-		origins:      DevOrigins,
+	p := parameters{
+		origins:      nil,
 		docURL:       "",
 		nameVersion:  "",
-		secretKey:    "",
+		secretKey:    nil,
 		planPerm:     nil,
 		opaFilenames: nil,
 		pprofPort:    0,
@@ -82,27 +83,30 @@ func New(opts ...Option) (*Garcon, error) {
 	}
 
 	for _, opt := range opts {
-		opt(&s)
+		opt(&p)
 	}
 
-	pprof.StartServer(s.pprofPort)
+	pprof.StartServer(p.pprofPort)
 
-	if s.origins == nil {
-		s.origins = DevOrigins
-	} else if s.devMode {
-		s.origins = AppendPrefixes(s.origins, DevOrigins)
+	if p.origins == nil {
+		p.origins = DevOrigins
+	} else if p.devMode {
+		p.origins = AppendPrefixes(p.origins, DevOrigins...)
 	}
 
-	if len(s.docURL) > 0 &&
-		!strings.HasPrefix(s.docURL, s.origins[0]) &&
-		!strings.Contains(s.docURL, "://") {
-		s.docURL = s.origins[0] + s.docURL
+	if len(p.docURL) > 0 {
+		// if docURL is just a path => complet it with the base URL (scheme + host)
+		baseURL := p.origins[0]
+		if !strings.HasPrefix(p.docURL, baseURL) &&
+			!strings.Contains(p.docURL, "://") {
+			p.docURL = baseURL + p.docURL
+		}
 	}
 
-	return s.new()
+	return p.new()
 }
 
-func (s settings) new() (*Garcon, error) {
+func (s parameters) new() (*Garcon, error) {
 	g := Garcon{
 		AllowedOrigins: s.origins,
 		ResErr:         reserr.New(s.docURL),
@@ -148,36 +152,37 @@ func (s settings) new() (*Garcon, error) {
 	return &g, nil
 }
 
-type Option func(*settings)
+type Option func(*parameters)
 
 func WithOrigins(origins ...string) Option {
-	return func(s *settings) {
-		s.origins = origins
+	return func(p *parameters) {
+		p.origins = cleanAddresses(origins)
 	}
 }
 
 func WithDocURL(pathOrURL string) Option {
-	return func(s *settings) {
-		s.docURL = pathOrURL
+	return func(p *parameters) {
+		p.docURL = pathOrURL
 	}
 }
 
 func WithServerHeader(nameVersion string) Option {
-	return func(s *settings) {
-		s.nameVersion = nameVersion
+	return func(p *parameters) {
+		p.nameVersion = nameVersion
 	}
 }
 
-func WithJWT(secretKey string, planPerm ...interface{}) Option {
-	return func(s *settings) {
-		s.secretKey = secretKey
-		s.planPerm = planPerm
+// WithJWT also requires WithOrigins() to set the Cookie domain.
+func WithJWT(secretKey []byte, planPerm ...interface{}) Option {
+	return func(p *parameters) {
+		p.secretKey = secretKey
+		p.planPerm = planPerm
 	}
 }
 
 func WithOPA(opaFilenames ...string) Option {
-	return func(s *settings) {
-		s.opaFilenames = opaFilenames
+	return func(p *parameters) {
+		p.opaFilenames = opaFilenames
 	}
 }
 
@@ -195,8 +200,8 @@ func WithReqLogs(verbosity ...int) Option {
 		}
 	}
 
-	return func(s *settings) {
-		s.reqLogs = v
+	return func(p *parameters) {
+		p.reqLogs = v
 	}
 }
 
@@ -217,21 +222,21 @@ func WithLimiter(values ...int) Option {
 		log.Panic("garcon.WithLimiter() must be called with less than three arguments")
 	}
 
-	return func(s *settings) {
-		s.reqBurst = burst
-		s.reqMinute = perMinute
+	return func(p *parameters) {
+		p.reqBurst = burst
+		p.reqMinute = perMinute
 	}
 }
 
 func WithPProf(port int) Option {
-	return func(s *settings) {
-		s.pprofPort = port
+	return func(p *parameters) {
+		p.pprofPort = port
 	}
 }
 
 func WithProm(port int) Option {
-	return func(s *settings) {
-		s.expPort = port
+	return func(p *parameters) {
+		p.expPort = port
 	}
 }
 
@@ -245,8 +250,8 @@ func WithDev(enable ...bool) Option {
 		}
 	}
 
-	return func(s *settings) {
-		s.devMode = devMode
+	return func(p *parameters) {
+		p.devMode = devMode
 	}
 }
 
@@ -282,7 +287,7 @@ func (g *Garcon) Run(h http.Handler, port int) error {
 	return err
 }
 
-func (g *Garcon) NewJWTChecker(secretKey string, planPerm ...interface{}) *jwtperm.Checker {
+func (g *Garcon) NewJWTChecker(secretKey []byte, planPerm ...interface{}) *jwtperm.Checker {
 	return jwtperm.New(g.AllowedOrigins, g.ResErr, secretKey, planPerm...)
 }
 
@@ -324,28 +329,57 @@ func isSeparator(c rune) bool {
 	return false
 }
 
-func AppendPrefixes(slice, prefixes []string) []string {
+func AppendPrefixes(urls []string, prefixes ...string) []string {
 	for _, p := range prefixes {
-		slice = insertPrefix(slice, p)
+		urls = appendOnePrefix(urls, p)
 	}
 
-	return slice
+	return urls
 }
 
-func insertPrefix(slice []string, p string) []string {
-	for i, s := range slice {
-		// check if `s` is a prefix of `p`
-		if len(s) <= len(p) {
-			if s == p[:len(s)] {
-				return slice
+func appendOnePrefix(urls []string, p string) []string {
+	for i, u := range urls {
+		// is `u` is a prefix of `p`?
+		if len(u) <= len(p) {
+			if u == p[:len(u)] {
+				return urls
 			}
-		} else // is `p` a prefix of `s`?  (preserve i==0)
-		if i > 0 && s[:len(p)] == p {
-			slice[i] = p // replace `s` by `p`
 
-			return slice
+			continue
+		}
+
+		// is `p` a prefix of `u`?  (preserve i==0)
+		if i > 0 && u[:len(p)] == p {
+			urls[i] = p // yes => replace `u` by `p`
+
+			return urls
 		}
 	}
 
-	return append(slice, p)
+	return append(urls, p)
+}
+
+func cleanAddresses(origins []string) []string {
+	addresses := make([]string, 0, len(origins))
+
+	for _, o := range origins {
+		u, err := url.Parse(o)
+		if err != nil {
+			log.Panic("WithOrigins: ", err)
+		}
+
+		if u.Host == "" {
+			log.Panic("WithOrigins: missing host in ", o)
+		}
+
+		a := u.Scheme + "://" + u.Host
+
+		if o != a {
+			log.Print("WithOrigins: replace ", o, " by ", a)
+		}
+
+		addresses = append(addresses, a)
+	}
+
+	return addresses
 }

@@ -66,26 +66,24 @@ type Checker struct {
 	devOrigins  []string
 }
 
-func New(addresses []string, resErr reserr.ResErr, secretKey string, permissions ...interface{}) *Checker {
-	secure, dns, devOrigins := extractDomains(addresses)
-
+func New(addresses []string, resErr reserr.ResErr, secretKey []byte, permissions ...interface{}) *Checker {
 	n := len(permissions) / 2
 	if n == 0 {
 		n = 1
 	}
 
-	plans := make([]string, n)
-	pVals := make([]int, n)
+	names := make([]string, n)
+	values := make([]int, n)
 
-	plans[0] = defaultPlanName
-	pVals[0] = defaultPermValue
+	names[0] = defaultPlanName
+	values[0] = defaultPermValue
 
 	for i, p := range permissions {
 		var ok bool
 		if i%2 == 0 {
-			plans[i/2], ok = p.(string)
+			names[i/2], ok = p.(string)
 		} else {
-			pVals[i/2], ok = p.(int)
+			values[i/2], ok = p.(int)
 		}
 
 		if !ok {
@@ -94,62 +92,78 @@ func New(addresses []string, resErr reserr.ResErr, secretKey string, permissions
 		}
 	}
 
+	dns, secure := extractMainDomain(addresses)
 	perms := make([]Perm, n)
 	cookies := make([]http.Cookie, n)
 
-	for i, v := range pVals {
+	for i, v := range values {
 		perms[i] = Perm{Value: v}
-		cookies[i] = createCookie(plans[i], dns, secretKey, secure)
+		cookies[i] = createCookie(names[i], dns, secure, secretKey)
 	}
 
 	return &Checker{
 		resErr:      resErr,
 		b64encoding: base64.RawURLEncoding,
-		secretKey:   []byte(secretKey),
-		plans:       plans,
+		secretKey:   secretKey,
+		plans:       names,
 		perms:       perms,
 		cookies:     cookies,
-		devOrigins:  devOrigins,
+		devOrigins:  extractDevDomains(addresses),
 	}
 }
 
-func extractDomains(addresses []string) (secure bool, dns string, devOrigins []string) {
+const (
+	HTTP  = "http://"
+	HTTPS = "https://"
+)
+
+func extractMainDomain(addresses []string) (dns string, secure bool) {
 	if len(addresses) == 0 {
 		log.Panic("No addresses => Cannot set Cookie domain")
 	}
 
-	if strings.HasPrefix(addresses[0], "http://") {
+	addr := addresses[0]
+
+	switch {
+	case strings.HasPrefix(addr, HTTP):
+		dns = addr[len(HTTP):]
 		secure = false
-		dns = addresses[0][len("http://"):]
-	} else if strings.HasPrefix(addresses[0], "https://") {
+
+	case strings.HasPrefix(addr, HTTPS):
+		dns = addr[len(HTTPS):]
 		secure = true
-		dns = addresses[0][len("https://"):]
+
+	default:
+		log.Panic("Missing scheme in address ", addr)
 	}
 
+	// remove the trailing ":port" if any
 	dns = strings.SplitN(dns, ":", 2)[0]
 
+	return dns, secure
+}
+
+func extractDevDomains(addresses []string) (devOrigins []string) {
 	if len(addresses) == 1 {
-		log.Print("JWT required for single origin: ", addresses)
-	} else {
-		for i, a := range addresses {
-			if strings.HasPrefix(a, "https://") {
-				log.Print("JWT required for HTTPS origin: ", a)
+		log.Print("JWT required for single domain: ", addresses)
 
-				continue
-			}
+		return nil
+	}
 
+	for i, a := range addresses {
+		if strings.HasPrefix(a, HTTP) {
 			devOrigins = addresses[i:]
 			log.Print("JWT not required for dev. origins: ", devOrigins)
 
-			break
+			return devOrigins
 		}
 	}
 
-	return secure, dns, devOrigins
+	return nil
 }
 
-func createCookie(plan, dns, secretKey string, secure bool) http.Cookie {
-	_, jwt, err := genRefreshToken(plan, secretKey, "1y", "", "1y")
+func createCookie(plan, dns string, secure bool, secretKey []byte) http.Cookie {
+	jwt, err := genRefreshToken(plan, secretKey, "1y", "1y", "")
 	if err != nil || jwt == "" {
 		log.Panic("Cannot create JWT: ", err)
 	}

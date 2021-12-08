@@ -52,7 +52,7 @@ func main() {
 		garcon.WithOrigins(addr),
 		garcon.WithDocURL("/doc"),
 		garcon.WithServerHeader("MyBackendName-1.2.0"),
-		garcon.WithJWT(hmacSHA256, "FreePlan", 10, "PremiumPlan", 100),
+		garcon.WithJWT([]byte(hmacSHA256), "FreePlan", 10, "PremiumPlan", 100),
 		garcon.WithOPA(opaFilenames...),
 		garcon.WithReqLogs(),
 		garcon.WithLimiter(burst, perMinute),
