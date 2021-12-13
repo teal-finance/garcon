@@ -180,10 +180,12 @@ func createCookie(plan string, secure bool, dns, path string, secretKey []byte) 
 	}
 
 	name := defaultCookieName
-	if len(name) > 1 {
-		i := strings.LastIndexByte(name[:len(name)-1], byte('/'))
-		if 0 <= i && i+1 < len(name)-1 {
-			name = plan[i+1 : len(name)-1]
+
+	for i := len(path) - 2; i >= 0; i-- {
+		if path[i] == byte('/') {
+			name = plan[i+1 : len(path)-1]
+
+			break
 		}
 	}
 
