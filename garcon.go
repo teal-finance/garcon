@@ -40,7 +40,10 @@ import (
 // - localhost:8085 on multidevices: web autoreload using https://github.com/synw/fwr
 // - flutter run --web-port=8080
 // - 192.168.1.x + any port on tablet: mobile app using fast builtin autoreload.
-var DevOrigins = []string{"http://localhost:", "http://192.168.1."}
+var DevOrigins = []url.URL{
+	{Scheme: "http", Host: "localhost:"},
+	{Scheme: "http", Host: "192.168.1."},
+}
 
 type Garcon struct {
 	ConnState      func(net.Conn, http.ConnState)
@@ -52,7 +55,7 @@ type Garcon struct {
 }
 
 type parameters struct {
-	origins      []string
+	urls         []url.URL
 	docURL       string
 	nameVersion  string
 	secretKey    []byte
@@ -68,7 +71,7 @@ type parameters struct {
 
 func New(opts ...Option) (*Garcon, error) {
 	p := parameters{
-		origins:      nil,
+		urls:         nil,
 		docURL:       "",
 		nameVersion:  "",
 		secretKey:    nil,
@@ -88,15 +91,15 @@ func New(opts ...Option) (*Garcon, error) {
 
 	pprof.StartServer(p.pprofPort)
 
-	if p.origins == nil {
-		p.origins = DevOrigins
+	if p.urls == nil {
+		p.urls = DevOrigins
 	} else if p.devMode {
-		p.origins = AppendPrefixes(p.origins, DevOrigins...)
+		p.urls = AppendURLs(p.urls, DevOrigins...)
 	}
 
 	if len(p.docURL) > 0 {
 		// if docURL is just a path => complet it with the base URL (scheme + host)
-		baseURL := p.origins[0]
+		baseURL := p.urls[0].String()
 		if !strings.HasPrefix(p.docURL, baseURL) &&
 			!strings.Contains(p.docURL, "://") {
 			p.docURL = baseURL + p.docURL
@@ -108,7 +111,7 @@ func New(opts ...Option) (*Garcon, error) {
 
 func (s parameters) new() (*Garcon, error) {
 	g := Garcon{
-		AllowedOrigins: s.origins,
+		AllowedOrigins: OriginsFromURLs(s.urls),
 		ResErr:         reserr.New(s.docURL),
 		metrics:        metrics.Metrics{},
 		Middlewares:    nil,
@@ -137,7 +140,7 @@ func (s parameters) new() (*Garcon, error) {
 		cors.Handler(g.AllowedOrigins, s.devMode),
 	)
 
-	g.JWT = g.NewJWTChecker(s.secretKey, s.planPerm...)
+	g.JWT = g.NewJWTChecker(s.urls, s.secretKey, s.planPerm...)
 
 	// Authentication rules (Open Policy Agent)
 	policy, err := opa.New(s.opaFilenames, g.ResErr)
@@ -154,9 +157,9 @@ func (s parameters) new() (*Garcon, error) {
 
 type Option func(*parameters)
 
-func WithOrigins(origins ...string) Option {
+func WithURLs(urls ...string) Option {
 	return func(p *parameters) {
-		p.origins = cleanAddresses(origins)
+		p.urls = cleanURLs(urls)
 	}
 }
 
@@ -287,8 +290,8 @@ func (g *Garcon) Run(h http.Handler, port int) error {
 	return err
 }
 
-func (g *Garcon) NewJWTChecker(secretKey []byte, planPerm ...interface{}) *jwtperm.Checker {
-	return jwtperm.New(g.AllowedOrigins, g.ResErr, secretKey, planPerm...)
+func (g *Garcon) NewJWTChecker(urls []url.URL, secretKey []byte, planPerm ...interface{}) *jwtperm.Checker {
+	return jwtperm.New(urls, g.ResErr, secretKey, planPerm...)
 }
 
 // ServerHeader sets the Server HTTP header in the response.
@@ -329,28 +332,72 @@ func isSeparator(c rune) bool {
 	return false
 }
 
-func AppendPrefixes(urls []string, prefixes ...string) []string {
+func AppendPrefixes(origins []string, prefixes ...string) []string {
 	for _, p := range prefixes {
-		urls = appendOnePrefix(urls, p)
+		origins = appendOnePrefix(origins, p)
+	}
+
+	return origins
+}
+
+func appendOnePrefix(origins []string, p string) []string {
+	for i, o := range origins {
+		// if `o` is already a prefix of `p` => stop
+		if len(o) <= len(p) {
+			if o == p[:len(o)] {
+				return origins
+			}
+
+			continue
+		}
+
+		// preserve origins[0]
+		if i == 0 {
+			continue
+		}
+
+		// if `p` a prefix of `o` => update origins[i]
+		if o[:len(p)] == p {
+			origins[i] = p // replace `o` by `p`
+
+			return origins
+		}
+	}
+
+	return append(origins, p)
+}
+
+func AppendURLs(urls []url.URL, prefixes ...url.URL) []url.URL {
+	for _, p := range prefixes {
+		urls = appendOneURL(urls, p)
 	}
 
 	return urls
 }
 
-func appendOnePrefix(urls []string, p string) []string {
+func appendOneURL(urls []url.URL, p url.URL) []url.URL {
 	for i, u := range urls {
-		// is `u` is a prefix of `p`?
-		if len(u) <= len(p) {
-			if u == p[:len(u)] {
+		if u.Scheme != p.Scheme {
+			continue
+		}
+
+		// if `u` is already a prefix of `p` => stop
+		if len(u.Host) <= len(p.Host) {
+			if u.Host == p.Host[:len(u.Host)] {
 				return urls
 			}
 
 			continue
 		}
 
-		// is `p` a prefix of `u`?  (preserve i==0)
-		if i > 0 && u[:len(p)] == p {
-			urls[i] = p // yes => replace `u` by `p`
+		// preserve urls[0]
+		if i == 0 {
+			continue
+		}
+
+		// if `p` a prefix of `u` => update urls[i]
+		if u.Host[:len(p.Host)] == p.Host {
+			urls[i] = p // replace `u` by `p`
 
 			return urls
 		}
@@ -359,8 +406,8 @@ func appendOnePrefix(urls []string, p string) []string {
 	return append(urls, p)
 }
 
-func cleanAddresses(origins []string) []string {
-	addresses := make([]string, 0, len(origins))
+func cleanURLs(origins []string) []url.URL {
+	urls := make([]url.URL, 0, len(origins))
 
 	for _, o := range origins {
 		u, err := url.Parse(o)
@@ -372,14 +419,24 @@ func cleanAddresses(origins []string) []string {
 			log.Panic("WithOrigins: missing host in ", o)
 		}
 
-		a := u.Scheme + "://" + u.Host
-
-		if o != a {
-			log.Print("WithOrigins: replace ", o, " by ", a)
-		}
-
-		addresses = append(addresses, a)
+		// keep only Scheme, Host and Path
+		urls = append(urls, url.URL{
+			Scheme: u.Scheme,
+			Host:   u.Host,
+			Path:   u.Path,
+		})
 	}
 
-	return addresses
+	return urls
+}
+
+func OriginsFromURLs(urls []url.URL) []string {
+	origins := make([]string, 0, len(urls))
+
+	for _, u := range urls {
+		o := u.Scheme + "://" + u.Host
+		origins = append(origins, o)
+	}
+
+	return origins
 }

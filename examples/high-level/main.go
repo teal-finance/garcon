@@ -49,7 +49,7 @@ func main() {
 	}
 
 	g, err := garcon.New(
-		garcon.WithOrigins(addr),
+		garcon.WithURLs(addr),
 		garcon.WithDocURL("/doc"),
 		garcon.WithServerHeader("MyBackendName-1.2.0"),
 		garcon.WithJWT([]byte(hmacSHA256), "FreePlan", 10, "PremiumPlan", 100),
