@@ -72,8 +72,8 @@ import "github.com/teal-finance/garcon"
 
 func main() {
     g, _ := garcon.New(
-        garcon.WithOrigins("localhost:8080"),
-        garcon.WithDocURL("/doc"), // ==> URL = localhost:8080/doc
+        garcon.WithURLs("http://localhost:8080"),
+        garcon.WithDocURL("/doc"), // URL --> http://localhost:8080/doc
         garcon.WithServerHeader("MyBackendName-1.2.0"),
         garcon.WithJWT(hmacSHA256, "FreePlan", 10, "PremiumPlan", 100),
         garcon.WithOPA("auth.rego"),

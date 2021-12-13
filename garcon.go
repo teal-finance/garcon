@@ -175,7 +175,7 @@ func WithServerHeader(nameVersion string) Option {
 	}
 }
 
-// WithJWT also requires WithOrigins() to set the Cookie domain.
+// WithJWT requires WithURLs() to set the Cookie name, secure, domain and path.
 func WithJWT(secretKey []byte, planPerm ...interface{}) Option {
 	return func(p *parameters) {
 		p.secretKey = secretKey
@@ -410,16 +410,15 @@ func cleanURLs(origins []string) []*url.URL {
 	urls := make([]*url.URL, 0, len(origins))
 
 	for _, o := range origins {
-		u, err := url.Parse(o)
+		u, err := url.ParseRequestURI(o) // strip #fragment
 		if err != nil {
-			log.Panic("WithOrigins: ", err)
+			log.Panic("WithURLs: ", err)
 		}
 
 		if u.Host == "" {
-			log.Panic("WithOrigins: missing host in ", o)
+			log.Panic("WithURLs: missing host in ", o)
 		}
 
-		// keep only Scheme, Host and Path
 		urls = append(urls, u)
 	}
 
