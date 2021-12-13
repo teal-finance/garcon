@@ -66,7 +66,7 @@ type Checker struct {
 	devOrigins  []string
 }
 
-func New(urls []url.URL, resErr reserr.ResErr, secretKey []byte, permissions ...interface{}) *Checker {
+func New(urls []*url.URL, resErr reserr.ResErr, secretKey []byte, permissions ...interface{}) *Checker {
 	n := len(permissions) / 2
 	if n == 0 {
 		n = 1
@@ -117,7 +117,7 @@ const (
 	HTTPS = "https"
 )
 
-func extractMainDomain(urls []url.URL) (secure bool, dns, path string) {
+func extractMainDomain(urls []*url.URL) (secure bool, dns, path string) {
 	if len(urls) == 0 {
 		log.Panic("No urls => Cannot set Cookie domain")
 	}
@@ -138,7 +138,7 @@ func extractMainDomain(urls []url.URL) (secure bool, dns, path string) {
 	return secure, u.Hostname(), u.Path
 }
 
-func extractDevURLs(urls []url.URL) (devURLs []url.URL) {
+func extractDevURLs(urls []*url.URL) (devURLs []*url.URL) {
 	if len(urls) == 1 {
 		log.Print("JWT required for single domain: ", urls)
 
@@ -154,7 +154,7 @@ func extractDevURLs(urls []url.URL) (devURLs []url.URL) {
 	return nil
 }
 
-func extractDevOrigins(urls []url.URL) (devOrigins []string) {
+func extractDevOrigins(urls []*url.URL) (devOrigins []string) {
 	devURLS := extractDevURLs(urls)
 
 	if len(devURLS) == 0 {

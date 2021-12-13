@@ -40,7 +40,7 @@ import (
 // - localhost:8085 on multidevices: web autoreload using https://github.com/synw/fwr
 // - flutter run --web-port=8080
 // - 192.168.1.x + any port on tablet: mobile app using fast builtin autoreload.
-var DevOrigins = []url.URL{
+var DevOrigins = []*url.URL{
 	{Scheme: "http", Host: "localhost:"},
 	{Scheme: "http", Host: "192.168.1."},
 }
@@ -55,7 +55,7 @@ type Garcon struct {
 }
 
 type parameters struct {
-	urls         []url.URL
+	urls         []*url.URL
 	docURL       string
 	nameVersion  string
 	secretKey    []byte
@@ -290,7 +290,7 @@ func (g *Garcon) Run(h http.Handler, port int) error {
 	return err
 }
 
-func (g *Garcon) NewJWTChecker(urls []url.URL, secretKey []byte, planPerm ...interface{}) *jwtperm.Checker {
+func (g *Garcon) NewJWTChecker(urls []*url.URL, secretKey []byte, planPerm ...interface{}) *jwtperm.Checker {
 	return jwtperm.New(urls, g.ResErr, secretKey, planPerm...)
 }
 
@@ -367,7 +367,7 @@ func appendOnePrefix(origins []string, p string) []string {
 	return append(origins, p)
 }
 
-func AppendURLs(urls []url.URL, prefixes ...url.URL) []url.URL {
+func AppendURLs(urls []*url.URL, prefixes ...*url.URL) []*url.URL {
 	for _, p := range prefixes {
 		urls = appendOneURL(urls, p)
 	}
@@ -375,7 +375,7 @@ func AppendURLs(urls []url.URL, prefixes ...url.URL) []url.URL {
 	return urls
 }
 
-func appendOneURL(urls []url.URL, p url.URL) []url.URL {
+func appendOneURL(urls []*url.URL, p *url.URL) []*url.URL {
 	for i, u := range urls {
 		if u.Scheme != p.Scheme {
 			continue
@@ -406,8 +406,8 @@ func appendOneURL(urls []url.URL, p url.URL) []url.URL {
 	return append(urls, p)
 }
 
-func cleanURLs(origins []string) []url.URL {
-	urls := make([]url.URL, 0, len(origins))
+func cleanURLs(origins []string) []*url.URL {
+	urls := make([]*url.URL, 0, len(origins))
 
 	for _, o := range origins {
 		u, err := url.Parse(o)
@@ -420,17 +420,13 @@ func cleanURLs(origins []string) []url.URL {
 		}
 
 		// keep only Scheme, Host and Path
-		urls = append(urls, url.URL{
-			Scheme: u.Scheme,
-			Host:   u.Host,
-			Path:   u.Path,
-		})
+		urls = append(urls, u)
 	}
 
 	return urls
 }
 
-func OriginsFromURLs(urls []url.URL) []string {
+func OriginsFromURLs(urls []*url.URL) []string {
 	origins := make([]string, 0, len(urls))
 
 	for _, u := range urls {
