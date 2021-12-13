@@ -35,17 +35,16 @@ import (
 
 const (
 	bearerPrefix = "Bearer "
-	cookieName   = "g"
 
 	invalidCookie = "invalid cookie"
 	noClaimsInJWT = "no Access nor Refresh token in JWT"
 	expiredRToken = "Refresh token has expired (or invalid)"
 
-	defaultPlanName = "DefaultPlan"
-
-	defaultPermValue = 3600     // one hour
-	oneYearInSeconds = 31556952 // average number of seconds including leap years
-	oneYearInNS      = oneYearInSeconds * 1_000_000_000
+	defaultCookieName = "g"
+	defaultPlanName   = "DefaultPlan"
+	defaultPermValue  = 3600     // one hour
+	oneYearInSeconds  = 31556952 // average number of seconds including leap years
+	oneYearInNS       = oneYearInSeconds * 1_000_000_000
 )
 
 var (
@@ -180,10 +179,18 @@ func createCookie(plan string, secure bool, dns, path string, secretKey []byte) 
 		log.Panic("Cannot create JWT: ", err)
 	}
 
-	log.Print("Create cookie plan=", plan, " domain=", dns, " secure=", secure, " "+cookieName+"=", jwt)
+	name := defaultCookieName
+	if len(name) > 1 {
+		i := strings.LastIndexByte(name[:len(name)-1], byte('/'))
+		if 0 <= i && i+1 < len(name)-1 {
+			name = plan[i+1 : len(name)-1]
+		}
+	}
+
+	log.Print("Create cookie plan=", plan, " domain=", dns, " secure=", secure, " ", name, "=", jwt)
 
 	return http.Cookie{
-		Name:       cookieName,
+		Name:       name,
 		Value:      jwt,
 		Path:       path,
 		Domain:     dns,
@@ -248,7 +255,7 @@ func (ck *Checker) Vet(next http.Handler) http.Handler {
 }
 
 func (ck *Checker) hasValidCookie(r *http.Request) bool {
-	cookie, err := r.Cookie(cookieName)
+	cookie, err := r.Cookie(ck.cookies[0].Name)
 	if err != nil {
 		return false
 	}
@@ -334,6 +341,8 @@ func (ck *Checker) jwtFromBearer(r *http.Request) (jwt, errMsg string) {
 }
 
 func (ck *Checker) jwtFromCookie(r *http.Request) (jwt, errMsg string) {
+	cookieName := ck.cookies[0].Name
+
 	c, err := r.Cookie(cookieName)
 	if err != nil {
 		log.Print("Cookie name="+cookieName+" is missing: ", err)
