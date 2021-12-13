@@ -183,7 +183,7 @@ func createCookie(plan string, secure bool, dns, path string, secretKey []byte) 
 
 	for i := len(path) - 2; i >= 0; i-- {
 		if path[i] == byte('/') {
-			name = plan[i+1 : len(path)-1]
+			name = path[i+1 : len(path)-1]
 
 			break
 		}
