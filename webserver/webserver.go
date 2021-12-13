@@ -36,12 +36,20 @@ type WebServer struct {
 func (ws WebServer) ServeFile(urlPath, contentType string) func(w http.ResponseWriter, r *http.Request) {
 	absPath := path.Join(ws.Dir, urlPath)
 
+	if strings.HasPrefix(contentType, "text/html") {
+		return func(w http.ResponseWriter, r *http.Request) {
+			// Set short "Cache-Control" because index.html may change on a daily basis
+			w.Header().Set("Cache-Control", "public,max-age=3600")
+			w.Header().Set("Content-Type", contentType)
+			ws.send(w, r, absPath)
+		}
+	}
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Set aggressive "Cache-Control" because ServeFile() is often used
 		// to serve "favicon.ico" and other assets that do not change often
 		w.Header().Set("Cache-Control", "public,max-age=31536000,immutable")
 		w.Header().Set("Content-Type", contentType)
-
 		ws.send(w, r, absPath)
 	}
 }
