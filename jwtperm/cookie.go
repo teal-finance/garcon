@@ -181,11 +181,18 @@ func createCookie(plan string, secure bool, dns, path string, secretKey []byte) 
 
 	name := defaultCookieName
 
-	for i := len(path) - 2; i >= 0; i-- {
-		if path[i] == byte('/') {
-			name = path[i+1 : len(path)-1]
+	if path != "" {
+		// remove trailing slash
+		if path[len(path)-1] == '/' {
+			path = path[:len(path)-2]
+		}
 
-			break
+		for i := len(path) - 1; i >= 0; i-- {
+			if path[i] == byte('/') {
+				name = path[i+1:]
+
+				break
+			}
 		}
 	}
 
