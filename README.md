@@ -72,8 +72,8 @@ import "github.com/teal-finance/garcon"
 
 func main() {
     g, _ := garcon.New(
-        garcon.WithURLs("http://localhost:8080"),
-        garcon.WithDocURL("/doc"), // URL --> http://localhost:8080/doc
+        garcon.WithURLs("http://localhost:8080/myapp"),
+        garcon.WithDocURL("/doc"), // URL --> http://localhost:8080/myapp/doc
         garcon.WithServerHeader("MyBackendName-1.2.0"),
         garcon.WithJWT(hmacSHA256, "FreePlan", 10, "PremiumPlan", 100),
         garcon.WithOPA("auth.rego"),
@@ -148,7 +148,7 @@ The export port <http://localhost:9093/metrics> is for the monitoring tools like
 
 The [high-level example](examples/high-level/main.go) is running.
 
-Open <http://localhost:8080> with your browser, and play with the API endpoints.
+Open <http://localhost:8080/myapp> with your browser, and play with the API endpoints.
 
 The resources and API endpoints are protected with a HttpOnly cookie.
 The [high-level example](examples/high-level/main.go) sets the cookie to browsers visiting the `index.html`.
@@ -212,7 +212,7 @@ allow = true { __local0__ = input.token; data.auth.tokens[__local0__] }]
 Test the API with `curl`:
 
 ```sh
-curl -D - http://localhost:8080/api/v1/items
+curl -D - http://localhost:8080/myapp/api/v1/items
 ```
 
 ```yaml
@@ -226,7 +226,7 @@ Content-Length: 84
 
 {"error":"Unauthorized",
 "path":"/api/v1/items",
-"doc":"http://localhost:8080/doc"}
+"doc":"http://localhost:8080/myapp/doc"}
 ```
 
 The corresponding garcon logs:
@@ -251,7 +251,7 @@ The values `c=1 a=1 i=0 h=0` measure the web traffic:
 ### 7. With Authorization header
 
 ```sh
-curl -D - http://localhost:8080/api/v1/items -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuIjoiRnJlZVBsYW4iLCJleHAiOjE2Njk5NjQ0ODh9.elDm_t4vezVgEmS8UFFo_spLJTts7JWybzbyO_aYV3Y'
+curl -D - http://localhost:8080/myapp/api/v1/items -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuIjoiRnJlZVBsYW4iLCJleHAiOjE2Njk5NjQ0ODh9.elDm_t4vezVgEmS8UFFo_spLJTts7JWybzbyO_aYV3Y'
 ```
 
 ```yaml

@@ -9,15 +9,18 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/teal-finance/garcon"
 	"github.com/teal-finance/garcon/chain"
 	"github.com/teal-finance/garcon/cors"
+	"github.com/teal-finance/garcon/jwtperm"
 	"github.com/teal-finance/garcon/limiter"
 	"github.com/teal-finance/garcon/metrics"
 	"github.com/teal-finance/garcon/opa"
@@ -27,70 +30,78 @@ import (
 )
 
 // Garcon settings
-const apiDoc = "https://my-dns.co/doc"
-const allowedProdOrigin = "https://my-dns.co"
-const allowedDevOrigins = "http://localhost:  http://192.168.1."
-const serverHeader = "MyBackendName-1.2.0"
-const authCfg = "examples/sample-auth.rego"
-const pprofPort = 8093
-const expPort = 9093
-const burst, reqMinute = 10, 30
-const devMode = true
+const (
+	apiDoc            = "https://my-dns.co/myapp/doc"
+	allowedProdOrigin = "https://my-dns.co"
+	allowedDevOrigins = "http://localhost:  http://192.168.1."
+	serverHeader      = "MyBackendName-1.2.0"
+	authCfg           = "examples/sample-auth.rego"
+	pprofPort         = 8093
+	expPort           = 9093
+	burst, reqMinute  = 10, 30
+	// the HMAC-SHA256 key to decode JWT (to be removed from source code)
+	hmacSHA256 = "9d2e0a02121179a3c3de1b035ae1355b1548781c8ce8538a1dc0853a12dfb13d"
+)
 
 func main() {
-	if devMode {
-		// the following line collects the CPU-profile and writes it in the file "cpu.pprof"
-		defer pprof.ProbeCPU().Stop()
-	}
+	// the following line collects the CPU-profile and writes it in the file "cpu.pprof"
+	defer pprof.ProbeCPU().Stop()
 
 	pprof.StartServer(pprofPort)
 
 	// Uniformize error responses with API doc
 	resErr := reserr.New(apiDoc)
 
-	middlewares, connState := setMiddlewares(resErr)
+	middlewares, connState, urls := setMiddlewares(resErr)
 
 	// Handles both REST API and static web files
-	h := handler(resErr)
+	h := handler(resErr, jwtperm.New(urls, resErr, []byte(hmacSHA256)))
 	h = middlewares.Then(h)
 
 	runServer(h, connState)
 }
 
-func setMiddlewares(resErr reserr.ResErr) (middlewares chain.Chain, connState func(net.Conn, http.ConnState)) {
+func setMiddlewares(resErr reserr.ResErr) (middlewares chain.Chain, connState func(net.Conn, http.ConnState), urls []*url.URL) {
+	auth := flag.Bool("auth", false, "Enable OPA authorization specified in file "+authCfg)
+	dev := flag.Bool("dev", true, "Use development or production settings")
+	flag.Parse()
+
 	// Start a metrics server in background if export port > 0.
 	// The metrics server is for use with Prometheus or another compatible monitoring tool.
 	metrics := metrics.Metrics{}
-	middlewares, connState = metrics.StartServer(expPort, devMode)
+	middlewares, connState = metrics.StartServer(expPort, *dev)
 
 	// Limit the input request rate per IP
-	reqLimiter := limiter.New(burst, reqMinute, devMode, resErr)
+	reqLimiter := limiter.New(burst, reqMinute, *dev, resErr)
 
 	corsConfig := allowedProdOrigin
-	if devMode {
-		corsConfig += " " + allowedDevOrigins
+	if *dev {
+		corsConfig = allowedDevOrigins
 	}
 
 	allowedOrigins := garcon.SplitClean(corsConfig)
+	urls = garcon.ParseURLs(allowedOrigins)
 
 	middlewares = middlewares.Append(
 		reqLimiter.Limit,
 		garcon.ServerHeader(serverHeader),
-		cors.Handler(allowedOrigins, devMode),
+		cors.Handler(allowedOrigins, *dev),
 	)
 
 	// Endpoint authentication rules (Open Policy Agent)
-	files := garcon.SplitClean(authCfg)
-	policy, err := opa.New(files, resErr)
-	if err != nil {
-		log.Fatal(err)
+	if *auth {
+		files := garcon.SplitClean(authCfg)
+		policy, err := opa.New(files, resErr)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if policy.Ready() {
+			middlewares = middlewares.Append(policy.Auth)
+		}
 	}
 
-	if policy.Ready() {
-		middlewares = middlewares.Append(policy.Auth)
-	}
-
-	return middlewares, connState
+	return middlewares, connState, urls
 }
 
 // runServer runs in foreground the main server.
@@ -119,19 +130,22 @@ func runServer(h http.Handler, connState func(net.Conn, http.ConnState)) {
 }
 
 // handler creates the mapping between the endpoints and the handler functions.
-func handler(resErr reserr.ResErr) http.Handler {
+func handler(resErr reserr.ResErr, jc *jwtperm.Checker) http.Handler {
 	r := chi.NewRouter()
 
 	// Static website files
 	ws := webserver.WebServer{Dir: "examples/www", ResErr: resErr}
-	r.Get("/", ws.ServeFile("index.html", "text/html; charset=utf-8"))
-	r.Get("/js/*", ws.ServeDir("text/javascript; charset=utf-8"))
-	r.Get("/css/*", ws.ServeDir("text/css; charset=utf-8"))
-	r.Get("/images/*", ws.ServeImages())
+	r.Get("/favicon.ico", ws.ServeFile("favicon.ico", "image/x-icon"))
+	r.With(jc.Set).Get("/myapp", ws.ServeFile("myapp/index.html", "text/html; charset=utf-8"))
+	r.With(jc.Set).Get("/myapp/", ws.ServeFile("myapp/index.html", "text/html; charset=utf-8"))
+	r.With(jc.Chk).Get("/myapp/js/*", ws.ServeDir("text/javascript; charset=utf-8"))
+	r.With(jc.Chk).Get("/myapp/css/*", ws.ServeDir("text/css; charset=utf-8"))
+	r.With(jc.Chk).Get("/myapp/images/*", ws.ServeImages())
 
 	// API
-	r.Get("/api/v1/items", items)
-	r.Get("/api/v1/ducks", resErr.NotImplemented)
+	r.With(jc.Vet).Get("/api/v1/items", items)
+	r.With(jc.Vet).Get("/myapp/api/v1/items", items)
+	r.With(jc.Vet).Get("/myapp/api/v1/ducks", resErr.NotImplemented)
 
 	// Other endpoints
 	r.NotFound(resErr.InvalidPath)

@@ -43,15 +43,15 @@ func main() {
 
 	var addr string
 	if *prod {
-		addr = "https://my-dns.co"
+		addr = "https://my-dns.co/myapp"
 	} else {
-		addr = "http://localhost:" + strconv.Itoa(mainPort)
+		addr = "http://localhost:" + strconv.Itoa(mainPort) + "/myapp"
 	}
 
 	g, err := garcon.New(
 		garcon.WithURLs(addr),
 		garcon.WithDocURL("/doc"),
-		garcon.WithServerHeader("MyBackendName-1.2.0"),
+		garcon.WithServerHeader("MyApp-1.2.0"),
 		garcon.WithJWT([]byte(hmacSHA256), "FreePlan", 10, "PremiumPlan", 100),
 		garcon.WithOPA(opaFilenames...),
 		garcon.WithReqLogs(),
@@ -78,15 +78,17 @@ func handler(resErr reserr.ResErr, jc *jwtperm.Checker) http.Handler {
 
 	// Static website files
 	ws := webserver.WebServer{Dir: "examples/www", ResErr: resErr}
-	r.With(jc.Set).Get("/", ws.ServeFile("index.html", "text/html; charset=utf-8"))
-	r.With(jc.Set).Get("/favicon.ico", ws.ServeFile("favicon.ico", "image/x-icon"))
-	r.With(jc.Chk).Get("/js/*", ws.ServeDir("text/javascript; charset=utf-8"))
-	r.With(jc.Chk).Get("/css/*", ws.ServeDir("text/css; charset=utf-8"))
-	r.With(jc.Chk).Get("/images/*", ws.ServeImages())
+	r.Get("/favicon.ico", ws.ServeFile("favicon.ico", "image/x-icon"))
+	r.With(jc.Set).Get("/myapp", ws.ServeFile("myapp/index.html", "text/html; charset=utf-8"))
+	r.With(jc.Set).Get("/myapp/", ws.ServeFile("myapp/index.html", "text/html; charset=utf-8"))
+	r.With(jc.Chk).Get("/myapp/js/*", ws.ServeDir("text/javascript; charset=utf-8"))
+	r.With(jc.Chk).Get("/myapp/css/*", ws.ServeDir("text/css; charset=utf-8"))
+	r.With(jc.Chk).Get("/myapp/images/*", ws.ServeImages())
 
 	// API
 	r.With(jc.Vet).Get("/api/v1/items", items)
-	r.With(jc.Vet).Get("/api/v1/ducks", resErr.NotImplemented)
+	r.With(jc.Vet).Get("/myapp/api/v1/items", items)
+	r.With(jc.Vet).Get("/myapp/api/v1/ducks", resErr.NotImplemented)
 
 	// Other endpoints
 	r.NotFound(resErr.InvalidPath)
