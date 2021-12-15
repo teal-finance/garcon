@@ -341,7 +341,7 @@ func (ck *Checker) jwtFromBearer(r *http.Request) (jwt, errMsg string) {
 	if auth == "" {
 		log.Print("Authorization header is missing, no JWT")
 
-		return "", `provide your JWT within the 'Authorization Bearer' HTTP header`
+		return "", "Provide your JWT within the 'Authorization Bearer' HTTP header"
 	}
 
 	log.Printf("Authorization header %q does not contain %q", auth, bearerPrefix)

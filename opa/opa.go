@@ -107,8 +107,9 @@ func (opa Policy) Auth(next http.Handler) http.Handler {
 		}
 
 		if !allow {
-			resErr.Write(w, r, http.StatusUnauthorized, "Unauthorized")
-			log.Print("OPA unauthorize " + r.RemoteAddr + " " + r.RequestURI)
+			resErr.Write(w, r, http.StatusUnauthorized,
+				"Provide your JWT within the 'Authorization Bearer' HTTP header")
+			log.Print("OPA: Missing or invalid Authorization header " + r.RemoteAddr + " " + r.RequestURI)
 
 			return
 		}

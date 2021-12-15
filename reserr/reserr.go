@@ -22,7 +22,7 @@ import (
 
 const (
 	pathReserved = "Path is reserved for future use. Please contact us to share your ideas."
-	pathInvalid  = "Path is not valid. Please refer to the API doc."
+	pathInvalid  = "Path is not valid. Please refer to the documentation."
 )
 
 type ResErr string
