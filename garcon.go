@@ -159,7 +159,7 @@ type Option func(*parameters)
 
 func WithURLs(urls ...string) Option {
 	return func(p *parameters) {
-		p.urls = cleanURLs(urls)
+		p.urls = ParseURLs(urls)
 	}
 }
 
@@ -406,7 +406,7 @@ func appendOneURL(urls []*url.URL, p *url.URL) []*url.URL {
 	return append(urls, p)
 }
 
-func cleanURLs(origins []string) []*url.URL {
+func ParseURLs(origins []string) []*url.URL {
 	urls := make([]*url.URL, 0, len(origins))
 
 	for _, o := range origins {
