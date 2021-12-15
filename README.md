@@ -1,6 +1,6 @@
 # Teal.Finance/Garcon
 
-![logo](examples/www/images/garcon.png) | <big>Opinionated boilerplate all-in-one HTTP server with rate-limiter, Cookies, JWT, CORS, OPA, web traffic, Prometheus export, PProf… for API and static website.</big>
+![logo](examples/www/myapp/images/garcon.png) | <big>Opinionated boilerplate all-in-one HTTP server with rate-limiter, Cookies, JWT, CORS, OPA, web traffic, Prometheus export, PProf… for API and static website.</big>
 -|-
 
 This library is used by
