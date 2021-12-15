@@ -103,34 +103,33 @@ func validPath(w http.ResponseWriter, r *http.Request) bool {
 	return true
 }
 
-func (ws WebServer) send(w http.ResponseWriter, r *http.Request, absPath string) {
-	var (
-		file *os.File
-		err  error
-	)
-
+func (ws WebServer) openFile(w http.ResponseWriter, r *http.Request, absPath string) (*os.File, string) {
 	// if client (browser) supports Brotli and the *.br file is present
 	// => send the *.br file
 	if strings.Contains(r.Header.Get("Accept-Encoding"), "br") {
 		brotli := absPath + ".br"
 
-		file, err = os.Open(brotli)
+		file, err := os.Open(brotli)
 		if err == nil {
 			w.Header().Set("Content-Encoding", "br")
 
-			absPath = brotli
+			return file, brotli
 		}
 	}
 
-	if file == nil {
-		file, err = os.Open(absPath)
-		if err != nil {
-			ws.ResErr.Write(w, r, http.StatusNotFound, "Page not found")
-			log.Print("WRN WebServer: ", err)
+	file, err := os.Open(absPath)
+	if err != nil {
+		log.Print("WRN WebServer: ", err)
+		ws.ResErr.Write(w, r, http.StatusNotFound, "Page not found")
 
-			return
-		}
+		return nil, ""
 	}
+
+	return file, absPath
+}
+
+func (ws WebServer) send(w http.ResponseWriter, r *http.Request, absPath string) {
+	file, absPath := ws.openFile(w, r, absPath)
 
 	defer func() {
 		if e := file.Close(); e != nil {
@@ -138,18 +137,14 @@ func (ws WebServer) send(w http.ResponseWriter, r *http.Request, absPath string)
 		}
 	}()
 
-	fi, err := file.Stat()
-	if err != nil {
-		ws.ResErr.Write(w, r, http.StatusInternalServerError, "Internal Server Error")
+	if fi, err := file.Stat(); err != nil {
 		log.Print("WRN WebServer: Stat(", absPath, ") ", err)
-
-		return
+	} else {
+		w.Header().Set("Content-Length", strconv.FormatInt(fi.Size(), 10))
+		w.Header().Set("Last-Modified", fi.ModTime().UTC().Format(http.TimeFormat))
+		// We do not manage PartialContent because too much stuff
+		// to handle the headers Range If-Range Etag and Content-Range.
 	}
-
-	w.Header().Set("Content-Length", strconv.FormatInt(fi.Size(), 10))
-	w.Header().Set("Last-Modified", fi.ModTime().UTC().Format(http.TimeFormat))
-	// We do not manage PartialContent because too much stuff
-	// to handle the headers Range If-Range Etag and Content-Range.
 
 	if n, err := io.Copy(w, file); err != nil {
 		log.Print("WRN WebServer: Copy(", absPath, ") ", err)
