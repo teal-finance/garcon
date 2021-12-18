@@ -13,20 +13,20 @@ Please propose a PR to add here your project that also uses Garcon.
 
 Garcon includes the following middlewares:
 
-* Logging of incoming requests ;
-* Rate limiter to prevent requests flooding ;
-* JWT management using HttpOnly cookie or Authorization header ;
-* Cross-Origin Resource Sharing (CORS) ;
-* Authentication rules based on Datalog/Rego files using [Open Policy Agent](https://www.openpolicyagent.org) ;
+* Logging of incoming requests ;
+* Rate limiter to prevent requests flooding ;
+* JWT management using HttpOnly cookie or Authorization header ;
+* Cross-Origin Resource Sharing (CORS) ;
+* Authentication rules based on Datalog/Rego files using [Open Policy Agent](https://www.openpolicyagent.org) ;
 * Web traffic metrics.
 
 Garcon also provides the following features:
 
-* HTTP/REST server for API endpoints (compatible with any Go-standard HTTP handlers) ;
-* File server intended for static web files supporting Brotli and AVIF data ;
-* Metrics server exporting data to Prometheus (or other compatible monitoring tool) ;
-* PProf server for debugging purpose ;
-* Error response in JSON format ;
+* HTTP/REST server for API endpoints (compatible with any Go-standard HTTP handlers) ;
+* File server intended for static web files supporting Brotli and AVIF data ;
+* Metrics server exporting data to Prometheus (or other compatible monitoring tool) ;
+* PProf server for debugging purpose ;
+* Error response in JSON format ;
 * Chained middlewares (fork of [justinas/alice](https://github.com/justinas/alice)).
 
 ## CPU profiling
@@ -439,6 +439,6 @@ See the [LICENSE](LICENSE) file.
 
 Except:
 
-* the [example](examples) files under CC0-1.0 (Creative Commons Zero v1.0 Universal) ;
+* the [example](examples) files under CC0-1.0 (Creative Commons Zero v1.0 Universal) ;
 * the file [chain.go](chain/chain.go) (fork) under the MIT License.
 * the file [cookie.go](jwtperm/cookie.go) (fork) under the MIT License.
