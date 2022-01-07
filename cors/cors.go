@@ -28,7 +28,7 @@ func Handler(origins []string, debug bool) func(next http.Handler) http.Handler 
 		AllowedOrigins:         []string{},
 		AllowOriginFunc:        nil,
 		AllowOriginRequestFunc: nil,
-		AllowedMethods:         []string{http.MethodGet},
+		AllowedMethods:         []string{http.MethodGet, http.MethodPost},
 		AllowedHeaders:         []string{"Origin", "Accept", "Content-Type", "Authorization", "Cookie"},
 		ExposedHeaders:         []string{},
 		MaxAge:                 24 * 3600, // https://developer.mozilla.org/docs/Web/HTTP/Headers/Access-Control-Max-Age
