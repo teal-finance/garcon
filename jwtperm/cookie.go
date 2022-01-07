@@ -155,6 +155,10 @@ func extractDevURLs(urls []*url.URL) (devURLs []*url.URL) {
 }
 
 func extractDevOrigins(urls []*url.URL) (devOrigins []string) {
+	if len(urls) > 0 && urls[0].Scheme == "http" && urls[0].Host == "localhost" {
+		return []string{"*"} // Accept absence of cookie for http://localhost
+	}
+
 	devURLS := extractDevURLs(urls)
 
 	if len(devURLS) == 0 {
@@ -289,6 +293,12 @@ func (ck *Checker) isDevOrigin(r *http.Request) bool {
 		origin := r.Header.Get("Origin")
 
 		for _, prefix := range ck.devOrigins {
+			if prefix == "*" {
+				log.Print("No JWT but addr=http://localhost => Accept any origin=", origin)
+
+				return true
+			}
+
 			if strings.HasPrefix(origin, prefix) {
 				log.Printf("No JWT but origin=%v is a valid dev origin", origin)
 
