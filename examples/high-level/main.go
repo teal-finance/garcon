@@ -45,7 +45,7 @@ func main() {
 	if *prod {
 		addr = "https://my-dns.co/myapp/"
 	} else {
-		addr = "http://localhost:" + strconv.Itoa(mainPort) + "/myapp/"
+		addr = "http://localhost:" + strconv.Itoa(mainPort) + "/myapp"
 	}
 
 	g, err := garcon.New(

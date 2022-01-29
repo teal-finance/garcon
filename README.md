@@ -96,17 +96,17 @@ go build -race ./examples/high-level && ./high-level
 ```
 
 ```log
-2021/12/02 08:01:28 Prometheus export http://localhost:9093
-2021/12/02 08:01:28 CORS: Set origin prefixes: [http://localhost:8080 http://localhost: http://192.168.1.]
-2021/12/02 08:01:28 CORS: Methods=[GET] Headers=[Origin Accept Content-Type Authorization Cookie] Credentials=true MaxAge=86400
-2021/12/02 08:01:28 JWT not required for dev. origins: [http://localhost:8080 http://localhost: http://192.168.1.]
-2021/12/02 08:01:28 Enable PProf endpoints: http://localhost:8093/debug/pprof
-2021/12/02 08:01:28 Create cookie plan=FreePlan domain=localhost secure=false jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuIjoiRnJlZVBsYW4iLCJleHAiOjE2Njk5NjQ0ODh9.elDm_t4vezVgEmS8UFFo_spLJTts7JWybzbyO_aYV3Y
-2021/12/02 08:01:28 Create cookie plan=PremiumPlan domain=localhost secure=false jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuIjoiUHJlbWl1bVBsYW4iLCJleHAiOjE2Njk5NjQ0ODh9.ZJG6xSVUZAEUuMbZLPbGrV6nPoAIZQJA89_OE2pZmPE
-2021/12/02 08:01:28 Middleware response HTTP header: Set Server MyBackendName-1.2.0
-2021/12/02 08:01:28 Middleware RateLimiter: burst=100 rate=5/s
-2021/12/02 08:01:28 Middleware logger: requester IP and requested URL
-2021/12/02 08:01:28 Server listening on http://localhost:8080
+2022/01/29 17:31:26 Prometheus export http://localhost:9093
+2022/01/29 17:31:26 CORS: Set origin prefixes: [http://localhost:8080 http://localhost: http://192.168.1.]
+2022/01/29 17:31:26 CORS: Methods=[GET POST] Headers=[Origin Accept Content-Type Authorization Cookie] Credentials=true MaxAge=86400
+2022/01/29 17:31:26 Enable PProf endpoints: http://localhost:8093/debug/pprof
+2022/01/29 17:31:26 Create cookie plan=FreePlan domain=localhost secure=false myapp=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuIjoiRnJlZVBsYW4iLCJleHAiOjE2NzUwMDk4ODZ9.hiQQuFxNghrrCvvzEsXzN1lWTavL09Plx0dhFynrBxc
+2022/01/29 17:31:26 Create cookie plan=PremiumPlan domain=localhost secure=false myapp=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuIjoiUHJlbWl1bVBsYW4iLCJleHAiOjE2NzUwMDk4ODZ9.iP587iHjhLmX_8yMhuQfKu9q7qLbLE7UX-UgkL_VYhE
+2022/01/29 17:31:26 JWT not required for dev. origins: [http://localhost:8080 http://localhost: http://192.168.1.]
+2022/01/29 17:31:26 Middleware response HTTP header: Set Server MyApp-1.2.0
+2022/01/29 17:31:26 Middleware RateLimiter: burst=100 rate=5/s
+2022/01/29 17:31:26 Middleware logger: requester IP and requested URL
+2022/01/29 17:31:26 Server listening on http://localhost:8080
 ```
 
 ### 2. Embedded PProf server
