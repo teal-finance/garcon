@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Private key/value storage</title>
+</head>
+
+<body>
+  <h1>Private key/value store</h1>
+
+  <p>
+    This Garcon example is a key/value store
+    providing private storage
+    for each client identified by its unique IP.
+  </p>
+
+  <ul>
+    <li><p>
+      <a href="/keys"><code>GET /keys</code></a>
+      lists the key names for each client (each IP).
+      Only available when queried from local host 120.0.0.1.
+    </p></li>
+
+    <li><p>
+      <code>POST /keys</code> requires form body
+      encoded with the <code>application/x-www-form-urlencoded</code> media type.
+      The following command line sets the key <code>AA</code>:
+      <pre>
+        curl -D - -X POST 127.0.0.1:8080/keys -d AA=12345
+      </pre>
+      The following command line gets the key <code>AA</code>:
+      <pre>
+        curl -D - -X POST 127.0.0.1:8080/keys -d AA
+      </pre>
+      Multiple keys can be set and get simultaneously.
+    </p></li>
+
+    <li><p>
+      <code>DELETE /keys</code> accepts an optional form body
+      encoded with the <code>application/x-www-form-urlencoded</code> media type.
+      The following command line deletes all keys owned by the client:
+      <pre>
+        curl -D - -X DELETE 127.0.0.1:8080/keys
+      </pre>
+      The following command line deletes only the key <code>AA</code>:
+      <pre>
+        curl -D - -X DELETE 127.0.0.1:8080/keys -d AA
+      </pre>
+    </p></li>
+  </ul>
+</body>
+
+</html>
