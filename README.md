@@ -61,7 +61,7 @@ pprof -http=: cpu.pprof
 See also a complete real example in the repo
 [github.com/teal-finance/rainbow](https://github.com/teal-finance/rainbow/blob/main/cmd/server/main.go).
 
-## High-level
+## High-level example
 
 The following code uses the high-level function `Garcon.RunServer()`.
 
@@ -278,7 +278,7 @@ The corresponding garcon logs:
 2021/12/02 08:10:37 out 127.0.0.1:42892 GET /api/v1/items 1.984568ms c=1 a=1 i=0 h=0
 ```
 
-## Low-level
+## Low-level example
 
 :warning: **WARNING: This chapter is outdated!** :warning:
 
@@ -428,6 +428,18 @@ func items(w http.ResponseWriter, _ *http.Request) {
     _, _ = w.Write([]byte(`["item1","item2","item3"]`))
 }
 ```
+
+## KeyStore example
+
+The example KeyStore implements a key/value datastore
+providing private storage for each client identified by its unique IP.
+
+```
+go build ./examples/keystore
+./keystore
+```
+
+Then open <http://localhost:8080> to learn more about the implemented features.
 
 ## License
 
