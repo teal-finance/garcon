@@ -8,7 +8,7 @@ require (
 	github.com/golang-jwt/jwt/v4 v4.2.0
 	github.com/karrick/tparse/v2 v2.8.2
 	github.com/mailru/easyjson v0.7.7
-	github.com/open-policy-agent/opa v0.36.1
+	github.com/open-policy-agent/opa v0.37.0
 	github.com/pkg/profile v1.6.0
 	github.com/prometheus/client_golang v1.12.1
 	github.com/rs/cors v1.8.2
