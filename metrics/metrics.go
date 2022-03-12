@@ -132,9 +132,9 @@ func (m *Metrics) updateConnCounters() (connState func(net.Conn, http.ConnState)
 			m.conn--
 		// StateClosed is a terminal state.
 		case http.StateClosed:
-		default:
 			m.conn--
 		}
+		metrics.SetGauge([]string{"conn_count"}, float32(m.conn))
 	}
 }
 
@@ -151,7 +151,6 @@ func (m *Metrics) updateConnCountersAtomic() (connState func(net.Conn, http.Conn
 			atomic.AddInt64(&m.hijacked, 1)
 			atomic.AddInt64(&m.conn, -1)
 		case http.StateClosed:
-		default:
 			atomic.AddInt64(&m.conn, -1)
 		}
 	}
