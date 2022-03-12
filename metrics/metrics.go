@@ -19,23 +19,26 @@ import (
 	"net"
 	"net/http"
 	"strconv"
-	"sync/atomic"
 	"time"
 
 	"github.com/teal-finance/garcon/chain"
 	"github.com/teal-finance/garcon/security"
 
 	"github.com/armon/go-metrics"
-	"github.com/armon/go-metrics/prometheus"
+	metricsProm "github.com/armon/go-metrics/prometheus"
 	"github.com/go-chi/chi/v5"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 type Metrics struct {
-	conn     int64 // gauge   - Current number of HTTP connections
-	active   int64 // counter - Accumulate HTTP connections that have been in StateActive
-	idle     int64 // counter - Accumulate HTTP connections that have been in StateIdle
-	hijacked int64 // counter - Accumulate HTTP connections that have been in StateHijacked
+	conn float64 // Number of current active HTTP connections
+
+	connGauge  prometheus.Gauge
+	iniCounter prometheus.Counter
+	reqCounter prometheus.Counter
+	resCounter prometheus.Counter
+	hijCounter prometheus.Counter
 }
 
 // MetricsServer creates and starts the Prometheus export server.
@@ -55,32 +58,29 @@ func (m *Metrics) StartServer(port int, devMode bool) (chain.Chain, func(net.Con
 
 	log.Print("Prometheus export http://localhost" + addr)
 
-	// connState counts the HTTP client connections.
-	// In prod mode, we do not care about minor counting errors, we use the unsafe-thread version.
-	// In dev mode we use the atomic version to avoid warnings from "go build -race".
-	var connState func(net.Conn, http.ConnState)
-	if devMode {
-		connState = m.updateConnCountersAtomic()
-	} else {
-		connState = m.updateConnCounters()
-	}
+	m.connGauge = prometheus.NewGauge(prometheus.GaugeOpts{Namespace: "http", Name: "conn", Help: "Number of current active HTTP connections"})
+	m.iniCounter = prometheus.NewCounter(prometheus.CounterOpts{Namespace: "http", Name: "new", Help: "Total initiated HTTP connections since startup"})
+	m.reqCounter = prometheus.NewCounter(prometheus.CounterOpts{Namespace: "http", Name: "req", Help: "Total requested HTTP connections since startup"})
+	m.resCounter = prometheus.NewCounter(prometheus.CounterOpts{Namespace: "http", Name: "res", Help: "Total responded HTTP connections since startup"})
+	m.hijCounter = prometheus.NewCounter(prometheus.CounterOpts{Namespace: "http", Name: "hij", Help: "Total hijacked HTTP connections since startup"})
 
-	return chain.New(m.count), connState
+	prometheus.MustRegister(m.connGauge, m.iniCounter, m.reqCounter, m.resCounter, m.hijCounter)
+
+	// Add Go module build info.
+	prometheus.MustRegister(prometheus.NewBuildInfoCollector())
+
+	return chain.New(m.count), m.updateConnCounters()
 }
 
-// handler returns the endpoints "/metrics/xxx".
+// handler returns the endpoint "/metrics".
 func handler() http.Handler {
-	sink, err := prometheus.NewPrometheusSink()
+	sink, err := metricsProm.NewPrometheusSink()
 	if err != nil {
-		log.Print("ERR: NewPrometheusSink cannot register sink because ", err)
-
-		return nil
+		log.Fatal("ERR: NewPrometheusSink cannot register sink because ", err)
 	}
 
-	if _, err := metrics.NewGlobal(metrics.DefaultConfig("Rainbow"), sink); err != nil {
-		log.Print("ERR: Prometheus export is not able to provide metrics because ", err)
-
-		return nil
+	if _, err := metrics.NewGlobal(metrics.DefaultConfig("rainbow"), sink); err != nil {
+		log.Fatal("ERR: Prometheus export is not able to provide metrics because ", err)
 	}
 
 	handler := chi.NewRouter()
@@ -107,54 +107,42 @@ func (m *Metrics) count(next http.Handler) http.Handler {
 		metrics.AddSampleWithLabels([]string{"request_duration"}, float32(duration.Milliseconds()), labels)
 
 		uri := security.Sanitize(r.RequestURI)
-		log.Print("out ", r.RemoteAddr, " ", r.Method, " ", uri, " ", duration,
-			" c=", m.conn, " a=", m.active, " i=", m.idle, " h=", m.hijacked)
+		log.Print("out ", r.RemoteAddr, " ", r.Method, " ", uri, " ", duration, " c=", int(m.conn))
 	})
 }
 
-// updateConnCounters increments/decrements the number of connections.
+// updateConnCounters counts the number of HTTP client connections.
 func (m *Metrics) updateConnCounters() (connState func(net.Conn, http.ConnState)) {
 	return func(_ net.Conn, cs http.ConnState) {
 		switch cs {
-		// StateNew: the client just connects to TealAPI expecting a request.
+		// StateNew: the client just connects, the server expects its request.
 		// Transition to either StateActive or StateClosed.
 		case http.StateNew:
+			m.iniCounter.Inc()
 			m.conn++
-		// StateActive when 1 or more bytes of a request has been read.
-		// After the request is handled, transitions to StateClosed, StateHijacked, or StateIdle.
+			m.connGauge.Set(m.conn)
+
+		// StateActive: a request is being received.
+		// Transition to StateClosed, StateHijacked or StateIdle, after the request is handled.
 		// HTTP/2: StateActive only transitions away once all active requests are complete.
 		case http.StateActive:
-			m.active++
-		// StateIdle when handling a request is finished and is in the keep-alive state,
-		// waiting for a new request, then transitions to either StateActive or StateClosed.
-		case http.StateIdle:
-			m.idle++
-		// StateHijacked is a terminal state: does not transition to StateClosed.
-		case http.StateHijacked:
-			m.hijacked++
-			m.conn--
-		// StateClosed is a terminal state.
-		case http.StateClosed:
-			m.conn--
-		}
-		metrics.SetGauge([]string{"conn_count"}, float32(m.conn))
-	}
-}
+			m.reqCounter.Inc()
 
-func (m *Metrics) updateConnCountersAtomic() (connState func(net.Conn, http.ConnState)) {
-	return func(_ net.Conn, cs http.ConnState) {
-		switch cs {
-		case http.StateNew:
-			atomic.AddInt64(&m.conn, 1)
-		case http.StateActive:
-			atomic.AddInt64(&m.active, 1)
+		// StateIdle: the server has handled the request and is in the keep-alive state waiting for a new request.
+		// Transitions to either StateActive or StateClosed.
 		case http.StateIdle:
-			atomic.AddInt64(&m.idle, 1)
+			m.resCounter.Inc()
+
+		// StateHijacked: terminal state.
 		case http.StateHijacked:
-			atomic.AddInt64(&m.hijacked, 1)
-			atomic.AddInt64(&m.conn, -1)
+			m.hijCounter.Inc()
+			m.conn--
+			m.connGauge.Set(m.conn)
+
+		// StateClosed: terminal state.
 		case http.StateClosed:
-			atomic.AddInt64(&m.conn, -1)
+			m.conn--
+			m.connGauge.Set(m.conn)
 		}
 	}
 }

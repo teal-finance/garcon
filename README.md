@@ -236,17 +236,12 @@ The corresponding garcon logs:
 [cors] 2021/12/02 08:06:20 Handler: Actual request
 [cors] 2021/12/02 08:06:20   Actual request no headers added: missing origin
 2021/12/02 08:06:20 OPA unauthorize 127.0.0.1:42888 /api/v1/items
-2021/12/02 08:06:20 out 127.0.0.1:42888 GET /api/v1/items 1.426916ms c=1 a=1 i=0 h=0
+2021/12/02 08:06:20 out 127.0.0.1:42888 GET /api/v1/items 1.426916ms c=1
 ```
 
 The CORS logs can be disabled by passing `debug=false` in `cors.Handler(origins, false)`.
 
-The values `c=1 a=1 i=0 h=0` measure the web traffic:
-
-* `c` for the current number of HTTP connections (gauge)
-* `a` for the accumulated HTTP connections that have been in StateActive (counter)
-* `i` for the accumulated HTTP connections that have been in StateIdle (counter)
-* `h` for the accumulated HTTP connections that have been in StateHijacked (counter)
+The value `c=1` measures the web traffic (current active HTTP connections).
 
 ### 7. With Authorization header
 
