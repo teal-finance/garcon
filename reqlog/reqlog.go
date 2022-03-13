@@ -19,6 +19,8 @@ package reqlog
 import (
 	"log"
 	"net/http"
+
+	"github.com/teal-finance/garcon/security"
 )
 
 // LogRequests is the middleware to log the incoming HTTP requests.
@@ -96,14 +98,19 @@ func IPMethodURLFingerprint(r *http.Request) string {
 	// 9. Authorization and/or Cookie content.
 
 	if a := r.Header.Get("Authorization"); a != "" {
-		line += " " + a
+		checksum, err := security.Obfuscate(a)
+		if err == nil {
+			line += " " + checksum
+		} else {
+			log.Print("WAR Cannot create HighwayHash ", err)
+		}
 	}
 
 	if c := r.Header.Get("Cookie"); c != "" {
 		line += " " + c
 	}
 
-	return line
+	return security.SanitizeLineBreaks(line)
 }
 
 // FingerprintExplanation provides a description of the logged HTTP headers.
@@ -116,4 +123,4 @@ const FingerprintExplanation = `
 6. Connection, can be empty, "keep-alive" or "close". 
 7. DNT (Do Not Track) can be used by Firefox (dropped by web standards). 
 8. Cache-Control, how the browser is caching data. 
-9. Authorization and/or Cookie content.`
+9. Authorization (obfuscated) and/or Cookie content.`

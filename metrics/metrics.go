@@ -22,11 +22,13 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/teal-finance/garcon/chain"
+	"github.com/teal-finance/garcon/security"
+
 	"github.com/armon/go-metrics"
 	"github.com/armon/go-metrics/prometheus"
 	"github.com/go-chi/chi/v5"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/teal-finance/garcon/chain"
 )
 
 type Metrics struct {
@@ -104,7 +106,8 @@ func (m *Metrics) count(next http.Handler) http.Handler {
 		duration := time.Since(start)
 		metrics.AddSampleWithLabels([]string{"request_duration"}, float32(duration.Milliseconds()), labels)
 
-		log.Print("out ", r.RemoteAddr, " ", r.Method, " ", r.URL, " ", duration,
+		uri := security.SanitizeLineBreaks(r.RequestURI)
+		log.Print("out ", r.RemoteAddr, " ", r.Method, " ", uri, " ", duration,
 			" c=", m.conn, " a=", m.active, " i=", m.idle, " h=", m.hijacked)
 	})
 }

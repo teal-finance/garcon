@@ -32,6 +32,7 @@ import (
 	"github.com/teal-finance/garcon/pprof"
 	"github.com/teal-finance/garcon/reqlog"
 	"github.com/teal-finance/garcon/reserr"
+	"github.com/teal-finance/garcon/security"
 )
 
 // DevOrigins provides the development origins:
@@ -120,6 +121,8 @@ func (s parameters) new() (*Garcon, error) {
 	}
 
 	g.Middlewares, g.ConnState = g.metrics.StartServer(s.expPort, s.devMode)
+
+	g.Middlewares.Append(security.RejectLineBreakInURI)
 
 	switch s.reqLogs {
 	case 0:

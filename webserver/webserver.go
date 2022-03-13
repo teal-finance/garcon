@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	"github.com/teal-finance/garcon/reserr"
+	"github.com/teal-finance/garcon/security"
 )
 
 type WebServer struct {
@@ -57,50 +58,42 @@ func (ws WebServer) ServeFile(urlPath, contentType string) func(w http.ResponseW
 // ServeDir handles the static files using the same Content-Type.
 func (ws WebServer) ServeDir(contentType string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if validPath(w, r) {
-			// JS and CSS files should contain a [hash].
-			// Thus the path changes when content changes,
-			// enabling aggressive Cache-Control parameters:
-			// public            Can be cached by proxy (reverse-proxy. CDN…) and by browser
-			// max-age=31536000  Store it up to 1 year (browser stores it some days due to limited cache size)
-			// immutable         Only supported by Firefox and Safari
-			w.Header().Set("Cache-Control", "public,max-age=31536000,immutable")
-			w.Header().Set("Content-Type", contentType)
-
-			absPath := path.Join(ws.Dir, r.URL.Path)
-			ws.send(w, r, absPath)
+		if !security.ValidPath(w, r) {
+			return
 		}
+
+		// JS and CSS files should contain a [hash].
+		// Thus the path changes when content changes,
+		// enabling aggressive Cache-Control parameters:
+		// public            Can be cached by proxy (reverse-proxy. CDN…) and by browser
+		// max-age=31536000  Store it up to 1 year (browser stores it some days due to limited cache size)
+		// immutable         Only supported by Firefox and Safari
+		w.Header().Set("Cache-Control", "public,max-age=31536000,immutable")
+		w.Header().Set("Content-Type", contentType)
+
+		absPath := path.Join(ws.Dir, r.URL.Path)
+		ws.send(w, r, absPath)
 	}
 }
 
 // ServeImages detects the Content-Type depending on the image extension.
 func (ws WebServer) ServeImages() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if validPath(w, r) {
-			// Images are supposed never change, else better to create a new image
-			// (or to wait some days the browser clears out data based on LRU).
-			w.Header().Set("Cache-Control", "public,max-age=31536000,immutable")
-
-			absPath, contentType := ws.imagePathAndType(r)
-			if contentType != "" {
-				w.Header().Set("Content-Type", contentType)
-			}
-
-			ws.send(w, r, absPath)
+		if !security.ValidPath(w, r) {
+			return
 		}
+
+		// Images are supposed never change, else better to create a new image
+		// (or to wait some days the browser clears out data based on LRU).
+		w.Header().Set("Cache-Control", "public,max-age=31536000,immutable")
+
+		absPath, contentType := ws.imagePathAndType(r)
+		if contentType != "" {
+			w.Header().Set("Content-Type", contentType)
+		}
+
+		ws.send(w, r, absPath)
 	}
-}
-
-// validPath returns a HTTP error if the path is invalid.
-func validPath(w http.ResponseWriter, r *http.Request) bool {
-	if strings.Contains(r.URL.Path, "..") {
-		reserr.Write(w, r, http.StatusBadRequest, "Invalid URL Path Containing '..'")
-		log.Print("WRN WebServer: reject path with '..' ", r.URL.Path)
-
-		return false
-	}
-
-	return true
 }
 
 func (ws WebServer) openFile(w http.ResponseWriter, r *http.Request, absPath string) (*os.File, string) {

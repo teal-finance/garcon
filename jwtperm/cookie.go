@@ -23,6 +23,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -31,6 +32,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/teal-finance/garcon/reserr"
+	"github.com/teal-finance/garcon/security"
 )
 
 const (
@@ -291,22 +293,23 @@ func (ck *Checker) isDevOrigin(r *http.Request) bool {
 
 	if len(ck.devOrigins) > 0 {
 		origin := r.Header.Get("Origin")
+		sanitized := security.SanitizeLineBreaks(origin)
 
 		for _, prefix := range ck.devOrigins {
 			if prefix == "*" {
-				log.Print("No JWT but addr=http://localhost => Accept any origin=", origin)
+				log.Print("No JWT but addr=http://localhost => Accept any origin=", sanitized)
 
 				return true
 			}
 
 			if strings.HasPrefix(origin, prefix) {
-				log.Printf("No JWT but origin=%v is a valid dev origin", origin)
+				log.Printf("No JWT but origin=%v is a valid dev origin", sanitized)
 
 				return true
 			}
 		}
 
-		log.Print("No JWT and origin=", origin, " has not prefixes ", ck.devOrigins)
+		log.Print("No JWT and origin=", sanitized, " has not prefixes ", ck.devOrigins)
 	}
 
 	return false
@@ -343,7 +346,10 @@ func (ck *Checker) jwtFromBearer(r *http.Request) (jwt, errMsg string) {
 
 	n := len(bearerPrefix)
 	if len(auth) > n && auth[:n] == bearerPrefix {
-		log.Print("Authorization header has JWT: ", auth[n:])
+		checksum, err := security.Obfuscate(auth[n:])
+		if err != nil {
+			log.Print("Authorization header has JWT hash: ", checksum)
+		}
 
 		return auth[n:], "" // Success
 	}
@@ -354,7 +360,7 @@ func (ck *Checker) jwtFromBearer(r *http.Request) (jwt, errMsg string) {
 		return "", "Provide your JWT within the 'Authorization Bearer' HTTP header"
 	}
 
-	log.Printf("Authorization header %q does not contain %q", auth, bearerPrefix)
+	log.Printf("Authorization header does not contain «" + bearerPrefix + "»")
 
 	return "", invalidCookie
 }
@@ -411,7 +417,8 @@ func (ck *Checker) permFromRefreshClaims(claims *RefreshClaims) Perm {
 		}
 	}
 
-	log.Print("WRN Set default JWT because RefreshClaims has not been identified: ", claims)
+	log.Print("WRN Set default JWT due to unexpected RefreshClaims: ",
+		security.SanitizeLineBreaks(fmt.Sprint(*claims)))
 
 	return ck.perms[0]
 }
@@ -451,7 +458,7 @@ func (ck *Checker) verifySignature(parts []string) (errMsg string) {
 	signedString := ck.sign(signingString)
 
 	if signature := parts[2]; signature != signedString {
-		log.Print("WRN JWT signature in 3rd part : ", signature)
+		log.Print("WRN JWT signature in 3rd part : ", security.SanitizeLineBreaks(signature))
 		log.Print("WRN JWT signed first two parts: ", signedString)
 
 		return "JWT signature mismatch"
@@ -476,16 +483,14 @@ func (ck *Checker) permFromRefreshBytes(claimsJSON []byte) (perm Perm, errMsg st
 	}
 
 	if err := json.Unmarshal(claimsJSON, claims); err != nil {
-		log.Print("WRN JWT ", err, " while unmarshaling RefreshClaims: ", string(claimsJSON))
-
-		return perm, noClaimsInJWT
+		return perm, err.Error() + " while unmarshaling RefreshClaims: " +
+			security.SanitizeLineBreaks(string(claimsJSON))
 	}
 
 	if err := claims.Valid(); err != nil {
-		return perm, err.Error()
+		return perm, err.Error() + " in RefreshClaims: " +
+			security.SanitizeLineBreaks(string(claimsJSON))
 	}
-
-	log.Print("JWT Claims: ", *claims)
 
 	perm = ck.permFromRefreshClaims(claims)
 
