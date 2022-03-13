@@ -28,6 +28,7 @@ import (
 	metricsProm "github.com/armon/go-metrics/prometheus"
 	"github.com/go-chi/chi/v5"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
@@ -58,16 +59,16 @@ func (m *Metrics) StartServer(port int, devMode bool) (chain.Chain, func(net.Con
 
 	log.Print("Prometheus export http://localhost" + addr)
 
-	m.connGauge = prometheus.NewGauge(prometheus.GaugeOpts{Namespace: "http", Name: "conn", Help: "Number of current active HTTP connections"})
-	m.iniCounter = prometheus.NewCounter(prometheus.CounterOpts{Namespace: "http", Name: "new", Help: "Total initiated HTTP connections since startup"})
-	m.reqCounter = prometheus.NewCounter(prometheus.CounterOpts{Namespace: "http", Name: "req", Help: "Total requested HTTP connections since startup"})
-	m.resCounter = prometheus.NewCounter(prometheus.CounterOpts{Namespace: "http", Name: "res", Help: "Total responded HTTP connections since startup"})
-	m.hijCounter = prometheus.NewCounter(prometheus.CounterOpts{Namespace: "http", Name: "hij", Help: "Total hijacked HTTP connections since startup"})
+	m.connGauge = newGauge("conn", "Number of current active HTTP connections")
+	m.iniCounter = newCounter("new_total", "Total initiated HTTP connections since startup")
+	m.reqCounter = newCounter("req_total", "Total requested HTTP connections since startup")
+	m.resCounter = newCounter("res_total", "Total responded HTTP connections since startup")
+	m.hijCounter = newCounter("hij_total", "Total hijacked HTTP connections since startup")
 
 	prometheus.MustRegister(m.connGauge, m.iniCounter, m.reqCounter, m.resCounter, m.hijCounter)
 
 	// Add Go module build info.
-	prometheus.MustRegister(prometheus.NewBuildInfoCollector())
+	prometheus.MustRegister(collectors.NewBuildInfoCollector())
 
 	return chain.New(m.count), m.updateConnCounters()
 }
@@ -158,4 +159,24 @@ func (r *statusRecorder) WriteHeader(status int) {
 	}
 
 	r.ResponseWriter.WriteHeader(status)
+}
+
+func newGauge(name, help string) prometheus.Gauge {
+	return prometheus.NewGauge(prometheus.GaugeOpts{
+		Namespace:   "http",
+		Subsystem:   "",
+		Name:        name,
+		Help:        help,
+		ConstLabels: nil,
+	})
+}
+
+func newCounter(name, help string) prometheus.Counter {
+	return prometheus.NewCounter(prometheus.CounterOpts{
+		Namespace:   "http",
+		Subsystem:   "",
+		Name:        name,
+		Help:        help,
+		ConstLabels: nil,
+	})
 }
