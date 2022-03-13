@@ -33,8 +33,6 @@ import (
 )
 
 type Metrics struct {
-	conn float64 // Number of current active HTTP connections
-
 	connGauge  prometheus.Gauge
 	iniCounter prometheus.Counter
 	reqCounter prometheus.Counter
@@ -108,7 +106,7 @@ func (m *Metrics) count(next http.Handler) http.Handler {
 		metrics.AddSampleWithLabels([]string{"request_duration"}, float32(duration.Milliseconds()), labels)
 
 		uri := security.Sanitize(r.RequestURI)
-		log.Print("out ", r.RemoteAddr, " ", r.Method, " ", uri, " ", duration, " c=", int(m.conn))
+		log.Print("out ", r.RemoteAddr, " ", r.Method, " ", uri, " ", duration)
 	})
 }
 
@@ -119,9 +117,8 @@ func (m *Metrics) updateConnCounters() (connState func(net.Conn, http.ConnState)
 		// StateNew: the client just connects, the server expects its request.
 		// Transition to either StateActive or StateClosed.
 		case http.StateNew:
+			m.connGauge.Inc()
 			m.iniCounter.Inc()
-			m.conn++
-			m.connGauge.Set(m.conn)
 
 		// StateActive: a request is being received.
 		// Transition to StateClosed, StateHijacked or StateIdle, after the request is handled.
@@ -136,14 +133,12 @@ func (m *Metrics) updateConnCounters() (connState func(net.Conn, http.ConnState)
 
 		// StateHijacked: terminal state.
 		case http.StateHijacked:
+			m.connGauge.Dec()
 			m.hijCounter.Inc()
-			m.conn--
-			m.connGauge.Set(m.conn)
 
 		// StateClosed: terminal state.
 		case http.StateClosed:
-			m.conn--
-			m.connGauge.Set(m.conn)
+			m.connGauge.Dec()
 		}
 	}
 }
