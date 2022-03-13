@@ -449,3 +449,8 @@ Except:
 * the [example](examples) files under CC0-1.0 (Creative Commons Zero v1.0 Universal) ;
 * the file [chain.go](chain/chain.go) (fork) under the MIT License.
 * the file [cookie.go](jwtperm/cookie.go) (fork) under the MIT License.
+
+## See also
+
+* <https://github.com/kambahr/go-webstandard>
+* <https://github.com/go-aah/aah>
