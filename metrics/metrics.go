@@ -25,19 +25,20 @@ import (
 	"github.com/teal-finance/garcon/security"
 
 	"github.com/armon/go-metrics"
-	metricsProm "github.com/armon/go-metrics/prometheus"
 	"github.com/go-chi/chi/v5"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 type Metrics struct {
-	connGauge  prometheus.Gauge
-	iniCounter prometheus.Counter
-	reqCounter prometheus.Counter
-	resCounter prometheus.Counter
-	hijCounter prometheus.Counter
+	reqDuration prometheus.Summary
+	connGauge   prometheus.Gauge
+	iniCounter  prometheus.Counter
+	reqCounter  prometheus.Counter
+	resCounter  prometheus.Counter
+	hijCounter  prometheus.Counter
 }
 
 // MetricsServer creates and starts the Prometheus export server.
@@ -57,61 +58,56 @@ func (m *Metrics) StartServer(port int, devMode bool) (chain.Chain, func(net.Con
 
 	log.Print("Prometheus export http://localhost" + addr)
 
-	m.connGauge = newGauge("conn", "Number of current active HTTP connections")
-	m.iniCounter = newCounter("new_total", "Total initiated HTTP connections since startup")
-	m.reqCounter = newCounter("req_total", "Total requested HTTP connections since startup")
-	m.resCounter = newCounter("res_total", "Total responded HTTP connections since startup")
-	m.hijCounter = newCounter("hij_total", "Total hijacked HTTP connections since startup")
+	m.reqDuration = newSummary("request_duration_seconds", "Time to handle a client request")
+	m.connGauge = newGauge("in_flight_connections", "Number of current active connections")
+	m.iniCounter = newCounter("conn_new_total", "Total initiated connections since startup")
+	m.reqCounter = newCounter("conn_req_total", "Total requested connections since startup")
+	m.resCounter = newCounter("conn_res_total", "Total responded connections since startup")
+	m.hijCounter = newCounter("conn_hij_total", "Total hijacked connections since startup")
 
-	prometheus.MustRegister(m.connGauge, m.iniCounter, m.reqCounter, m.resCounter, m.hijCounter)
-
-	// Add Go module build info.
+	// Add build info.
 	prometheus.MustRegister(collectors.NewBuildInfoCollector())
 
-	return chain.New(m.count), m.updateConnCounters()
+	return chain.New(m.measureDuration), m.updateHTTPMetrics()
 }
 
 // handler returns the endpoint "/metrics".
 func handler() http.Handler {
-	sink, err := metricsProm.NewPrometheusSink()
-	if err != nil {
-		log.Fatal("ERR: NewPrometheusSink cannot register sink because ", err)
-	}
-
-	if _, err := metrics.NewGlobal(metrics.DefaultConfig("rainbow"), sink); err != nil {
-		log.Fatal("ERR: Prometheus export is not able to provide metrics because ", err)
-	}
-
 	handler := chi.NewRouter()
 	handler.Handle("/metrics", promhttp.Handler())
 
 	return handler
 }
 
-// count increments/decrements web traffic metrics depending on incoming requests and outgoing responses.
-func (m *Metrics) count(next http.Handler) http.Handler {
+// measureDuration measures the time to handle a request.
+func (m *Metrics) measureDuration(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		record := &statusRecorder{ResponseWriter: w, Status: "success"}
 
 		next.ServeHTTP(record, r)
 
-		labels := []metrics.Label{
-			{Name: "method", Value: r.Method},
-			{Name: "route", Value: r.RequestURI},
-			{Name: "status", Value: record.Status},
-		}
-
 		duration := time.Since(start)
-		metrics.AddSampleWithLabels([]string{"request_duration"}, float32(duration.Milliseconds()), labels)
+
+		// TODO: replace below code using go-metrics by pure prom-client code using m.reqDuration
+		metrics.AddSampleWithLabels(
+			[]string{"request_duration"},
+			float32(duration.Milliseconds()),
+			[]metrics.Label{
+				{Name: "method", Value: r.Method},
+				{Name: "route", Value: r.RequestURI},
+				{Name: "status", Value: record.Status},
+			})
+
+		m.reqDuration.Observe(duration.Seconds())
 
 		uri := security.Sanitize(r.RequestURI)
 		log.Print("out ", r.RemoteAddr, " ", r.Method, " ", uri, " ", duration)
 	})
 }
 
-// updateConnCounters counts the number of HTTP client connections.
-func (m *Metrics) updateConnCounters() (connState func(net.Conn, http.ConnState)) {
+// updateHTTPMetrics counts the connections and update web traffic metrics depending on incoming requests and outgoing responses.
+func (m *Metrics) updateHTTPMetrics() (connState func(net.Conn, http.ConnState)) {
 	return func(_ net.Conn, cs http.ConnState) {
 		switch cs {
 		// StateNew: the client just connects, the server expects its request.
@@ -156,8 +152,22 @@ func (r *statusRecorder) WriteHeader(status int) {
 	r.ResponseWriter.WriteHeader(status)
 }
 
+func newSummary(name, help string) prometheus.Summary {
+	return promauto.NewSummary(prometheus.SummaryOpts{
+		Namespace:   "http",
+		Subsystem:   "",
+		Name:        name,
+		Help:        help,
+		ConstLabels: nil,
+		Objectives:  map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
+		MaxAge:      24 * time.Hour,
+		AgeBuckets:  0,
+		BufCap:      0,
+	})
+}
+
 func newGauge(name, help string) prometheus.Gauge {
-	return prometheus.NewGauge(prometheus.GaugeOpts{
+	return promauto.NewGauge(prometheus.GaugeOpts{
 		Namespace:   "http",
 		Subsystem:   "",
 		Name:        name,
@@ -167,7 +177,7 @@ func newGauge(name, help string) prometheus.Gauge {
 }
 
 func newCounter(name, help string) prometheus.Counter {
-	return prometheus.NewCounter(prometheus.CounterOpts{
+	return promauto.NewCounter(prometheus.CounterOpts{
 		Namespace:   "http",
 		Subsystem:   "",
 		Name:        name,
