@@ -21,19 +21,17 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/teal-finance/garcon/chain"
-	"github.com/teal-finance/garcon/security"
-
-	"github.com/armon/go-metrics"
 	"github.com/go-chi/chi/v5"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/teal-finance/garcon/chain"
+	"github.com/teal-finance/garcon/security"
 )
 
 type Metrics struct {
-	reqDuration prometheus.Summary
+	reqDuration *prometheus.SummaryVec
 	connGauge   prometheus.Gauge
 	iniCounter  prometheus.Counter
 	reqCounter  prometheus.Counter
@@ -58,7 +56,7 @@ func (m *Metrics) StartServer(port int, devMode bool) (chain.Chain, func(net.Con
 
 	log.Print("Prometheus export http://localhost" + addr)
 
-	m.reqDuration = newSummary("request_duration_seconds", "Time to handle a client request")
+	m.reqDuration = newSummaryVec("request_duration_seconds", "Time to handle a client request", "code", "route")
 	m.connGauge = newGauge("in_flight_connections", "Number of current active connections")
 	m.iniCounter = newCounter("conn_new_total", "Total initiated connections since startup")
 	m.reqCounter = newCounter("conn_req_total", "Total requested connections since startup")
@@ -89,17 +87,8 @@ func (m *Metrics) measureDuration(next http.Handler) http.Handler {
 
 		duration := time.Since(start)
 
-		// TODO: replace below code using go-metrics by pure prom-client code using m.reqDuration
-		metrics.AddSampleWithLabels(
-			[]string{"request_duration"},
-			float32(duration.Milliseconds()),
-			[]metrics.Label{
-				{Name: "method", Value: r.Method},
-				{Name: "route", Value: r.RequestURI},
-				{Name: "status", Value: record.Status},
-			})
-
-		m.reqDuration.Observe(duration.Seconds())
+		m.reqDuration.WithLabelValues(record.Status, r.RequestURI).
+			Observe(duration.Seconds())
 
 		uri := security.Sanitize(r.RequestURI)
 		log.Print("out ", r.RemoteAddr, " ", r.Method, " ", uri, " ", duration)
@@ -152,8 +141,8 @@ func (r *statusRecorder) WriteHeader(status int) {
 	r.ResponseWriter.WriteHeader(status)
 }
 
-func newSummary(name, help string) prometheus.Summary {
-	return promauto.NewSummary(prometheus.SummaryOpts{
+func newSummaryVec(name, help string, labels ...string) *prometheus.SummaryVec {
+	return promauto.NewSummaryVec(prometheus.SummaryOpts{
 		Namespace:   "http",
 		Subsystem:   "",
 		Name:        name,
@@ -163,7 +152,7 @@ func newSummary(name, help string) prometheus.Summary {
 		MaxAge:      24 * time.Hour,
 		AgeBuckets:  0,
 		BufCap:      0,
-	})
+	}, labels)
 }
 
 func newGauge(name, help string) prometheus.Gauge {
