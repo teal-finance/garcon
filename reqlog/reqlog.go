@@ -110,7 +110,7 @@ func IPMethodURLFingerprint(r *http.Request) string {
 		line += " " + c
 	}
 
-	return security.SanitizeLineBreaks(line)
+	return security.Sanitize(line)
 }
 
 // FingerprintExplanation provides a description of the logged HTTP headers.

@@ -293,7 +293,7 @@ func (ck *Checker) isDevOrigin(r *http.Request) bool {
 
 	if len(ck.devOrigins) > 0 {
 		origin := r.Header.Get("Origin")
-		sanitized := security.SanitizeLineBreaks(origin)
+		sanitized := security.Sanitize(origin)
 
 		for _, prefix := range ck.devOrigins {
 			if prefix == "*" {
@@ -418,7 +418,7 @@ func (ck *Checker) permFromRefreshClaims(claims *RefreshClaims) Perm {
 	}
 
 	log.Print("WRN Set default JWT due to unexpected RefreshClaims: ",
-		security.SanitizeLineBreaks(fmt.Sprint(*claims)))
+		security.Sanitize(fmt.Sprint(*claims)))
 
 	return ck.perms[0]
 }
@@ -458,7 +458,7 @@ func (ck *Checker) verifySignature(parts []string) (errMsg string) {
 	signedString := ck.sign(signingString)
 
 	if signature := parts[2]; signature != signedString {
-		log.Print("WRN JWT signature in 3rd part : ", security.SanitizeLineBreaks(signature))
+		log.Print("WRN JWT signature in 3rd part : ", security.Sanitize(signature))
 		log.Print("WRN JWT signed first two parts: ", signedString)
 
 		return "JWT signature mismatch"
@@ -484,12 +484,12 @@ func (ck *Checker) permFromRefreshBytes(claimsJSON []byte) (perm Perm, errMsg st
 
 	if err := json.Unmarshal(claimsJSON, claims); err != nil {
 		return perm, err.Error() + " while unmarshaling RefreshClaims: " +
-			security.SanitizeLineBreaks(string(claimsJSON))
+			security.Sanitize(string(claimsJSON))
 	}
 
 	if err := claims.Valid(); err != nil {
 		return perm, err.Error() + " in RefreshClaims: " +
-			security.SanitizeLineBreaks(string(claimsJSON))
+			security.Sanitize(string(claimsJSON))
 	}
 
 	perm = ck.permFromRefreshClaims(claims)

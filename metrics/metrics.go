@@ -106,7 +106,7 @@ func (m *Metrics) count(next http.Handler) http.Handler {
 		duration := time.Since(start)
 		metrics.AddSampleWithLabels([]string{"request_duration"}, float32(duration.Milliseconds()), labels)
 
-		uri := security.SanitizeLineBreaks(r.RequestURI)
+		uri := security.Sanitize(r.RequestURI)
 		log.Print("out ", r.RemoteAddr, " ", r.Method, " ", uri, " ", duration,
 			" c=", m.conn, " a=", m.active, " i=", m.idle, " h=", m.hijacked)
 	})

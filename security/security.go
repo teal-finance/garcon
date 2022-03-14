@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/minio/highwayhash"
 	"github.com/teal-finance/garcon/reserr"
@@ -14,21 +15,69 @@ import (
 
 const hashKey32bytes = "0123456789ABCDEF0123456789ABCDEF"
 
-// DoesContainLineBreak returns true if input string
-// contains a Carriage Return "\r" or a Line Feed "\n"
-// to prevent log injection.
-func DoesContainLineBreak(s string) bool {
-	return strings.Contains(s, "\r") || strings.Contains(s, "\n")
+// Code points in the surrogate range are not valid for UTF-8.
+const (
+	surrogateMin = 0xD800
+	surrogateMax = 0xDFFF
+)
+
+// Sanitize replaces control codes by the tofu symbol
+// and invalid UTF-8 codes by the replacement character.
+// Sanitize can be used to prevent log injection.
+// Inspired from:
+// https://wikiless.org/wiki/Replacement_character#Replacement_character
+// https://graphicdesign.stackexchange.com/q/108297
+func Sanitize(s string) string {
+	return strings.Map(
+		func(r rune) rune {
+			switch {
+			case r < 32:
+			case r == 127: // The .notdef character is often represented by the empty box (tofu)
+				return '􏿮' // to indicate a valid but not rendered character.
+			case surrogateMin <= r && r <= surrogateMax:
+			case utf8.MaxRune < r:
+				return '�' // The replacement character U+FFFD indicates an invalid UTF-8 character.
+			}
+
+			return r
+		},
+		s,
+	)
 }
 
-// SanitizeLineBreaks replaces
-// Carriage Return "\r" by <CR> and
-// Line Feed "\n" by <LF>.
-func SanitizeLineBreaks(s string) string {
-	s = strings.ReplaceAll(s, "\r", "<CR>")
-	s = strings.ReplaceAll(s, "\n", "<LF>")
+// ValidRuneForLogging returns false if rune is
+// a Carriage Return "\r", or a Line Feed "\n",
+// or another ASCII control code (except space),
+// or an invalid UTF-8 code.
+// ValidRuneForLogging can be used to prevent log injection.
+func ValidRuneForLogging(r rune) bool {
+	switch {
+	case r < 32:
+		return false
+	case r == 127:
+		return false
+	case surrogateMin <= r && r <= surrogateMax:
+		return false
+	case utf8.MaxRune > r:
+		return false
+	}
 
-	return s
+	return true
+}
+
+// ValidForLogging returns false if input string contains
+// a Carriage Return "\r", or a Line Feed "\n",
+// or any other ASCII control code (except space),
+// or, as well as, invalid UTF-8 codes.
+// ValidForLogging can be used to prevent log injection.
+func ValidForLogging(s string) bool {
+	for _, r := range s {
+		if !ValidRuneForLogging(r) {
+			return false
+		}
+	}
+
+	return true
 }
 
 // RejectLineBreakInURI rejects HTTP requests having
@@ -39,9 +88,9 @@ func RejectLineBreakInURI(next http.Handler) http.Handler {
 
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			if DoesContainLineBreak(r.RequestURI) {
+			if !ValidForLogging(r.RequestURI) {
 				reserr.Write(w, r, http.StatusBadRequest, "Invalid URI containing a line break (CR or LF)")
-				log.Print("WRN WebServer: reject URI with <CR> or <LF>:", SanitizeLineBreaks(r.RequestURI))
+				log.Print("WRN WebServer: reject URI with <CR> or <LF>:", Sanitize(r.RequestURI))
 
 				return
 			}
@@ -54,7 +103,7 @@ func RejectLineBreakInURI(next http.Handler) http.Handler {
 func ValidPath(w http.ResponseWriter, r *http.Request) bool {
 	if strings.Contains(r.URL.Path, "..") {
 		reserr.Write(w, r, http.StatusBadRequest, "Invalid URL Path Containing '..'")
-		log.Print("WRN WebServer: reject path with '..' ", SanitizeLineBreaks(r.URL.Path))
+		log.Print("WRN WebServer: reject path with '..' ", Sanitize(r.URL.Path))
 
 		return false
 	}
