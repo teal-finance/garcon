@@ -57,7 +57,7 @@ func main() {
 		garcon.WithReqLogs(),
 		garcon.WithLimiter(burst, perMinute),
 		garcon.WithPProf(pprofPort),
-		garcon.WithProm(expPort, "myapp"),
+		garcon.WithProm(expPort, "https://example.com/path/myapp/"),
 		garcon.WithDev(!*prod),
 	)
 

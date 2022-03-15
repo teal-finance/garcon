@@ -49,7 +49,7 @@ func StartServer(port int, namespace string, devMode bool) (chain.Chain, func(ne
 		log.Fatal(err)
 	}()
 
-	log.Print("Prometheus export http://localhost" + addr)
+	log.Print("Prometheus export http://localhost" + addr + " namespace=" + namespace)
 
 	// Add build info.
 	prometheus.MustRegister(collectors.NewBuildInfoCollector())

@@ -242,6 +242,13 @@ func WithPProf(port int) Option {
 
 func WithProm(port int, namespace string) Option {
 	return func(p *parameters) {
+		// If namespace is a path or an URL, keep only the last dirname.
+		// Example: keep "myapp" from "https://example.com/path/myapp/"
+		namespace = strings.Trim(namespace, "/")
+		if i := strings.LastIndex(namespace, "/"); i >= 0 {
+			namespace = namespace[i+1:]
+		}
+
 		p.expPort = port
 		p.expNamespace = namespace
 	}
