@@ -34,6 +34,7 @@ func Handler(origins []string, debug bool) func(next http.Handler) http.Handler 
 		MaxAge:                 24 * 3600, // https://developer.mozilla.org/docs/Web/HTTP/Headers/Access-Control-Max-Age
 		AllowCredentials:       true,
 		OptionsPassthrough:     false,
+		OptionsSuccessStatus:   http.StatusNoContent,
 		Debug:                  debug, // verbose logs
 	}
 

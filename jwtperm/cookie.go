@@ -39,7 +39,6 @@ const (
 	bearerPrefix = "Bearer "
 
 	invalidCookie = "invalid cookie"
-	noClaimsInJWT = "no Access nor Refresh token in JWT"
 	expiredRToken = "Refresh token has expired (or invalid)"
 
 	defaultCookieName = "g" // g as in garcon
