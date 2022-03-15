@@ -52,7 +52,6 @@ type Garcon struct {
 	ResErr         reserr.ResErr
 	AllowedOrigins []string
 	Middlewares    chain.Chain
-	metrics        metrics.Metrics
 }
 
 type parameters struct {
@@ -64,6 +63,7 @@ type parameters struct {
 	opaFilenames []string
 	pprofPort    int
 	expPort      int
+	expNamespace string
 	reqLogs      int
 	reqBurst     int
 	reqMinute    int
@@ -80,6 +80,7 @@ func New(opts ...Option) (*Garcon, error) {
 		opaFilenames: nil,
 		pprofPort:    0,
 		expPort:      0,
+		expNamespace: "",
 		reqLogs:      0,
 		reqBurst:     0,
 		reqMinute:    0,
@@ -114,13 +115,12 @@ func (s parameters) new() (*Garcon, error) {
 	g := Garcon{
 		AllowedOrigins: OriginsFromURLs(s.urls),
 		ResErr:         reserr.New(s.docURL),
-		metrics:        metrics.Metrics{},
 		Middlewares:    nil,
 		ConnState:      nil,
 		JWT:            nil,
 	}
 
-	g.Middlewares, g.ConnState = g.metrics.StartServer(s.expPort, s.devMode)
+	g.Middlewares, g.ConnState = metrics.StartServer(s.expPort, s.expNamespace, s.devMode)
 
 	g.Middlewares.Append(security.RejectLineBreakInURI)
 
@@ -240,9 +240,10 @@ func WithPProf(port int) Option {
 	}
 }
 
-func WithProm(port int) Option {
+func WithProm(port int, namespace string) Option {
 	return func(p *parameters) {
 		p.expPort = port
+		p.expNamespace = namespace
 	}
 }
 

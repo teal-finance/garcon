@@ -30,17 +30,12 @@ import (
 	"github.com/teal-finance/garcon/security"
 )
 
-type Metrics struct {
-	reqDuration *prometheus.SummaryVec
-	connGauge   prometheus.Gauge
-	iniCounter  prometheus.Counter
-	reqCounter  prometheus.Counter
-	resCounter  prometheus.Counter
-	hijCounter  prometheus.Counter
+type space struct {
+	namespace string
 }
 
 // MetricsServer creates and starts the Prometheus export server.
-func (m *Metrics) StartServer(port int, devMode bool) (chain.Chain, func(net.Conn, http.ConnState)) {
+func StartServer(port int, namespace string, devMode bool) (chain.Chain, func(net.Conn, http.ConnState)) {
 	if port <= 0 {
 		log.Print("Disable Prometheus, export port=", port)
 
@@ -56,17 +51,12 @@ func (m *Metrics) StartServer(port int, devMode bool) (chain.Chain, func(net.Con
 
 	log.Print("Prometheus export http://localhost" + addr)
 
-	m.reqDuration = newSummaryVec("request_duration_seconds", "Time to handle a client request", "code", "route")
-	m.connGauge = newGauge("in_flight_connections", "Number of current active connections")
-	m.iniCounter = newCounter("conn_new_total", "Total initiated connections since startup")
-	m.reqCounter = newCounter("conn_req_total", "Total requested connections since startup")
-	m.resCounter = newCounter("conn_res_total", "Total responded connections since startup")
-	m.hijCounter = newCounter("conn_hij_total", "Total hijacked connections since startup")
-
 	// Add build info.
 	prometheus.MustRegister(collectors.NewBuildInfoCollector())
 
-	return chain.New(m.measureDuration), m.updateHTTPMetrics()
+	s := space{namespace: namespace}
+
+	return chain.New(s.measureDuration), s.updateHTTPMetrics()
 }
 
 // handler returns the endpoint "/metrics".
@@ -78,7 +68,13 @@ func handler() http.Handler {
 }
 
 // measureDuration measures the time to handle a request.
-func (m *Metrics) measureDuration(next http.Handler) http.Handler {
+func (s *space) measureDuration(next http.Handler) http.Handler {
+	summary := s.newSummaryVec(
+		"request_duration_seconds",
+		"Time to handle a client request",
+		"code",
+		"route")
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		record := &statusRecorder{ResponseWriter: w, Status: "success"}
@@ -87,7 +83,7 @@ func (m *Metrics) measureDuration(next http.Handler) http.Handler {
 
 		duration := time.Since(start)
 
-		m.reqDuration.WithLabelValues(record.Status, r.RequestURI).
+		summary.WithLabelValues(record.Status, r.RequestURI).
 			Observe(duration.Seconds())
 
 		uri := security.Sanitize(r.RequestURI)
@@ -96,34 +92,40 @@ func (m *Metrics) measureDuration(next http.Handler) http.Handler {
 }
 
 // updateHTTPMetrics counts the connections and update web traffic metrics depending on incoming requests and outgoing responses.
-func (m *Metrics) updateHTTPMetrics() (connState func(net.Conn, http.ConnState)) {
+func (s *space) updateHTTPMetrics() (connState func(net.Conn, http.ConnState)) {
+	connGauge := s.newGauge("in_flight_connections", "Number of current active connections")
+	iniCounter := s.newCounter("conn_new_total", "Total initiated connections since startup")
+	reqCounter := s.newCounter("conn_req_total", "Total requested connections since startup")
+	resCounter := s.newCounter("conn_res_total", "Total responded connections since startup")
+	hijCounter := s.newCounter("conn_hij_total", "Total hijacked connections since startup")
+
 	return func(_ net.Conn, cs http.ConnState) {
 		switch cs {
 		// StateNew: the client just connects, the server expects its request.
 		// Transition to either StateActive or StateClosed.
 		case http.StateNew:
-			m.connGauge.Inc()
-			m.iniCounter.Inc()
+			connGauge.Inc()
+			iniCounter.Inc()
 
 		// StateActive: a request is being received.
 		// Transition to StateClosed, StateHijacked or StateIdle, after the request is handled.
 		// HTTP/2: StateActive only transitions away once all active requests are complete.
 		case http.StateActive:
-			m.reqCounter.Inc()
+			reqCounter.Inc()
 
 		// StateIdle: the server has handled the request and is in the keep-alive state waiting for a new request.
 		// Transitions to either StateActive or StateClosed.
 		case http.StateIdle:
-			m.resCounter.Inc()
+			resCounter.Inc()
 
 		// StateHijacked: terminal state.
 		case http.StateHijacked:
-			m.connGauge.Dec()
-			m.hijCounter.Inc()
+			connGauge.Dec()
+			hijCounter.Inc()
 
 		// StateClosed: terminal state.
 		case http.StateClosed:
-			m.connGauge.Dec()
+			connGauge.Dec()
 		}
 	}
 }
@@ -141,10 +143,10 @@ func (r *statusRecorder) WriteHeader(status int) {
 	r.ResponseWriter.WriteHeader(status)
 }
 
-func newSummaryVec(name, help string, labels ...string) *prometheus.SummaryVec {
+func (s *space) newSummaryVec(name, help string, labels ...string) *prometheus.SummaryVec {
 	return promauto.NewSummaryVec(prometheus.SummaryOpts{
-		Namespace:   "http",
-		Subsystem:   "",
+		Namespace:   s.namespace,
+		Subsystem:   "http",
 		Name:        name,
 		Help:        help,
 		ConstLabels: nil,
@@ -155,20 +157,20 @@ func newSummaryVec(name, help string, labels ...string) *prometheus.SummaryVec {
 	}, labels)
 }
 
-func newGauge(name, help string) prometheus.Gauge {
+func (s *space) newGauge(name, help string) prometheus.Gauge {
 	return promauto.NewGauge(prometheus.GaugeOpts{
-		Namespace:   "http",
-		Subsystem:   "",
+		Namespace:   s.namespace,
+		Subsystem:   "http",
 		Name:        name,
 		Help:        help,
 		ConstLabels: nil,
 	})
 }
 
-func newCounter(name, help string) prometheus.Counter {
+func (s *space) newCounter(name, help string) prometheus.Counter {
 	return promauto.NewCounter(prometheus.CounterOpts{
-		Namespace:   "http",
-		Subsystem:   "",
+		Namespace:   s.namespace,
+		Subsystem:   "http",
 		Name:        name,
 		Help:        help,
 		ConstLabels: nil,

@@ -42,7 +42,7 @@ func main() {
 		garcon.WithReqLogs(),
 		garcon.WithLimiter(burst, perMinute),
 		garcon.WithPProf(pprofPort),
-		garcon.WithProm(expPort),
+		garcon.WithProm(expPort, "keystore"),
 		garcon.WithDev(!*prod),
 	)
 
