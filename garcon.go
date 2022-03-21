@@ -61,15 +61,15 @@ type Garcon struct {
 }
 
 type parameters struct {
-	urls         []*url.URL
+	expNamespace string
 	docURL       string
 	nameVersion  string
 	secretKey    []byte
 	planPerm     []interface{}
 	opaFilenames []string
+	urls         []*url.URL
 	pprofPort    int
 	expPort      int
-	expNamespace string
 	reqLogs      int
 	reqBurst     int
 	reqMinute    int
@@ -77,21 +77,7 @@ type parameters struct {
 }
 
 func New(opts ...Option) (*Garcon, error) {
-	p := parameters{
-		urls:         nil,
-		docURL:       "",
-		nameVersion:  "",
-		secretKey:    nil,
-		planPerm:     nil,
-		opaFilenames: nil,
-		pprofPort:    0,
-		expPort:      0,
-		expNamespace: "",
-		reqLogs:      0,
-		reqBurst:     0,
-		reqMinute:    0,
-		devMode:      false,
-	}
+	var p parameters
 
 	for _, opt := range opts {
 		opt(&p)
