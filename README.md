@@ -429,14 +429,30 @@ func items(w http.ResponseWriter, _ *http.Request) {
 The example KeyStore implements a key/value datastore
 providing private storage for each client identified by its unique IP.
 
-```
+```sh
 go build ./examples/keystore
 ./keystore
 ```
 
 Then open <http://localhost:8080> to learn more about the implemented features.
 
-## License
+## Copyright and license
+
+Copyright (c) 2020-2022 Teal.Finance contributors
+
+SPDX-License-Identifier: LGPL-3.0-or-later
+
+Teal.Finance/Garcon is licensed under LGPL-3.0-or-later.
+Teal.Finance/Garcon is free software: you can redistribute it
+and/or modify it under the terms of the GNU Lesser General Public License
+either version 3 or any later version, at the licensee’s option.
+
+Teal.Finance/Garcon is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty
+of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+For more details, see the LICENSE file (alongside the source files)
+or the GNU General Public License: <https://www.gnu.org/licenses/>
 
 [LGPL-3.0-or-later](https://spdx.org/licenses/LGPL-3.0-or-later.html):
 GNU Lesser General Public License v3.0 or later
@@ -444,11 +460,11 @@ GNU Lesser General Public License v3.0 or later
 [Choosealicense.com](https://choosealicense.com/licenses/lgpl-3.0/)).
 See the [LICENSE](LICENSE) file.
 
-Except:
+Except some source code that is released to the public domain or is not owned by the Teal.Finance contributors:
 
-* the [example](examples) files under CC0-1.0 (Creative Commons Zero v1.0 Universal) ;
-* the file [chain.go](chain/chain.go) (fork) under the MIT License.
-* the file [cookie.go](jwtperm/cookie.go) (fork) under the MIT License.
+* the [example](examples) files under [CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/) ;
+* the file [chain.go](chain/chain.go) (fork) under the [MIT License](https://mit-license.org/) ;
+* the file [cookie.go](jwtperm/cookie.go) (fork) under the [MIT License](https://mit-license.org/) too.
 
 ## See also
 

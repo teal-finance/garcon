@@ -1,16 +1,22 @@
-// Teal.Finance/Garcon is an opinionated boilerplate API and website server.
-// Copyright (C) 2021 Teal.Finance contributors
+// #region <editor-fold desc="Preamble">
+// Copyright (c) 2020-2022 Teal.Finance contributors
 //
-// This file is part of Teal.Finance/Garcon, licensed under LGPL-3.0-or-later.
+// This file is part of Teal.Finance/Garcon,
+// an opinionated boilerplate API and website server,
+// licensed under LGPL-3.0-or-later.
+// SPDX-License-Identifier: LGPL-3.0-or-later
 //
 // Teal.Finance/Garcon is free software: you can redistribute it
 // and/or modify it under the terms of the GNU Lesser General Public License
-// either version 3 of the License, or (at your option) any later version.
+// either version 3 or any later version, at the licensee’s option.
 //
 // Teal.Finance/Garcon is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty
 // of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-// See the GNU General Public License for more details.
+//
+// For more details, see the LICENSE file (alongside the source files)
+// or the GNU General Public License: <https://www.gnu.org/licenses/>
+// #endregion </editor-fold>
 
 // package opa manages the Open Policy Agent.
 // see https://www.openpolicyagent.org/docs/edge/integration/#integrating-with-the-go-api

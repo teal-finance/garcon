@@ -1,8 +1,9 @@
-// Copyright (C) 2020-2021 synw
+// Copyright (c) 2020-2021 synw
+// Copyright (c) 2021-2022 Teal.Finance contributors
 //
-// This code source is a simplified extract from "github.com/synw/quid/quidlib"
+// This code source is a simplified extract from "github.com/teal.finance/quid/quidlib"
 //
-// MIT License
+// SPDX-License-Identifier: MIT
 
 package jwtperm
 

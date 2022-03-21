@@ -1,8 +1,10 @@
-// modified copy of https://github.com/justinas/alice
-// MIT License
 // Copyright (c) 2014      Justinas Stankevicius
 // Copyright (c) 2015-2016 contributors of alice
-// Copyright (c) 2021      teal.finance
+// Copyright (c) 2021-2022 Teal.Finance contributors
+//
+// This file is a modified copy from https://github.com/justinas/alice
+//
+// SPDX-License-Identifier: MIT
 
 package chain
 

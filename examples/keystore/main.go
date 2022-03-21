@@ -1,10 +1,10 @@
-// CC0-1.0: Creative Commons Zero v1.0 Universal
-// No Rights Reserved - (CC) ZERO - (0) PUBLIC DOMAIN
+// SPDX-License-Identifier: CC0-1.0+
+// Creative Commons Zero v1.0 Universal - No Rights Reserved
 //
 // To the extent possible under law, the Teal.Finance contributors
-// have waived all copyright and related or neighboring rights to this
-// example file "high-level/main.go" to be modified without restrictions.
-// Refer to https://creativecommons.org/publicdomain/zero/1.0
+// have waived all copyright and related/neighboring rights to this
+// file "keystore/main.go" to be freely used without any restriction.
+// See <https://creativecommons.org/publicdomain/zero/1.0>
 
 package main
 
