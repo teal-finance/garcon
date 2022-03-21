@@ -11,7 +11,7 @@ Please propose a PR to add here your project that also uses Garcon.
 
 ## Features
 
-Garcon includes the following middlewares:
+Garcon includes the following middleware pieces:
 
 * Logging of incoming requests ;
 * Rate limiter to prevent requests flooding ;
@@ -27,7 +27,7 @@ Garcon also provides the following features:
 * Metrics server exporting data to Prometheus (or other compatible monitoring tool) ;
 * PProf server for debugging purpose ;
 * Error response in JSON format ;
-* Chained middlewares (fork of [justinas/alice](https://github.com/justinas/alice)).
+* Chained middleware (fork of [justinas/alice](https://github.com/justinas/alice)).
 
 ## CPU profiling
 
@@ -40,7 +40,7 @@ In you code, add `defer ProbeCPU.Stop()` that will write the `cpu.pprof` file.
 ```go
 import "github.com/teal-finance/garcon/pprof"
 
-func myFunctionConsummingLotsOfCPU() {
+func myFunctionConsumingLotsOfCPU() {
     defer pprof.ProbeCPU.Stop()
 
     // ... lots of sub-functions
@@ -180,8 +180,8 @@ func handler(resErr reserr.ResErr, jc *jwtperm.Checker) http.Handler {
 
 Restart again the [high-level example](examples/high-level/main.go) with authentication enabled.
 
-Attention, in this example we use two redundant middlewares: `jwtperm` + `opa` using the same JWT.
-This is just an example, do not be confused.
+Attention, in this example we use two redundant middleware pieces using the same JWT: `jwtperm` and `opa`.
+This is just an example, don't be confused.
 
 ```sh
 go build -race ./examples/high-level && ./high-level -auth
@@ -327,20 +327,20 @@ func main() {
     // Uniformize error responses with API doc
     resErr := reserr.New(apiDoc)
 
-    middlewares, connState := setMiddlewares(resErr)
+    mw, connState := setMiddlewares(resErr)
 
     // Handles both REST API and static web files
     h := handler(resErr)
-    h = middlewares.Then(h)
+    h = mw.Then(h)
 
     runServer(h, connState)
 }
 
-func setMiddlewares(resErr reserr.ResErr) (middlewares chain.Chain, connState func(net.Conn, http.ConnState)) {
+func setMiddlewares(resErr reserr.ResErr) (mw chain.Chain, connState func(net.Conn, http.ConnState)) {
     // Start a metrics server in background if export port > 0.
     // The metrics server is for use with Prometheus or another compatible monitoring tool.
     metrics := metrics.Metrics{}
-    middlewares, connState = metrics.StartServer(expPort, devMode)
+    mw, connState = metrics.StartServer(expPort, devMode)
 
     // Limit the input request rate per IP
     reqLimiter := limiter.New(burst, reqMinute, devMode, resErr)
@@ -352,7 +352,7 @@ func setMiddlewares(resErr reserr.ResErr) (middlewares chain.Chain, connState fu
 
     allowedOrigins := garcon.SplitClean(corsConfig)
 
-    middlewares = middlewares.Append(
+    mw = mw.Append(
         reqLimiter.Limit,
         garcon.ServerHeader(serverHeader),
         cors.Handler(allowedOrigins, devMode),
@@ -366,10 +366,10 @@ func setMiddlewares(resErr reserr.ResErr) (middlewares chain.Chain, connState fu
     }
 
     if policy.Ready() {
-        middlewares = middlewares.Append(policy.Auth)
+        mw = mw.Append(policy.Auth)
     }
 
-    return middlewares, connState
+    return mw, connState
 }
 
 // runServer runs in foreground the main server.
@@ -457,7 +457,7 @@ or the GNU General Public License: <https://www.gnu.org/licenses/>
 [LGPL-3.0-or-later](https://spdx.org/licenses/LGPL-3.0-or-later.html):
 GNU Lesser General Public License v3.0 or later
 ([tl;drLegal](https://tldrlegal.com/license/gnu-lesser-general-public-license-v3-(lgpl-3)),
-[Choosealicense.com](https://choosealicense.com/licenses/lgpl-3.0/)).
+[ChooseALicense.com](https://choosealicense.com/licenses/lgpl-3.0/)).
 See the [LICENSE](LICENSE) file.
 
 Except some source code that is released to the public domain or is not owned by the Teal.Finance contributors:

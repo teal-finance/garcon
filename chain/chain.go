@@ -15,28 +15,28 @@ import (
 // Middleware is a constructor function returning a http.Handler.
 type Middleware func(http.Handler) http.Handler
 
-// Chain acts as a list of http.Handler middlewares.
+// Chain acts as a list of http.Handler middleware.
 // Chain is effectively immutable:
 // once created, it will always hold
-// the same set of middlewares in the same order.
+// the same set of middleware in the same order.
 type Chain []Middleware
 
 // New creates a new chain,
-// memorizing the given list of middlewares.
+// memorizing the given list of middleware.
 // New serves no other function,
-// middlewares are only constructed upon a call to Then().
-func New(middlewares ...Middleware) Chain {
-	return middlewares
+// middleware is only constructed upon a call to Then().
+func New(mw ...Middleware) Chain {
+	return mw
 }
 
-// Append extends a chain, adding the specified middlewares
+// Append extends a chain, adding the specified middleware
 // as the last ones in the request flow.
 //
 //     chain := chain.New(m1, m2)
 //     chain = chain.Append(m3, m4)
 //     // requests in chain go m1 -> m2 -> m3 -> m4
-func (c Chain) Append(middlewares ...Middleware) Chain {
-	return append(c, middlewares...)
+func (c Chain) Append(mw ...Middleware) Chain {
+	return append(c, mw...)
 }
 
 // Then chains the middleware and returns the final http.Handler.
@@ -53,7 +53,7 @@ func (c Chain) Append(middlewares ...Middleware) Chain {
 //     indexPipe = chain.Then(indexHandler)
 //     authPipe  = chain.Then(authHandler)
 //
-// Note that middlewares are called on every call to Then()
+// Note that middleware pieces are called on every call to Then()
 // and thus several instances of the same middleware will be created
 // when a chain is reused in this previous example.
 // For proper middleware, this should cause no problems.

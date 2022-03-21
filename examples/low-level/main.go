@@ -52,23 +52,23 @@ func main() {
 	// Uniformize error responses with API doc
 	resErr := reserr.New(apiDoc)
 
-	middlewares, connState, urls := setMiddlewares(resErr)
+	mw, connState, urls := setMiddlewares(resErr)
 
 	// Handles both REST API and static web files
 	h := handler(resErr, jwtperm.New(urls, resErr, []byte(hmacSHA256)))
-	h = middlewares.Then(h)
+	h = mw.Then(h)
 
 	runServer(h, connState)
 }
 
-func setMiddlewares(resErr reserr.ResErr) (middlewares chain.Chain, connState func(net.Conn, http.ConnState), urls []*url.URL) {
+func setMiddlewares(resErr reserr.ResErr) (mw chain.Chain, connState func(net.Conn, http.ConnState), urls []*url.URL) {
 	auth := flag.Bool("auth", false, "Enable OPA authorization specified in file "+authCfg)
 	dev := flag.Bool("dev", true, "Use development or production settings")
 	flag.Parse()
 
 	// Start a metrics server in background if export port > 0.
 	// The metrics server is for use with Prometheus or another compatible monitoring tool.
-	middlewares, connState = metrics.StartServer(expPort, "LowLevel", *dev)
+	mw, connState = metrics.StartServer(expPort, "LowLevel", *dev)
 
 	// Limit the input request rate per IP
 	reqLimiter := limiter.New(burst, reqMinute, *dev, resErr)
@@ -81,7 +81,7 @@ func setMiddlewares(resErr reserr.ResErr) (middlewares chain.Chain, connState fu
 	allowedOrigins := garcon.SplitClean(corsConfig)
 	urls = garcon.ParseURLs(allowedOrigins)
 
-	middlewares = middlewares.Append(
+	mw = mw.Append(
 		reqLimiter.Limit,
 		garcon.ServerHeader(serverHeader),
 		cors.Handler(allowedOrigins, *dev),
@@ -96,11 +96,11 @@ func setMiddlewares(resErr reserr.ResErr) (middlewares chain.Chain, connState fu
 		}
 
 		if policy.Ready() {
-			middlewares = middlewares.Append(policy.Auth)
+			mw = mw.Append(policy.Auth)
 		}
 	}
 
-	return middlewares, connState, urls
+	return mw, connState, urls
 }
 
 // runServer runs in foreground the main server.
