@@ -41,7 +41,7 @@ type space struct {
 }
 
 // MetricsServer creates and starts the Prometheus export server.
-func StartServer(port int, namespace string, devMode bool) (chain.Chain, func(net.Conn, http.ConnState)) {
+func StartServer(port int, namespace string) (chain.Chain, func(net.Conn, http.ConnState)) {
 	if port <= 0 {
 		log.Print("Disable Prometheus, export port=", port)
 

@@ -68,7 +68,7 @@ func setMiddlewares(resErr reserr.ResErr) (mw chain.Chain, connState func(net.Co
 
 	// Start a metrics server in background if export port > 0.
 	// The metrics server is for use with Prometheus or another compatible monitoring tool.
-	mw, connState = metrics.StartServer(expPort, "LowLevel", *dev)
+	mw, connState = metrics.StartServer(expPort, "LowLevel")
 
 	// Limit the input request rate per IP
 	reqLimiter := limiter.New(burst, reqMinute, *dev, resErr)

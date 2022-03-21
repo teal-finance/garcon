@@ -112,7 +112,7 @@ func (s parameters) new() (*Garcon, error) {
 		JWT:            nil,
 	}
 
-	g.Middlewares, g.ConnState = metrics.StartServer(s.expPort, s.expNamespace, s.devMode)
+	g.Middlewares, g.ConnState = metrics.StartServer(s.expPort, s.expNamespace)
 
 	g.Middlewares.Append(security.RejectLineBreakInURI)
 
