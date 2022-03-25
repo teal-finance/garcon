@@ -102,6 +102,36 @@ func (ws WebServer) ServeImages() func(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// ServeAssets detects the Content-Type depending on the asset extension.
+func (ws WebServer) ServeAssets() func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !security.ValidPath(w, r) {
+			return
+		}
+
+		extPos := extIndex(r.URL.Path)
+		ext := r.URL.Path[extPos:]
+
+		w.Header().Set("Cache-Control", "public,max-age=31536000,immutable")
+
+		var absPath string
+
+		if ext == "css" {
+			w.Header().Set("Content-Type", "text/css; charset=utf-8")
+
+			absPath = path.Join(ws.Dir, r.URL.Path)
+		} else {
+			var contentType string
+			absPath, contentType = ws.imagePathAndType(r)
+			if contentType != "" {
+				w.Header().Set("Content-Type", contentType)
+			}
+		}
+
+		ws.send(w, r, absPath)
+	}
+}
+
 func (ws WebServer) openFile(w http.ResponseWriter, r *http.Request, absPath string) (*os.File, string) {
 	// if client (browser) supports Brotli and the *.br file is present
 	// => send the *.br file
