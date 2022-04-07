@@ -130,16 +130,16 @@ func RejectInvalidURI(next http.Handler) http.Handler {
 		})
 }
 
-// TraversalPath replies a HTTP error on invalid path to prevent path traversal attacks.
+// TraversalPath returns true when path contains ".." to prevent path traversal attack.
 func TraversalPath(w http.ResponseWriter, r *http.Request) bool {
 	if strings.Contains(r.URL.Path, "..") {
 		reserr.Write(w, r, http.StatusBadRequest, "Invalid URL Path Containing '..'")
 		log.Print("WRN WebServer: reject path with '..' ", Sanitize(r.URL.Path))
 
-		return false
+		return true
 	}
 
-	return true
+	return false
 }
 
 type Hash struct {
