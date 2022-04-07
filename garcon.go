@@ -21,6 +21,7 @@
 package garcon
 
 import (
+	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -29,6 +30,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-chi/chi"
 	"github.com/teal-finance/garcon/chain"
 	"github.com/teal-finance/garcon/cors"
 	"github.com/teal-finance/garcon/jwtperm"
@@ -437,4 +439,41 @@ func OriginsFromURLs(urls []*url.URL) []string {
 	}
 
 	return origins
+}
+
+// Value returns the /endpoint/{key} (URL path)
+// else the "key" form (HTTP body)
+// else the "key" query string (URL)
+// else the HTTP header.
+func Value(r *http.Request, key, header string) (string, error) {
+	v := chi.URLParam(r, key)
+
+	if v == "" {
+		v = r.FormValue(key)
+	}
+
+	if v == "" {
+		v = r.Header.Get(header)
+	}
+
+	if security.Printable(v) {
+		return v, nil
+	}
+
+	return "", fmt.Errorf("not printable")
+}
+
+func Values(r *http.Request, key string) ([]string, error) {
+	form := r.Form[key]
+
+	if !security.Printables(form) {
+		return nil, fmt.Errorf("not printable")
+	}
+
+	// no need to test v because Garcon already verifies the URI
+	if v := chi.URLParam(r, key); v != "" {
+		return append(form, v), nil
+	}
+
+	return form, nil
 }

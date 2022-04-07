@@ -15,10 +15,17 @@ require (
 )
 
 require (
+	github.com/google/flatbuffers v2.0.6+incompatible // indirect
+	github.com/klauspost/compress v1.15.1 // indirect
+	golang.org/x/net v0.0.0-20220403103023-749bd193bc2b // indirect
+)
+
+require (
 	github.com/OneOfOne/xxhash v1.2.8 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect
+	github.com/go-chi/chi v1.5.4
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
