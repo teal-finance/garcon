@@ -100,6 +100,17 @@ func Printable(s string) bool {
 	return true
 }
 
+// Printables returns true when all the strings are printable.
+func Printables(array []string) bool {
+	for _, s := range array {
+		if !Printable(s) {
+			return false
+		}
+	}
+
+	return true
+}
+
 // RejectInvalidURI rejects HTTP requests having
 // a Carriage Return "\r" or a Line Feed "\n"
 // within the URI to prevent log injection.
