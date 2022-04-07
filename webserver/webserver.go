@@ -64,7 +64,7 @@ func (ws WebServer) ServeFile(urlPath, contentType string) func(w http.ResponseW
 // ServeDir handles the static files using the same Content-Type.
 func (ws WebServer) ServeDir(contentType string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if !security.ValidPath(w, r) {
+		if security.TraversalPath(w, r) {
 			return
 		}
 
@@ -85,7 +85,7 @@ func (ws WebServer) ServeDir(contentType string) func(w http.ResponseWriter, r *
 // ServeImages detects the Content-Type depending on the image extension.
 func (ws WebServer) ServeImages() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if !security.ValidPath(w, r) {
+		if security.TraversalPath(w, r) {
 			return
 		}
 
@@ -105,7 +105,7 @@ func (ws WebServer) ServeImages() func(w http.ResponseWriter, r *http.Request) {
 // ServeAssets detects the Content-Type depending on the asset extension.
 func (ws WebServer) ServeAssets() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if !security.ValidPath(w, r) {
+		if security.TraversalPath(w, r) {
 			return
 		}
 

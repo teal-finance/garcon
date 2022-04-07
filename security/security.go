@@ -65,12 +65,12 @@ func Sanitize(s string) string {
 	)
 }
 
-// ValidRuneForLogging returns false if rune is
+// PrintableRune returns false if rune is
 // a Carriage Return "\r", or a Line Feed "\n",
 // or another ASCII control code (except space),
 // or an invalid UTF-8 code.
-// ValidRuneForLogging can be used to prevent log injection.
-func ValidRuneForLogging(r rune) bool {
+// PrintableRune can be used to prevent log injection.
+func PrintableRune(r rune) bool {
 	switch {
 	case r < 32:
 		return false
@@ -85,14 +85,14 @@ func ValidRuneForLogging(r rune) bool {
 	return true
 }
 
-// ValidForLogging returns false if input string contains
+// Printable returns false if input string contains
 // a Carriage Return "\r", or a Line Feed "\n",
 // or any other ASCII control code (except space),
 // or, as well as, invalid UTF-8 codes.
-// ValidForLogging can be used to prevent log injection.
-func ValidForLogging(s string) bool {
+// Printable can be used to prevent log injection.
+func Printable(s string) bool {
 	for _, r := range s {
-		if !ValidRuneForLogging(r) {
+		if !PrintableRune(r) {
 			return false
 		}
 	}
@@ -100,15 +100,15 @@ func ValidForLogging(s string) bool {
 	return true
 }
 
-// RejectLineBreakInURI rejects HTTP requests having
+// RejectInvalidURI rejects HTTP requests having
 // a Carriage Return "\r" or a Line Feed "\n"
 // within the URI to prevent log injection.
-func RejectLineBreakInURI(next http.Handler) http.Handler {
+func RejectInvalidURI(next http.Handler) http.Handler {
 	log.Print("Middleware security: RejectLineBreakInURI")
 
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			if !ValidForLogging(r.RequestURI) {
+			if !Printable(r.RequestURI) {
 				reserr.Write(w, r, http.StatusBadRequest, "Invalid URI containing a line break (CR or LF)")
 				log.Print("WRN WebServer: reject URI with <CR> or <LF>:", Sanitize(r.RequestURI))
 
@@ -119,8 +119,8 @@ func RejectLineBreakInURI(next http.Handler) http.Handler {
 		})
 }
 
-// ValidPath replies a HTTP error on invalid path to prevent path traversal attacks.
-func ValidPath(w http.ResponseWriter, r *http.Request) bool {
+// TraversalPath replies a HTTP error on invalid path to prevent path traversal attacks.
+func TraversalPath(w http.ResponseWriter, r *http.Request) bool {
 	if strings.Contains(r.URL.Path, "..") {
 		reserr.Write(w, r, http.StatusBadRequest, "Invalid URL Path Containing '..'")
 		log.Print("WRN WebServer: reject path with '..' ", Sanitize(r.URL.Path))

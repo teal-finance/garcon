@@ -114,7 +114,7 @@ func (s parameters) new() (*Garcon, error) {
 
 	g.Middlewares, g.ConnState = metrics.StartServer(s.expPort, s.expNamespace)
 
-	g.Middlewares.Append(security.RejectLineBreakInURI)
+	g.Middlewares.Append(security.RejectInvalidURI)
 
 	switch s.reqLogs {
 	case 0:
