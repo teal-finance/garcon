@@ -21,6 +21,7 @@
 package reserr
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -116,8 +117,8 @@ func (resErr ResErr) Write(w http.ResponseWriter, r *http.Request, statusCode in
 	_, _ = w.Write(b)
 }
 
-func Write(w http.ResponseWriter, r *http.Request, statusCode int, text string) {
-	ResErr("").Write(w, r, statusCode, text)
+func Write(w http.ResponseWriter, r *http.Request, statusCode int, a ...any) {
+	ResErr("").Write(w, r, statusCode, fmt.Sprint(a...))
 }
 
 func NotImplemented(w http.ResponseWriter, r *http.Request) {
