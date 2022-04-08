@@ -78,37 +78,38 @@ func PrintableRune(r rune) bool {
 		return false
 	case surrogateMin <= r && r <= surrogateMax:
 		return false
-	case utf8.MaxRune > r:
+	case r >= utf8.MaxRune:
 		return false
 	}
 
 	return true
 }
 
-// Printable returns false if input string contains
+// Printable returns the position (index) of
 // a Carriage Return "\r", or a Line Feed "\n",
 // or any other ASCII control code (except space),
-// or, as well as, invalid UTF-8 codes.
-// Printable can be used to prevent log injection.
-func Printable(s string) bool {
-	for _, r := range s {
+// or, as well as, bn invalid UTF-8 code.
+// Printable returns -1 if the string
+// is safely printable preventing log injection.
+func Printable(s string) int {
+	for i, r := range s {
 		if !PrintableRune(r) {
-			return false
+			return i
 		}
 	}
 
-	return true
+	return -1
 }
 
-// Printables returns true when all the strings are printable.
-func Printables(array []string) bool {
+// Printables returns -1 when all the strings are printable.
+func Printables(array []string) int {
 	for _, s := range array {
-		if !Printable(s) {
-			return false
+		if i := Printable(s); i >= 0 {
+			return i
 		}
 	}
 
-	return true
+	return -1
 }
 
 // RejectInvalidURI rejects HTTP requests having
@@ -119,8 +120,8 @@ func RejectInvalidURI(next http.Handler) http.Handler {
 
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			if !Printable(r.RequestURI) {
-				reserr.Write(w, r, http.StatusBadRequest, "Invalid URI containing a line break (CR or LF)")
+			if i := Printable(r.RequestURI); i >= 0 {
+				reserr.Write(w, r, http.StatusBadRequest, "Invalid URI containing an unexpected character at position ", i)
 				log.Print("WRN WebServer: reject URI with <CR> or <LF>:", Sanitize(r.RequestURI))
 
 				return
