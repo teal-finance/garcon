@@ -442,7 +442,7 @@ func OriginsFromURLs(urls []*url.URL) []string {
 	return origins
 }
 
-var NotPrintable = errors.New("not printable")
+var ErrNonPrintable = errors.New("non-printable")
 
 // Value returns the /endpoint/{key} (URL path)
 // else the "key" form (HTTP body)
@@ -460,7 +460,7 @@ func Value(r *http.Request, key, header string) (string, error) {
 	}
 
 	if i := security.Printable(v); i >= 0 {
-		return v, fmt.Errorf("%s %w at %d", key, NotPrintable, i)
+		return v, fmt.Errorf("%s %w at %d", key, ErrNonPrintable, i)
 	}
 
 	return v, nil
@@ -470,7 +470,7 @@ func Values(r *http.Request, key string) ([]string, error) {
 	form := r.Form[key]
 
 	if i := security.Printables(form); i >= 0 {
-		return form, fmt.Errorf("%s %w at %d", key, NotPrintable, i)
+		return form, fmt.Errorf("%s %w at %d", key, ErrNonPrintable, i)
 	}
 
 	// no need to test v because Garcon already verifies the URI
