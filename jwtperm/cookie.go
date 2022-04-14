@@ -35,9 +35,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang-jwt/jwt/v4"
+	"github.com/golang-jwt/jwt"
 	"github.com/teal-finance/garcon/reserr"
 	"github.com/teal-finance/garcon/security"
+	"github.com/teal-finance/quid/quidlib/tokens"
 )
 
 const (
@@ -184,7 +185,7 @@ func extractDevOrigins(urls []*url.URL) (devOrigins []string) {
 }
 
 func createCookie(plan string, secure bool, dns, path string, secretKey []byte) http.Cookie {
-	jwt, err := genRefreshToken(plan, secretKey, "1y", "1y", "")
+	jwt, err := tokens.GenRefreshToken("1y", "1y", plan, "", secretKey)
 	if err != nil || jwt == "" {
 		log.Panic("Cannot create JWT: ", err)
 	}
@@ -412,7 +413,7 @@ func (ck *Checker) permFromJWT(jwt string) (perm Perm, errMsg string) {
 	return perm, "" // Success
 }
 
-func (ck *Checker) permFromRefreshClaims(claims *RefreshClaims) Perm {
+func (ck *Checker) permFromRefreshClaims(claims *tokens.RefreshClaims) Perm {
 	for i, p := range ck.plans {
 		if p == claims.Namespace {
 			log.Print("JWT has the ", p, " Namespace")
@@ -472,17 +473,17 @@ func (ck *Checker) verifySignature(parts []string) (errMsg string) {
 }
 
 func (ck *Checker) permFromRefreshBytes(claimsJSON []byte) (perm Perm, errMsg string) {
-	claims := &RefreshClaims{
+	claims := &tokens.RefreshClaims{
 		Namespace: "",
 		UserName:  "",
-		RegisteredClaims: jwt.RegisteredClaims{
+		StandardClaims: jwt.StandardClaims{
+			Audience:  "",
+			ExpiresAt: 0,
+			Id:        invalidCookie,
+			IssuedAt:  0,
 			Issuer:    "",
+			NotBefore: 0,
 			Subject:   "",
-			Audience:  nil,
-			ExpiresAt: nil,
-			NotBefore: nil,
-			IssuedAt:  nil,
-			ID:        invalidCookie,
 		},
 	}
 

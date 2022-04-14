@@ -4,20 +4,22 @@ go 1.18
 
 require (
 	github.com/go-chi/chi/v5 v5.0.7
-	github.com/golang-jwt/jwt/v4 v4.4.1
-	github.com/karrick/tparse/v2 v2.8.2
+	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/mailru/easyjson v0.7.7
 	github.com/open-policy-agent/opa v0.39.0
 	github.com/pkg/profile v1.6.0
 	github.com/prometheus/client_golang v1.12.1
 	github.com/rs/cors v1.8.2
-	golang.org/x/time v0.0.0-20220224211638-0e9765cccd65
+	github.com/teal-finance/quid v0.0.0-20220414232549-a3004107fdec
+	golang.org/x/time v0.0.0-20220411224347-583f2d630306
 )
 
 require (
+	github.com/acmacalister/skittles v0.0.0-20160609003031-7423546701e1 // indirect
 	github.com/google/flatbuffers v2.0.6+incompatible // indirect
+	github.com/karrick/tparse/v2 v2.8.2 // indirect
 	github.com/klauspost/compress v1.15.1 // indirect
-	golang.org/x/net v0.0.0-20220403103023-749bd193bc2b // indirect
+	golang.org/x/xerrors v0.0.0-20220411194840-2f41105eb62f // indirect
 )
 
 require (
@@ -38,7 +40,7 @@ require (
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 	github.com/yashtewari/glob-intersection v0.1.0 // indirect
-	golang.org/x/sys v0.0.0-20220406163625-3f8b81556e12 // indirect
+	golang.org/x/sys v0.0.0-20220412211240-33da011f77ad // indirect
 	google.golang.org/protobuf v1.28.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
