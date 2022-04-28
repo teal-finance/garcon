@@ -440,9 +440,9 @@ Then open <http://localhost:8080> to learn more about the implemented features.
 
 Copyright (c) 2020-2022 Teal.Finance contributors
 
+Teal.Finance/Garcon is licensed under LGPL-3.0-or-later.
 SPDX-License-Identifier: LGPL-3.0-or-later
 
-Teal.Finance/Garcon is licensed under LGPL-3.0-or-later.
 Teal.Finance/Garcon is free software: you can redistribute it
 and/or modify it under the terms of the GNU Lesser General Public License
 either version 3 or any later version, at the licensee’s option.
@@ -452,7 +452,7 @@ but WITHOUT ANY WARRANTY; without even the implied warranty
 of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 For more details, see the LICENSE file (alongside the source files)
-or the GNU General Public License: <https://www.gnu.org/licenses/>
+or online at <https://www.gnu.org/licenses/lgpl-3.0.html>.
 
 [LGPL-3.0-or-later](https://spdx.org/licenses/LGPL-3.0-or-later.html):
 GNU Lesser General Public License v3.0 or later
