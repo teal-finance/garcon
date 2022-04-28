@@ -124,6 +124,9 @@ func extractMainDomain(urls []*url.URL) (secure bool, dns, path string) {
 	}
 
 	u := urls[0]
+	if u == nil {
+		log.Panic("Unexpected nil in URL slide: ", urls)
+	}
 
 	switch {
 	case u.Scheme == HTTP:
@@ -147,6 +150,9 @@ func extractDevURLs(urls []*url.URL) (devURLs []*url.URL) {
 	}
 
 	for i, u := range urls {
+		if u == nil {
+			log.Panic("Unexpected nil in URL slide: ", urls)
+		}
 		if u.Scheme == HTTP {
 			return urls[i:]
 		}
