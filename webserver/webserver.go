@@ -135,7 +135,6 @@ func (ws WebServer) openFile(w http.ResponseWriter, r *http.Request, absPath str
 		file, err := os.Open(brotli)
 		if err == nil {
 			w.Header().Set("Content-Encoding", "br")
-
 			return file, brotli
 		}
 	}
@@ -144,7 +143,6 @@ func (ws WebServer) openFile(w http.ResponseWriter, r *http.Request, absPath str
 	if err != nil {
 		log.Print("WRN WebServer: ", err)
 		ws.ResErr.Write(w, r, http.StatusNotFound, "Page not found")
-
 		return nil, ""
 	}
 
@@ -224,7 +222,6 @@ func (ws WebServer) imagePathAndType(r *http.Request) (absPath, contentType stri
 
 	ext := r.URL.Path[extPos:]
 	contentType = imageContentType(ext)
-
 	return absPath, contentType
 }
 
@@ -236,7 +233,6 @@ func extIndex(urlPath string) int {
 			return i + 1
 		}
 	}
-
 	return len(urlPath)
 }
 
@@ -252,7 +248,6 @@ func imageContentType(ext string) (contentType string) {
 		return "image/svg+xml"
 	default:
 		log.Print("WRN WebServer does not support image extension: ", ext)
-
 		return ""
 	}
 }

@@ -52,7 +52,6 @@ func Sanitize(s string) string {
 			case utf8.MaxRune < r:
 				return '�' // The replacement character U+FFFD indicates an invalid UTF-8 character.
 			}
-
 			return r
 		},
 		s,
@@ -75,7 +74,6 @@ func PrintableRune(r rune) bool {
 	case r >= utf8.MaxRune:
 		return false
 	}
-
 	return true
 }
 
@@ -91,7 +89,6 @@ func Printable(s string) int {
 			return i
 		}
 	}
-
 	return -1
 }
 
@@ -102,7 +99,6 @@ func Printables(array []string) int {
 			return i
 		}
 	}
-
 	return -1
 }
 
@@ -117,7 +113,6 @@ func RejectInvalidURI(next http.Handler) http.Handler {
 			if i := Printable(r.RequestURI); i >= 0 {
 				reserr.Write(w, r, http.StatusBadRequest, "Invalid URI containing an unexpected character at position ", i)
 				log.Print("WRN WebServer: reject URI with <CR> or <LF>:", Sanitize(r.RequestURI))
-
 				return
 			}
 
@@ -130,10 +125,8 @@ func TraversalPath(w http.ResponseWriter, r *http.Request) bool {
 	if strings.Contains(r.URL.Path, "..") {
 		reserr.Write(w, r, http.StatusBadRequest, "Invalid URL Path Containing '..'")
 		log.Print("WRN WebServer: reject path with '..' ", Sanitize(r.URL.Path))
-
 		return true
 	}
-
 	return false
 }
 
@@ -149,7 +142,6 @@ func NewHash() (Hash, error) {
 	}
 
 	h, err := highwayhash.New(key)
-
 	return Hash{h}, err
 }
 
@@ -158,7 +150,6 @@ func NewHash() (Hash, error) {
 func (h Hash) Obfuscate(s string) (string, error) {
 	h.h.Reset()
 	checksum := h.h.Sum([]byte(s))
-
 	return base64.StdEncoding.EncodeToString(checksum), nil
 }
 
@@ -171,6 +162,5 @@ func Obfuscate(s string) (string, error) {
 	}
 
 	checksum := hash.Sum([]byte(s))
-
 	return base64.StdEncoding.EncodeToString(checksum), nil
 }

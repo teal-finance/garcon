@@ -145,7 +145,6 @@ func extractMainDomain(urls []*url.URL) (secure bool, dns, path string) {
 func extractDevURLs(urls []*url.URL) (devURLs []*url.URL) {
 	if len(urls) == 1 {
 		log.Print("JWT required for single domain: ", urls)
-
 		return nil
 	}
 
@@ -180,7 +179,6 @@ func extractDevOrigins(urls []*url.URL) (devOrigins []string) {
 	}
 
 	log.Print("JWT not required for dev. origins: ", devOrigins)
-
 	return devOrigins
 }
 
@@ -247,7 +245,6 @@ func (ck *Checker) Chk(next http.Handler) http.Handler {
 				perm = ck.perms[0]
 			} else {
 				ck.resErr.Write(w, r, http.StatusUnauthorized, errMsg)
-
 				return
 			}
 		}
@@ -265,7 +262,6 @@ func (ck *Checker) Vet(next http.Handler) http.Handler {
 				perm = ck.perms[0]
 			} else {
 				ck.resErr.Write(w, r, http.StatusUnauthorized, errMsg)
-
 				return
 			}
 		}
@@ -303,13 +299,11 @@ func (ck *Checker) isDevOrigin(r *http.Request) bool {
 		for _, prefix := range ck.devOrigins {
 			if prefix == "*" {
 				log.Print("No JWT but addr=http://localhost => Accept any origin=", sanitized)
-
 				return true
 			}
 
 			if strings.HasPrefix(origin, prefix) {
 				log.Printf("No JWT but origin=%v is a valid dev origin", sanitized)
-
 				return true
 			}
 		}
@@ -327,11 +321,9 @@ func (ck *Checker) permFromBearerOrCookie(r *http.Request) (perm Perm, errC stri
 		if errC != "" {
 			err += " or " + errC
 			log.Print("No JWT from Bearer or Cookie: ", err)
-
 			return perm, err
 		}
 	}
-
 	return ck.permFromJWT(jwt)
 }
 
@@ -339,10 +331,8 @@ func (ck *Checker) permFromCookie(r *http.Request) (perm Perm, errMsg string) {
 	jwt, errMsg := ck.jwtFromCookie(r)
 	if errMsg != "" {
 		log.Print("No JWT from cookie: ", errMsg)
-
 		return perm, errMsg
 	}
-
 	return ck.permFromJWT(jwt)
 }
 
@@ -355,13 +345,11 @@ func (ck *Checker) jwtFromBearer(r *http.Request) (jwt, errMsg string) {
 		if err != nil {
 			log.Print("Authorization header has JWT hash: ", checksum)
 		}
-
 		return auth[n:], "" // Success
 	}
 
 	if auth == "" {
 		log.Print("Authorization header is missing, no JWT")
-
 		return "", "Provide your JWT within the 'Authorization Bearer' HTTP header"
 	}
 
@@ -385,7 +373,6 @@ func (ck *Checker) jwtFromCookie(r *http.Request) (jwt, errMsg string) {
 	}
 
 	log.Print("Cookie has JWT: ", c.Value)
-
 	return c.Value, "" // Success
 }
 
@@ -404,12 +391,10 @@ func (ck *Checker) permFromJWT(jwt string) (perm Perm, errMsg string) {
 	perm, errMsg = ck.permFromRefreshBytes(parts)
 	if errMsg != "" {
 		log.Print("WRN JWT: ", errMsg)
-
 		return perm, expiredRToken
 	}
 
 	log.Print("JWT Permission: ", perm)
-
 	return perm, "" // Success
 }
 
@@ -417,7 +402,6 @@ func (ck *Checker) permFromRefreshClaims(claims *tokens.RefreshClaims) Perm {
 	for i, p := range ck.plans {
 		if p == claims.Namespace {
 			log.Print("JWT has the ", p, " Namespace")
-
 			return ck.perms[i]
 		}
 	}
@@ -450,7 +434,6 @@ func (ck *Checker) partsFromJWT(jwt string) (claimsJSON []byte, errMsg string) {
 	claimsJSON, err := ck.b64encoding.DecodeString(parts[1])
 	if err != nil {
 		log.Print("WRN JWT Base64 decoding: ", err)
-
 		return nil, "The token claims (second part of the JWT) is not base64-valid"
 	}
 
@@ -465,7 +448,6 @@ func (ck *Checker) verifySignature(parts []string) (errMsg string) {
 	if signature := parts[2]; signature != signedString {
 		log.Print("WRN JWT signature in 3rd part : ", security.Sanitize(signature))
 		log.Print("WRN JWT signed first two parts: ", signedString)
-
 		return "JWT signature mismatch"
 	}
 
@@ -498,7 +480,6 @@ func (ck *Checker) permFromRefreshBytes(claimsJSON []byte) (perm Perm, errMsg st
 	}
 
 	perm = ck.permFromRefreshClaims(claims)
-
 	return perm, "" // Success
 }
 
@@ -506,7 +487,6 @@ func (ck *Checker) permFromRefreshBytes(claimsJSON []byte) (perm Perm, errMsg st
 func (ck *Checker) sign(signingString string) (signature string) {
 	hasher := hmac.New(crypto.SHA256.New, ck.secretKey)
 	_, _ = hasher.Write([]byte(signingString))
-
 	return ck.b64encoding.EncodeToString(hasher.Sum(nil))
 }
 
@@ -519,7 +499,6 @@ func From(r *http.Request) Perm {
 	if !ok {
 		log.Print("WRN JWT No permissions within the context ", r.URL.Path)
 	}
-
 	return perm
 }
 
@@ -529,6 +508,5 @@ var permKey struct{}
 func (perm Perm) storeInContext(r *http.Request) *http.Request {
 	parentCtx := r.Context()
 	childCtx := context.WithValue(parentCtx, permKey, perm)
-
 	return r.WithContext(childCtx)
 }

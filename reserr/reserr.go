@@ -70,7 +70,6 @@ func (resErr ResErr) SafeWrite(w http.ResponseWriter, r *http.Request, statusCod
 	b, err := m.MarshalJSON()
 	if err != nil {
 		log.Print("ResErr MarshalJSON ", m, " err: ", err)
-
 		return
 	}
 

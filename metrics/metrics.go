@@ -38,7 +38,6 @@ type space struct {
 func StartServer(port int, namespace string) (chain.Chain, func(net.Conn, http.ConnState)) {
 	if port <= 0 {
 		log.Print("Disable Prometheus, export port=", port)
-
 		return nil, nil
 	}
 
@@ -63,7 +62,6 @@ func StartServer(port int, namespace string) (chain.Chain, func(net.Conn, http.C
 func handler() http.Handler {
 	handler := chi.NewRouter()
 	handler.Handle("/metrics", promhttp.Handler())
-
 	return handler
 }
 

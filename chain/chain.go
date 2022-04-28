@@ -63,11 +63,9 @@ func (c Chain) Then(h http.Handler) http.Handler {
 	if h == nil {
 		h = http.DefaultServeMux
 	}
-
 	for i := range c {
 		h = c[len(c)-1-i](h)
 	}
-
 	return h
 }
 
@@ -83,6 +81,5 @@ func (c Chain) ThenFunc(fn http.HandlerFunc) http.Handler {
 	if fn == nil {
 		return c.Then(nil)
 	}
-
 	return c.Then(fn)
 }

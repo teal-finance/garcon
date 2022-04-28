@@ -43,7 +43,6 @@ type Stoppable interface {
 //    pprof -http=: cpu.pprof
 func ProbeCPU() Stoppable {
 	log.Print("Probing CPU. To visualize the profile: pprof -http=: cpu.pprof")
-
 	return profile.Start(profile.ProfilePath("."))
 }
 

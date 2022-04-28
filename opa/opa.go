@@ -38,7 +38,6 @@ type Policy struct {
 // New creates a new Policy by loading rego files.
 func New(filenames []string, reserr reserr.ResErr) (Policy, error) {
 	compiler, err := Load(filenames)
-
 	return Policy{compiler, reserr}, err
 }
 
@@ -94,7 +93,6 @@ func (opa Policy) Auth(next http.Handler) http.Handler {
 		if err != nil || len(rs) == 0 {
 			resErr.Write(w, r, http.StatusInternalServerError, "Internal Server Error #1")
 			log.Print("ERR OPA Eval: ", err)
-
 			return
 		}
 
@@ -102,7 +100,6 @@ func (opa Policy) Auth(next http.Handler) http.Handler {
 		if !ok {
 			resErr.Write(w, r, http.StatusInternalServerError, "Internal Server Error #2")
 			log.Print("ERR missing OPA data in ", rs)
-
 			return
 		}
 
@@ -110,7 +107,6 @@ func (opa Policy) Auth(next http.Handler) http.Handler {
 			resErr.Write(w, r, http.StatusUnauthorized,
 				"Provide your JWT within the 'Authorization Bearer' HTTP header")
 			log.Print("OPA: Missing or invalid Authorization header " + r.RemoteAddr + " " + r.RequestURI)
-
 			return
 		}
 

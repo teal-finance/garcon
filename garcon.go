@@ -298,7 +298,7 @@ func (g *Garcon) NewJWTChecker(urls []*url.URL, secretKey []byte, planPerm ...in
 func ServerHeader(version string) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		log.Print("Middleware response HTTP header: Set Server ", version)
-
+		
 		return http.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Set("Server", version)
@@ -310,16 +310,13 @@ func ServerHeader(version string) func(next http.Handler) http.Handler {
 // SplitClean splits the values and trim them.
 func SplitClean(values string) []string {
 	splitValues := strings.FieldsFunc(values, isSeparator)
-
 	cleanValues := make([]string, 0, len(splitValues))
-
 	for _, v := range splitValues {
 		v = strings.TrimSpace(v)
 		if v != "" {
 			cleanValues = append(cleanValues, v)
 		}
 	}
-
 	return cleanValues
 }
 
@@ -328,7 +325,6 @@ func isSeparator(c rune) bool {
 	case ',', ' ', '\t', '\n', '\v', '\f', '\r':
 		return true
 	}
-
 	return false
 }
 
@@ -336,7 +332,6 @@ func AppendPrefixes(origins []string, prefixes ...string) []string {
 	for _, p := range prefixes {
 		origins = appendOnePrefix(origins, p)
 	}
-
 	return origins
 }
 
@@ -359,7 +354,6 @@ func appendOnePrefix(origins []string, p string) []string {
 		// if `p` a prefix of `o` => update origins[i]
 		if o[:len(p)] == p {
 			origins[i] = p // replace `o` by `p`
-
 			return origins
 		}
 	}
@@ -371,7 +365,6 @@ func AppendURLs(urls []*url.URL, prefixes ...*url.URL) []*url.URL {
 	for _, p := range prefixes {
 		urls = appendOneURL(urls, p)
 	}
-
 	return urls
 }
 
@@ -398,7 +391,6 @@ func appendOneURL(urls []*url.URL, p *url.URL) []*url.URL {
 		// if `p` a prefix of `u` => update urls[i]
 		if u.Host[:len(p.Host)] == p.Host {
 			urls[i] = p // replace `u` by `p`
-
 			return urls
 		}
 	}
@@ -427,12 +419,10 @@ func ParseURLs(origins []string) []*url.URL {
 
 func OriginsFromURLs(urls []*url.URL) []string {
 	origins := make([]string, 0, len(urls))
-
 	for _, u := range urls {
 		o := u.Scheme + "://" + u.Host
 		origins = append(origins, o)
 	}
-
 	return origins
 }
 

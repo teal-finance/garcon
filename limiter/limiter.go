@@ -64,7 +64,6 @@ func (rl *ReqLimiter) Limit(next http.Handler) http.Handler {
 		if err != nil {
 			rl.resErr.Write(w, r, http.StatusInternalServerError, "Internal Server Error #3")
 			log.Print("in  ", r.RemoteAddr, " ", r.Method, " ", r.RequestURI, " ERR SplitHostPort ", err)
-
 			return
 		}
 
@@ -77,7 +76,6 @@ func (rl *ReqLimiter) Limit(next http.Handler) http.Handler {
 			} else {
 				log.Print("WRM ", r.RemoteAddr, " ", r.Method, " ", r.RequestURI, " ", err)
 			}
-
 			return
 		}
 

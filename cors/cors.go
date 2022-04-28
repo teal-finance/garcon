@@ -63,7 +63,6 @@ func InsertSchema(origins []string) {
 
 func oneOrigin(addr string) func(string) bool {
 	log.Print("CORS: Set one origin: ", addr)
-
 	return func(origin string) bool {
 		return origin == addr
 	}
@@ -80,7 +79,6 @@ func multipleOriginPrefixes(addrPrefixes []string) func(origin string) bool {
 		}
 
 		log.Print("CORS: Refuse ", origin, " without prefixes ", addrPrefixes)
-
 		return false
 	}
 }
