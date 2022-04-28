@@ -298,7 +298,7 @@ func (g *Garcon) NewJWTChecker(urls []*url.URL, secretKey []byte, planPerm ...in
 func ServerHeader(version string) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		log.Print("Middleware response HTTP header: Set Server ", version)
-		
+
 		return http.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Set("Server", version)
