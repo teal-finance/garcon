@@ -25,10 +25,6 @@ import (
 	"github.com/pkg/profile"
 )
 
-type Stoppable interface {
-	Stop()
-}
-
 // ProbeCPU is used like the following:
 //
 //     defer pprof.ProbeCPU.Stop()
@@ -41,7 +37,7 @@ type Stoppable interface {
 //    go get -u github.com/google/pprof
 //    cd -
 //    pprof -http=: cpu.pprof
-func ProbeCPU() Stoppable {
+func ProbeCPU() interface{ Stop() } {
 	log.Print("Probing CPU. To visualize the profile: pprof -http=: cpu.pprof")
 	return profile.Start(profile.ProfilePath("."))
 }
