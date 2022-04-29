@@ -18,6 +18,7 @@ package opa
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -31,9 +32,11 @@ import (
 )
 
 type Policy struct {
-	Compiler *ast.Compiler
-	ResErr   reserr.ResErr
+	compiler *ast.Compiler
+	resErr   reserr.ResErr
 }
+
+var ErrEmptyFilename = errors.New("OPA: missing filename")
 
 // New creates a new Policy by loading rego files.
 func New(filenames []string, reserr reserr.ResErr) (Policy, error) {
@@ -41,21 +44,20 @@ func New(filenames []string, reserr reserr.ResErr) (Policy, error) {
 	return Policy{compiler, reserr}, err
 }
 
-// Ready returns true if the Policy compiler contains rules.
-func (opa Policy) Ready() bool {
-	return opa.Compiler != nil
-}
-
 // Load check the Rego filenames and loads them to build the OPA compiler.
 func Load(filenames []string) (*ast.Compiler, error) {
 	if len(filenames) == 0 {
-		return nil, nil
+		return nil, ErrEmptyFilename
 	}
 
 	modules := map[string]string{}
 
 	for _, f := range filenames {
 		log.Printf("OPA: load %q", f)
+
+		if f == "" {
+			return nil, ErrEmptyFilename
+		}
 
 		content, err := ioutil.ReadFile(f)
 		if err != nil {
@@ -70,10 +72,10 @@ func Load(filenames []string) (*ast.Compiler, error) {
 
 // Auth is the HTTP middleware to check endpoint authorization.
 func (opa Policy) Auth(next http.Handler) http.Handler {
-	log.Print("Middleware OPA: ", opa.Compiler.Modules)
+	log.Print("Middleware OPA: ", opa.compiler.Modules)
 
-	compiler := opa.Compiler
-	resErr := opa.ResErr
+	compiler := opa.compiler
+	resErr := opa.resErr
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		input := map[string]interface{}{

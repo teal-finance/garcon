@@ -135,12 +135,11 @@ func (s parameters) new() (*Garcon, error) {
 	g.JWT = g.NewJWTChecker(s.urls, s.secretKey, s.planPerm...)
 
 	// Authentication rules (Open Policy Agent)
-	policy, err := opa.New(s.opaFilenames, g.ResErr)
-	if err != nil {
-		return &g, err
-	}
-
-	if policy.Ready() {
+	if len(s.opaFilenames) > 0 {
+		policy, err := opa.New(s.opaFilenames, g.ResErr)
+		if err != nil {
+			return &g, err
+		}
 		g.Middlewares = g.Middlewares.Append(policy.Auth)
 	}
 

@@ -94,10 +94,7 @@ func setMiddlewares(resErr reserr.ResErr) (mw chain.Chain, connState func(net.Co
 		if err != nil {
 			log.Fatal(err)
 		}
-
-		if policy.Ready() {
-			mw = mw.Append(policy.Auth)
-		}
+		mw = mw.Append(policy.Auth)
 	}
 
 	return mw, connState, urls
