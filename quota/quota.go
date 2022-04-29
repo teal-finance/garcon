@@ -12,7 +12,7 @@
 // or online at <https://www.gnu.org/licenses/lgpl-3.0.html>
 // #endregion </editor-fold>
 
-package limiter
+package quota
 
 import (
 	"log"

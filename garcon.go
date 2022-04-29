@@ -29,10 +29,10 @@ import (
 	"github.com/teal-finance/garcon/chain"
 	"github.com/teal-finance/garcon/cors"
 	"github.com/teal-finance/garcon/jwtperm"
-	"github.com/teal-finance/garcon/limiter"
 	"github.com/teal-finance/garcon/metrics"
 	"github.com/teal-finance/garcon/opa"
 	"github.com/teal-finance/garcon/pprof"
+	"github.com/teal-finance/garcon/quota"
 	"github.com/teal-finance/garcon/reqlog"
 	"github.com/teal-finance/garcon/reserr"
 	"github.com/teal-finance/garcon/security"
@@ -123,7 +123,7 @@ func (s parameters) new() (*Garcon, error) {
 	}
 
 	if s.reqMinute > 0 {
-		reqLimiter := limiter.New(s.reqBurst, s.reqMinute, s.devMode, g.ResErr)
+		reqLimiter := quota.New(s.reqBurst, s.reqMinute, s.devMode, g.ResErr)
 		g.Middlewares = g.Middlewares.Append(reqLimiter.Limit)
 	}
 
@@ -342,7 +342,6 @@ func appendOnePrefix(origins []string, p string) []string {
 			if o == p[:len(o)] {
 				return origins
 			}
-
 			continue
 		}
 
@@ -379,7 +378,6 @@ func appendOneURL(urls []*url.URL, p *url.URL) []*url.URL {
 			if u.Host == p.Host[:len(u.Host)] {
 				return urls
 			}
-
 			continue
 		}
 

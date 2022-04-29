@@ -21,10 +21,10 @@ import (
 	"github.com/teal-finance/garcon/chain"
 	"github.com/teal-finance/garcon/cors"
 	"github.com/teal-finance/garcon/jwtperm"
-	"github.com/teal-finance/garcon/limiter"
 	"github.com/teal-finance/garcon/metrics"
 	"github.com/teal-finance/garcon/opa"
 	"github.com/teal-finance/garcon/pprof"
+	"github.com/teal-finance/garcon/quota"
 	"github.com/teal-finance/garcon/reserr"
 	"github.com/teal-finance/garcon/webserver"
 )
@@ -71,7 +71,7 @@ func setMiddlewares(resErr reserr.ResErr) (mw chain.Chain, connState func(net.Co
 	mw, connState = metrics.StartServer(expPort, "LowLevel")
 
 	// Limit the input request rate per IP
-	reqLimiter := limiter.New(burst, reqMinute, *dev, resErr)
+	reqLimiter := quota.New(burst, reqMinute, *dev, resErr)
 
 	corsConfig := allowedProdOrigin
 	if *dev {

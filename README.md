@@ -14,7 +14,7 @@ Please propose a PR to add here your project that also uses Garcon.
 Garcon includes the following middleware pieces:
 
 * Logging of incoming requests ;
-* Rate limiter to prevent requests flooding ;
+* Rate-limiter to prevent requests flooding ;
 * JWT management using HttpOnly cookie or Authorization header ;
 * Cross-Origin Resource Sharing (CORS) ;
 * Authentication rules based on Datalog/Rego files using [Open Policy Agent](https://www.openpolicyagent.org) ;
@@ -297,10 +297,10 @@ import (
     "github.com/teal-finance/garcon"
     "github.com/teal-finance/garcon/chain"
     "github.com/teal-finance/garcon/cors"
-    "github.com/teal-finance/garcon/limiter"
     "github.com/teal-finance/garcon/metrics"
     "github.com/teal-finance/garcon/opa"
     "github.com/teal-finance/garcon/pprof"
+    "github.com/teal-finance/garcon/quota"
     "github.com/teal-finance/garcon/reserr"
     "github.com/teal-finance/garcon/webserver"
 )
@@ -343,7 +343,7 @@ func setMiddlewares(resErr reserr.ResErr) (mw chain.Chain, connState func(net.Co
     mw, connState = metrics.StartServer(expPort, devMode)
 
     // Limit the input request rate per IP
-    reqLimiter := limiter.New(burst, reqMinute, devMode, resErr)
+    reqLimiter := quota.New(burst, reqMinute, devMode, resErr)
 
     corsConfig := allowedProdOrigin
     if devMode {
