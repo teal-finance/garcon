@@ -36,12 +36,14 @@ import (
 )
 
 const (
-	authScheme = "Bearer " // Definition of "Bearer Token" in RFC 6750:
-	// A security token with the property that any party in possession of
+	// authScheme is part of the HTTP "Authorization" header
+	// conveying the "Bearer Token" definitioned by RFC 6750 as
+	// as security token with the property that any party in possession of
 	// the token (a "bearer") can use the token in any way that any other
 	// party in possession of it can.  Using a bearer token does not
 	// require a bearer to prove possession of cryptographic key material
 	// (proof-of-possession).
+	authScheme = "Bearer "
 
 	invalidCookie = "invalid cookie"
 	expiredRToken = "Refresh token has expired (or invalid)"
@@ -257,7 +259,8 @@ func (ck *Checker) Chk(next http.Handler) http.Handler {
 	})
 }
 
-// Vet accepts the HTTP request only if a valid JWT is in the Cookie or in the first "Autorisation" header.
+// Vet accepts the HTTP request only if a valid JWT is in the Cookie
+// or in the first "Authorization" header.
 func (ck *Checker) Vet(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		perm, errMsg := ck.permFromBearerOrCookie(r)
