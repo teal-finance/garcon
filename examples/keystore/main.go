@@ -45,7 +45,6 @@ func main() {
 		garcon.WithProm(expPort, "keystore"),
 		garcon.WithDev(!*prod),
 	)
-
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -104,7 +103,7 @@ func (db *db) list(w http.ResponseWriter, r *http.Request) {
 	keyNames := map[string][]string{}
 	for h, keys := range db.KeysByIP {
 		keyNames[h] = make([]string, len(keys))
-		for name, _ := range keys {
+		for name := range keys {
 			keyNames[h] = append(keyNames[h], name)
 		}
 	}

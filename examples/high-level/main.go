@@ -60,7 +60,6 @@ func main() {
 		garcon.WithProm(expPort, "https://example.com/path/myapp/"),
 		garcon.WithDev(!*prod),
 	)
-
 	if err != nil {
 		log.Fatal(err)
 	}
