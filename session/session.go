@@ -20,8 +20,6 @@ package session
 
 import (
 	"context"
-	"crypto/aes"
-	"crypto/cipher"
 	"errors"
 	"log"
 	"net/http"
@@ -29,27 +27,23 @@ import (
 	"strings"
 	"time"
 
+	"github.com/teal-finance/garcon/aead"
 	"github.com/teal-finance/garcon/reserr"
 	"github.com/teal-finance/garcon/security"
 )
 
-const (
-	ciphertextMinLen = 12
-	ascii85MinLen    = 16
-)
-
 type Checker struct {
 	resErr     reserr.ResErr
-	secretKey  []byte
-	plans      []string
 	cookie     http.Cookie
 	devOrigins []string
 	magic      byte
-	cipher     cipher.Block
+	cipher     aead.Cipher
 }
 
 const (
-	authScheme = "Session "
+	authScheme        = "Bearer "
+	secretTokenScheme = "i1" // See RFC 8959, i = the "incorruptible" format, 1 = the v1 version
+	prefixScheme      = authScheme + secretTokenScheme + ":"
 
 	invalidCookie = "invalid cookie"
 	expiredRToken = "Refresh token has expired (or invalid)"
@@ -63,23 +57,21 @@ var (
 	ErrNoTokenFound = errors.New("no token found")
 )
 
-func New(urls []*url.URL, resErr reserr.ResErr, secretKey []byte) *Checker {
+func New(urls []*url.URL, resErr reserr.ResErr, secretKey [16]byte) *Checker {
 	if len(urls) == 0 {
 		log.Panic("No urls => Cannot set Cookie domain")
 	}
 
 	secure, dns, path := extractMainDomain(urls[0])
-	cookie := createCookie("session", secure, dns, path, secretKey, "a85 TODO")
+	cookie := createCookie("session", secure, dns, path, "a85 TODO")
 
-	cipher, err := aes.NewCipher(secretKey)
+	cipher, err := aead.New(secretKey)
 	if err != nil {
 		log.Panic("AES NewCipher ", err)
 	}
 
 	return &Checker{
 		resErr:     resErr,
-		secretKey:  secretKey,
-		plans:      []string{},
 		cookie:     cookie,
 		devOrigins: extractDevOrigins(urls),
 		magic:      secretKey[0],
@@ -152,7 +144,7 @@ func extractDevOrigins(urls []*url.URL) (devOrigins []string) {
 	return devOrigins
 }
 
-func createCookie(name string, secure bool, dns, path string, secretKey []byte, a85 string) http.Cookie {
+func createCookie(name string, secure bool, dns, path string, a85 string) http.Cookie {
 	// remove trailing slash
 	if path != "" && path[len(path)-1] == '/' {
 		path = path[:len(path)-1]

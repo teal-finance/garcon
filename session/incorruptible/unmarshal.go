@@ -25,12 +25,12 @@ import (
 )
 
 func Unmarshal(b []byte) (t token.Token, err error) {
-	if len(b) < headerLen+expiryLen+net.IPv4len {
+	if len(b) < headerSize+expirySize+net.IPv4len {
 		return t, fmt.Errorf("not enough bytes (%d) for header+expiry+IP", len(b))
 	}
 
 	m := extractMetadata(b)
-	b = b[headerLen:] // drop header
+	b = b[headerSize:] // drop header
 
 	b, err = dropPadding(b)
 	if err != nil {
@@ -47,13 +47,13 @@ func Unmarshal(b []byte) (t token.Token, err error) {
 		}
 	}
 
-	if len(b) < expiryLen+m.ipLength()+m.nValues() {
+	if len(b) < expirySize+m.ipLength()+m.nValues() {
 		return t, fmt.Errorf("not enough bytes (%d) for expiry+IP+payload", len(b))
 	}
 
 	t.Expiry = parseExpiry(b)
 	t.IP = parseIP(b, m.ipLength())
-	b = b[expiryLen+m.ipLength():] // drop expiry and IP bytes
+	b = b[expirySize+m.ipLength():] // drop expiry and IP bytes
 
 	t.Values, err = parseValues(b, m.nValues())
 	if err != nil {
@@ -69,8 +69,8 @@ func parseExpiry(payload []byte) uint64 {
 }
 
 func parseIP(payload []byte, ipLen int) net.IP {
-	i := expiryLen
-	j := expiryLen + ipLen
+	i := expirySize
+	j := expirySize + ipLen
 	ip := payload[i:j]
 	return ip
 }
@@ -104,11 +104,11 @@ func parseValues(b []byte, nV int) ([][]byte, error) {
 }
 
 func dropPadding(b []byte) ([]byte, error) {
-	paddingLen := int(b[len(b)-1]) // last byte is the padding length
-	if paddingLen > paddingMaxLen {
-		return nil, fmt.Errorf("too much padding bytes (%d)", paddingLen)
+	paddingSize := int(b[len(b)-1]) // last byte is the padding length
+	if paddingSize > paddingMaxSize {
+		return nil, fmt.Errorf("too much padding bytes (%d)", paddingSize)
 	}
 
-	b = b[:len(b)-paddingLen] // drop padding
+	b = b[:len(b)-paddingSize] // drop padding
 	return b, nil
 }

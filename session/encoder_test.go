@@ -12,81 +12,74 @@
 // or online at <https://www.gnu.org/licenses/lgpl-3.0.html>
 // #endregion </editor-fold>
 
-package incorruptible
+package session
 
 import (
 	"net"
+	"net/url"
 	"reflect"
 	"testing"
 
+	"github.com/teal-finance/garcon/reserr"
 	"github.com/teal-finance/garcon/session/token"
 )
 
 var cases = []struct {
 	name    string
-	magic   uint8
 	wantErr bool
 	token   token.Token
 }{
 	{
-		"noneIPv4", 0x51, false,
-		token.Token{
+		"noneIPv4", false, token.Token{
 			Expiry: 123456789,
 			IP:     net.IPv4(11, 22, 33, 44),
 			Values: [][]byte{},
 		},
 	},
 	{
-		"noneIPv6", 0x51, false,
-		token.Token{
+		"noneIPv6", false, token.Token{
 			Expiry: 123456789,
 			IP:     net.IP{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
 			Values: [][]byte{},
 		},
 	},
 	{
-		"1emptyIPv6", 0x51, false,
-		token.Token{
+		"1emptyIPv6", false, token.Token{
 			Expiry: 123456789,
 			IP:     net.IP{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
 			Values: [][]byte{[]byte("")},
 		},
 	},
 	{
-		"4emptyIPv6", 0x51, false,
-		token.Token{
+		"4emptyIPv6", false, token.Token{
 			Expiry: 123456789,
 			IP:     net.IP{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
 			Values: [][]byte{[]byte(""), []byte(""), []byte(""), []byte("")},
 		},
 	},
 	{
-		"1smallIPv6", 0x51, false,
-		token.Token{
+		"1smallIPv6", false, token.Token{
 			Expiry: 123456789,
 			IP:     net.IP{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
 			Values: [][]byte{[]byte("1")},
 		},
 	},
 	{
-		"1valIPv6", 0x51, false,
-		token.Token{
+		"1valIPv6", false, token.Token{
 			Expiry: 123456789,
 			IP:     net.IP{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
 			Values: [][]byte{[]byte("123456789-B-123456789-C-123456789-D-123456789-E-123456789")},
 		},
 	},
 	{
-		"1moreIPv6", 0x51, false,
-		token.Token{
+		"1moreIPv6", false, token.Token{
 			Expiry: 123456789,
 			IP:     net.IP{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
 			Values: [][]byte{[]byte("123456789-B-123456789-C-123456789-D-123456789-E-123456789-")},
 		},
 	},
 	{
-		"Compress 10valIPv6", 0x51, false,
-		token.Token{
+		"Compress 10valIPv6", false, token.Token{
 			Expiry: 123456789,
 			IP:     net.IP{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
 			Values: [][]byte{
@@ -101,8 +94,7 @@ var cases = []struct {
 		},
 	},
 	{
-		"too much values", 0x51, true,
-		token.Token{
+		"too much values", true, token.Token{
 			Expiry: 123456789,
 			IP:     net.IP{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
 			Values: [][]byte{{1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9},
@@ -116,47 +108,46 @@ var cases = []struct {
 	},
 }
 
-func TestUnmarshal(t *testing.T) {
+func TestDecode(t *testing.T) {
 	for _, c := range cases {
+		u, err := url.Parse("http://host:8080/path/url")
+		if err != nil {
+			t.Error("url.Parse() error", err)
+			return
+		}
+
+		key := [16]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6}
+
+		ck := New([]*url.URL{u}, reserr.New("path/doc"), key)
+
 		t.Run(c.name, func(t *testing.T) {
 			c.token.ShortenIP()
 
-			b, err := Marshal(c.token, c.magic)
+			a85, err := ck.Encode(c.token)
 			if (err == nil) == c.wantErr {
-				t.Errorf("Marshal() error = %v, wantErr %v", err, c.wantErr)
+				t.Errorf("Encode() error = %v, wantErr %v", err, c.wantErr)
 				return
 			}
 
-			t.Log("len(b)", len(b))
+			t.Log("len(a85)", len(a85))
 
-			n := len(b)
+			n := len(a85)
 			if n == 0 {
 				return
 			}
 			if n > 70 {
-				n = 70 // print max the first 70 bytes
+				n = 70 // print max the first 70 characters
 			}
-			t.Logf("b[:%d] %v", n, b[:n])
+			t.Logf("a85[:%d] %v", n, string(a85[:n]))
 
-			magic := MagicCode(b)
-			if magic != c.magic {
-				t.Errorf("MagicCode() got = %x, want = %x", magic, c.magic)
-				return
-			}
-
-			if (len(b) % 4) != 0 {
-				t.Errorf("len(b) %d must be 32-bit aligned but gap =%d", len(b), len(b)%4)
-				return
-			}
-
-			got, err := Unmarshal(b)
+			got, err := ck.Decode(string(a85))
 			if err != nil {
-				t.Errorf("Unmarshal() error = %v", err)
+				t.Errorf("Decode() error = %v", err)
 				return
 			}
 
 			if !reflect.DeepEqual(got, c.token) {
-				t.Errorf("Unmarshal() = %v, want %v", got, c.token)
+				t.Errorf("Decode() = %v, want %v", got, c.token)
 			}
 		})
 	}

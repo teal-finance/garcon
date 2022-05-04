@@ -34,23 +34,23 @@ import (
 )
 
 const (
-	magicCodeLen  = 1
-	saltLen       = 1
-	metadataLen   = 1
-	headerLen     = magicCodeLen + saltLen + metadataLen
-	expiryLen     = int(unsafe.Sizeof(int64(0))) // int64 = 8 bytes
-	paddingMaxLen = 8
+	magicCodeSize  = 1
+	saltSize       = 1
+	metadataSize   = 1
+	headerSize     = magicCodeSize + saltSize + metadataSize
+	expirySize     = int(unsafe.Sizeof(int64(0))) // int64 = 8 bytes
+	paddingMaxSize = 8
 
 	lengthMayCompress  = 100
 	lengthMustCompress = 180
 )
 
 type Serializer struct {
-	ipLength   int
-	nValues    int // number of values
-	valLenSum  int // sum of the value lengths
-	payloadLen int // size in bytes of the uncompressed payload
-	compressed bool
+	ipLength    int
+	nValues     int // number of values
+	valLenSum   int // sum of the value lengths
+	payloadSize int // size in bytes of the uncompressed payload
+	compressed  bool
 }
 
 func newSerializer(t token.Token) (s Serializer) {
@@ -63,9 +63,9 @@ func newSerializer(t token.Token) (s Serializer) {
 		s.valLenSum += len(v)
 	}
 
-	s.payloadLen = expiryLen + s.ipLength + s.valLenSum
+	s.payloadSize = expirySize + s.ipLength + s.valLenSum
 
-	s.compressed = doesCompress(s.payloadLen)
+	s.compressed = doesCompress(s.payloadSize)
 
 	return s
 }
@@ -73,11 +73,11 @@ func newSerializer(t token.Token) (s Serializer) {
 // doesCompress decides to compress or not the payload.
 // The compression decision is a bit randomized
 // to limit the "chosen plaintext" attack.
-func doesCompress(payloadLen int) bool {
+func doesCompress(payloadSize int) bool {
 	switch {
-	case payloadLen < lengthMayCompress:
+	case payloadSize < lengthMayCompress:
 		return false
-	case payloadLen < lengthMustCompress:
+	case payloadSize < lengthMustCompress:
 		return (0 == rand.Intn(1))
 	default:
 		return true
@@ -100,17 +100,17 @@ func Marshal(t token.Token, magic uint8) ([]byte, error) {
 		return nil, err
 	}
 
-	if len(b) != headerLen+s.payloadLen {
-		return nil, fmt.Errorf("unexpected length got=%d want=%d", len(b), headerLen+s.payloadLen)
+	if len(b) != headerSize+s.payloadSize {
+		return nil, fmt.Errorf("unexpected length got=%d want=%d", len(b), headerSize+s.payloadSize)
 	}
 
 	if s.compressed {
-		c := s2.Encode(nil, b[headerLen:])
-		n := copy(b[headerLen:], c)
+		c := s2.Encode(nil, b[headerSize:])
+		n := copy(b[headerSize:], c)
 		if n != len(c) {
 			return nil, fmt.Errorf("unexpected copied bytes got=%d want=%d", n, len(c))
 		}
-		b = b[:headerLen+n]
+		b = b[:headerSize+n]
 	}
 
 	b = s.appendPadding(b)
@@ -118,13 +118,13 @@ func Marshal(t token.Token, magic uint8) ([]byte, error) {
 }
 
 func (s Serializer) buffer() []byte {
-	length := headerLen + expiryLen
-	capacity := length + s.ipLength + s.valLenSum + paddingMaxLen
+	length := headerSize + expirySize
+	capacity := length + s.ipLength + s.valLenSum + paddingMaxSize
 	return make([]byte, length, capacity)
 }
 
 func putExpiryTime(b []byte, expiry uint64) {
-	binary.BigEndian.PutUint64(b[headerLen:], expiry)
+	binary.BigEndian.PutUint64(b[headerSize:], expiry)
 }
 
 func appendIP(b []byte, ip net.IP) []byte {
@@ -148,7 +148,7 @@ func (s Serializer) appendValues(b []byte, t token.Token) ([]byte, error) {
 func (s *Serializer) appendPadding(b []byte) []byte {
 	trailing := len(b) % 4
 	missing := 4 - trailing
-	missing += 4 * rand.Intn(paddingMaxLen/4-1)
+	missing += 4 * rand.Intn(paddingMaxSize/4-1)
 
 	for i := 1; i < missing; i++ {
 		b = append(b, uint8(rand.Intn(256)))

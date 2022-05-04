@@ -15,39 +15,52 @@
 package session
 
 import (
-	"encoding/ascii85"
 	"errors"
 	"fmt"
 
+	"github.com/teal-finance/garcon/a85"
 	"github.com/teal-finance/garcon/session/incorruptible"
 	"github.com/teal-finance/garcon/session/token"
 )
 
+const (
+	a85MinSize        = 16
+	ciphertextMinSize = 12
+)
+
 func (ck *Checker) Encode(t token.Token) ([]byte, error) {
-	plaintext, err := Marshal(t, ck.magic)
+	plaintext, err := incorruptible.Marshal(t, ck.magic)
 	if err != nil {
 		return nil, err
 	}
 
-	ciphertext := make([]byte, len(plaintext))
-	ck.cipher.Encrypt(ciphertext, plaintext)
+	ciphertext, err := ck.cipher.Encrypt(plaintext)
+	if err != nil {
+		return nil, err
+	}
 
-	a85 := encodeAscii85(ciphertext)
-	return a85, nil
+	a := a85.Encode(ciphertext)
+	return a, nil
 }
 
-func (ck *Checker) Decode(a85 string) (t token.Token, err error) {
-	ciphertext, err := decodeAscii85(a85)
+func (ck *Checker) Decode(a string) (t token.Token, err error) {
+	if len(a) < a85MinSize {
+		return t, fmt.Errorf("Ascii85 string too short: %d < min=%d", len(a), a85MinSize)
+	}
+
+	ciphertext, err := a85.Decode(a)
 	if err != nil {
 		return t, err
 	}
 
-	if len(ciphertext) < ciphertextMinLen {
-		return t, fmt.Errorf("ciphertext too short: %d < min=%d", len(ciphertext), ciphertextMinLen)
+	if len(ciphertext) < ciphertextMinSize {
+		return t, fmt.Errorf("ciphertext too short: %d < min=%d", len(ciphertext), ciphertextMinSize)
 	}
 
-	plaintext := make([]byte, len(ciphertext))
-	ck.cipher.Decrypt(plaintext, ciphertext)
+	plaintext, err := ck.cipher.Decrypt(ciphertext)
+	if err != nil {
+		return t, err
+	}
 
 	magic := incorruptible.MagicCode(plaintext)
 	if magic != ck.magic {
@@ -55,24 +68,4 @@ func (ck *Checker) Decode(a85 string) (t token.Token, err error) {
 	}
 
 	return incorruptible.Unmarshal(plaintext)
-}
-
-func encodeAscii85(bin []byte) []byte {
-	max := ascii85.MaxEncodedLen(len(bin))
-	a85 := make([]byte, max)
-	n := ascii85.Encode(a85, bin)
-	return a85[:n]
-}
-
-func decodeAscii85(a85 string) ([]byte, error) {
-	// Ascii85 encodes 4 bytes 0x0000 by only one byte "z"
-	max := 4 * len(a85)
-	bin := make([]byte, max)
-
-	n, _, err := ascii85.Decode(bin, []byte(a85), true)
-	if err != nil {
-		return nil, fmt.Errorf("ascii85.Decode %w", err)
-	}
-
-	return bin[:n], nil
 }
