@@ -36,7 +36,7 @@ import (
 )
 
 const (
-	bearerPrefix = "Bearer "
+	authScheme = "Bearer "
 
 	invalidCookie = "invalid cookie"
 	expiredRToken = "Refresh token has expired (or invalid)"
@@ -199,7 +199,6 @@ func createCookie(plan string, secure bool, dns, path string, secretKey []byte) 
 		for i := len(path) - 1; i >= 0; i-- {
 			if path[i] == byte('/') {
 				name = path[i+1:]
-
 				break
 			}
 		}
@@ -339,8 +338,8 @@ func (ck *Checker) permFromCookie(r *http.Request) (perm Perm, errMsg string) {
 func (ck *Checker) jwtFromBearer(r *http.Request) (jwt, errMsg string) {
 	auth := r.Header.Get("Authorization")
 
-	n := len(bearerPrefix)
-	if len(auth) > n && auth[:n] == bearerPrefix {
+	n := len(authScheme)
+	if len(auth) > n && auth[:n] == authScheme {
 		checksum, err := security.Obfuscate(auth[n:])
 		if err != nil {
 			log.Print("Authorization header has JWT hash: ", checksum)
@@ -353,17 +352,14 @@ func (ck *Checker) jwtFromBearer(r *http.Request) (jwt, errMsg string) {
 		return "", "Provide your JWT within the 'Authorization Bearer' HTTP header"
 	}
 
-	log.Printf("Authorization header does not contain «" + bearerPrefix + "»")
-
+	log.Printf("Authorization header does not contain «" + authScheme + "»")
 	return "", invalidCookie
 }
 
 func (ck *Checker) jwtFromCookie(r *http.Request) (jwt, errMsg string) {
-	cookieName := ck.cookies[0].Name
-
-	c, err := r.Cookie(cookieName)
+	c, err := r.Cookie(ck.cookies[0].Name)
 	if err != nil {
-		log.Print("Cookie name="+cookieName+" is missing: ", err)
+		log.Print("Cookie name="+ck.cookies[0].Name+" is missing: ", err)
 
 		if cookies := r.Cookies(); len(cookies) > 0 {
 			log.Print("Other cookies in HTTP request: ", r.Cookies())
