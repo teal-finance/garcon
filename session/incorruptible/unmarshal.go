@@ -16,7 +16,6 @@ package incorruptible
 
 import (
 	"fmt"
-	"net"
 
 	"github.com/klauspost/compress/s2"
 
@@ -25,8 +24,8 @@ import (
 )
 
 func Unmarshal(b []byte) (dt dtoken.DToken, err error) {
-	if len(b) < bits.HeaderSize+bits.ExpirySize+net.IPv4len {
-		return dt, fmt.Errorf("not enough bytes (%d) for header+expiry+IP", len(b))
+	if len(b) < bits.HeaderSize+bits.ExpirySize {
+		return dt, fmt.Errorf("not enough bytes (%d) for header+expiry", len(b))
 	}
 
 	m := bits.GetMetadata(b)

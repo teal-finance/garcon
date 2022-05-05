@@ -33,6 +33,27 @@ var cases = []struct {
 	dtoken  dtoken.DToken
 }{
 	{
+		"noIP", 109, false, dtoken.DToken{
+			Expiry: expiry,
+			IP:     nil,
+			Values: nil,
+		},
+	},
+	{
+		"noIPnoExpiry", 109, false, dtoken.DToken{
+			Expiry: 0,
+			IP:     nil,
+			Values: nil,
+		},
+	},
+	{
+		"noExpiry", 109, false, dtoken.DToken{
+			Expiry: 0,
+			IP:     net.IPv4(0, 0, 0, 0),
+			Values: nil,
+		},
+	},
+	{
 		"noneIPv4", 0x51, false,
 		dtoken.DToken{
 			Expiry: expiry,
@@ -167,11 +188,13 @@ func TestUnmarshal(t *testing.T) {
 					got.Expiry, c.dtoken.Expiry, min, max)
 			}
 
-			if !reflect.DeepEqual(got.IP, c.dtoken.IP) {
+			if (len(got.IP) > 0 || len(c.dtoken.IP) > 0) &&
+				!reflect.DeepEqual(got.IP, c.dtoken.IP) {
 				t.Errorf("Mismatch IP got %v, want %v", got.IP, c.dtoken.IP)
 			}
 
-			if !reflect.DeepEqual(got.Values, c.dtoken.Values) {
+			if (len(got.Values) > 0 || len(c.dtoken.Values) > 0) &&
+				!reflect.DeepEqual(got.Values, c.dtoken.Values) {
 				t.Errorf("Mismatch Values got %v, want %v", got.Values, c.dtoken.Values)
 			}
 		})
