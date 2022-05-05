@@ -48,7 +48,7 @@ const (
 	invalidCookie = "invalid cookie"
 	expiredRToken = "Refresh token has expired (or invalid)"
 
-	oneYearInSeconds = 31556952 // average number of seconds including leap years
+	oneYearInSeconds = 31556952 // average including leap years
 	oneYearInNS      = oneYearInSeconds * 1_000_000_000
 )
 

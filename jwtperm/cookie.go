@@ -51,7 +51,7 @@ const (
 	defaultCookieName = "g" // g as in garcon
 	defaultPlanName   = "DefaultPlan"
 	defaultPermValue  = 3600     // one hour
-	oneYearInSeconds  = 31556952 // average number of seconds including leap years
+	oneYearInSeconds  = 31556952 // average including leap years
 	oneYearInNS       = oneYearInSeconds * 1_000_000_000
 )
 
