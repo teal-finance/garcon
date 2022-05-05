@@ -47,8 +47,8 @@ type Serializer struct {
 	compressed   bool
 }
 
-func newSerializer(t token.Token) (s Serializer) {
-	s.ipLength = len(t.IP)
+func newSerializer(t dtoken.DToken) (s Serializer) {
+	s.ipLength = len(t.IP) // can be 0, 4 or 16
 
 	s.nValues = len(t.Values)
 

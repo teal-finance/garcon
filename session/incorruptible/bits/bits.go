@@ -27,9 +27,10 @@ const (
 	metadataSize  = 1
 
 	// Metadata coding in byte #2.
-	maskIPv4     = 0b_1000_0000
-	maskCompress = 0b_0100_0000
-	maskNValues  = 0b_0011_1111
+	maskIP       = 0b_1000_0000
+	maskIPv4     = 0b_0100_0000
+	maskCompress = 0b_0010_0000
+	maskNValues  = 0b_0001_1111
 
 	MaxValues int = maskNValues
 )
@@ -47,8 +48,15 @@ func GetMetadata(b []byte) Metadata {
 func NewMetadata(ipLength int, compressed bool, nValues int) (Metadata, error) {
 	var m byte
 
-	if ipLength == 4 {
-		m |= maskIPv4
+	switch ipLength {
+	case 0:
+		m = 0
+	case 4:
+		m = maskIP | maskIPv4
+	case 16:
+		m = maskIP
+	default:
+		return 0, fmt.Errorf("unexpected IP length %d", ipLength)
 	}
 
 	if compressed {
@@ -79,10 +87,13 @@ func (m Metadata) PutHeader(b []byte, magic uint8) {
 }
 
 func (m Metadata) ipLength() int {
-	if (m & maskIPv4) == 0 {
+	if (m & maskIPv4) != 0 {
+		return net.IPv4len
+	}
+	if (m & maskIP) != 0 {
 		return net.IPv6len
 	}
-	return net.IPv4len
+	return 0
 }
 
 func (m Metadata) IsCompressed() bool {
