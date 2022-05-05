@@ -148,7 +148,7 @@ func TestUnmarshal(t *testing.T) {
 				return
 			}
 
-			if (len(b) % 4) != 0 {
+			if enablePadding && ((len(b) % 4) != 0) {
 				t.Errorf("len(b) %d must be 32-bit aligned but gap =%d", len(b), len(b)%4)
 				return
 			}

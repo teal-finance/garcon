@@ -32,9 +32,11 @@ func Unmarshal(b []byte) (t token.Token, err error) {
 	m := bits.GetMetadata(b)
 	b = b[bits.HeaderSize:] // drop header
 
-	b, err = dropPadding(b)
-	if err != nil {
-		return t, err
+	if enablePadding {
+		b, err = dropPadding(b)
+		if err != nil {
+			return t, err
+		}
 	}
 
 	if m.IsCompressed() {

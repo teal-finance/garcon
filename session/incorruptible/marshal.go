@@ -33,6 +33,7 @@ import (
 
 const (
 	paddingMaxSize = 8
+	enablePadding  = false
 
 	lengthMayCompress  = 100
 	lengthMustCompress = 180
@@ -102,13 +103,21 @@ func Marshal(t token.Token, magic uint8) ([]byte, error) {
 		b = b[:bits.HeaderSize+n]
 	}
 
-	b = s.appendPadding(b)
+	if enablePadding {
+		b = s.appendPadding(b)
+	}
+
 	return b, nil
 }
 
 func (s Serializer) allocateBuffer() []byte {
 	length := bits.HeaderSize + bits.ExpirySize
-	capacity := length + s.ipLength + s.valTotalSize + paddingMaxSize
+	capacity := length + s.ipLength + s.valTotalSize
+
+	if enablePadding {
+		capacity += paddingMaxSize
+	}
+
 	return make([]byte, length, capacity)
 }
 
