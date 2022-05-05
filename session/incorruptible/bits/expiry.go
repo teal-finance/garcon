@@ -28,9 +28,9 @@ const (
 	expiryBits = ExpirySize * 8
 	expiryMax  = 1 << expiryBits
 
-	PrecisionInSeconds = 30
-	rangeInSeconds     = expiryMax * PrecisionInSeconds
-	rangeInYears       = rangeInSeconds / secondsPerYear
+	PrecisionInSeconds     = 30
+	rangeInSeconds     int = expiryMax * PrecisionInSeconds
+	rangeInYears           = rangeInSeconds / secondsPerYear
 
 	internalToUnix = (ExpiryStartYear - 1970) * secondsPerYear
 	unixToInternal = -internalToUnix
