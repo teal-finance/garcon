@@ -27,15 +27,11 @@ import (
 
 	"github.com/klauspost/compress/s2"
 
+	"github.com/teal-finance/garcon/session/incorruptible/bits"
 	"github.com/teal-finance/garcon/session/token"
 )
 
 const (
-	magicCodeSize  = 1
-	saltSize       = 1
-	metadataSize   = 1
-	headerSize     = magicCodeSize + saltSize + metadataSize
-	expirySize     = 3 // 3 bytes = 24 bits = 3 years with 10 seconds precision
 	paddingMaxSize = 8
 
 	lengthMayCompress  = 100
@@ -43,11 +39,11 @@ const (
 )
 
 type Serializer struct {
-	ipLength    int
-	nValues     int // number of values
-	valLenSum   int // sum of the value lengths
-	payloadSize int // size in bytes of the uncompressed payload
-	compressed  bool
+	ipLength     int
+	nValues      int // number of values
+	valTotalSize int // sum of the value lengths
+	payloadSize  int // size in bytes of the uncompressed payload
+	compressed   bool
 }
 
 func newSerializer(t token.Token) (s Serializer) {
@@ -55,12 +51,12 @@ func newSerializer(t token.Token) (s Serializer) {
 
 	s.nValues = len(t.Values)
 
-	s.valLenSum = s.nValues
+	s.valTotalSize = s.nValues
 	for _, v := range t.Values {
-		s.valLenSum += len(v)
+		s.valTotalSize += len(v)
 	}
 
-	s.payloadSize = expirySize + s.ipLength + s.valLenSum
+	s.payloadSize = bits.ExpirySize + s.ipLength + s.valTotalSize
 
 	s.compressed = doesCompress(s.payloadSize)
 
@@ -83,41 +79,57 @@ func doesCompress(payloadSize int) bool {
 
 func Marshal(t token.Token, magic uint8) ([]byte, error) {
 	s := newSerializer(t)
-	b := s.buffer()
 
-	if err := s.putHeader(b, magic); err != nil {
+	b, err := s.putHeaderExpiryIP(magic, t)
+	if err != nil {
 		return nil, err
 	}
 
-	putExpiryTime(b, t.Expiry)
-	b = appendIP(b, t.IP)
-
-	var err error
-	if b, err = s.appendValues(b, t); err != nil {
+	b, err = s.appendValues(b, t)
+	if err != nil {
 		return nil, err
 	}
-
-	if len(b) != headerSize+s.payloadSize {
-		return nil, fmt.Errorf("unexpected length got=%d want=%d", len(b), headerSize+s.payloadSize)
+	if len(b) != bits.HeaderSize+s.payloadSize {
+		return nil, fmt.Errorf("unexpected length got=%d want=%d", len(b), bits.HeaderSize+s.payloadSize)
 	}
 
 	if s.compressed {
-		c := s2.Encode(nil, b[headerSize:])
-		n := copy(b[headerSize:], c)
+		c := s2.Encode(nil, b[bits.HeaderSize:])
+		n := copy(b[bits.HeaderSize:], c)
 		if n != len(c) {
 			return nil, fmt.Errorf("unexpected copied bytes got=%d want=%d", n, len(c))
 		}
-		b = b[:headerSize+n]
+		b = b[:bits.HeaderSize+n]
 	}
 
 	b = s.appendPadding(b)
 	return b, nil
 }
 
-func (s Serializer) buffer() []byte {
-	length := headerSize + expirySize
-	capacity := length + s.ipLength + s.valLenSum + paddingMaxSize
+func (s Serializer) allocateBuffer() []byte {
+	length := bits.HeaderSize + bits.ExpirySize
+	capacity := length + s.ipLength + s.valTotalSize + paddingMaxSize
 	return make([]byte, length, capacity)
+}
+
+func (s Serializer) putHeaderExpiryIP(magic uint8, t token.Token) ([]byte, error) {
+	b := s.allocateBuffer()
+
+	m, err := bits.NewMetadata(s.ipLength, s.compressed, s.nValues)
+	if err != nil {
+		return nil, err
+	}
+
+	m.PutHeader(b, magic)
+
+	err = bits.PutExpiry(b, t.Expiry)
+	if err != nil {
+		return nil, err
+	}
+
+	b = bits.AppendIP(b, t.IP)
+
+	return b, nil
 }
 
 func (s Serializer) appendValues(b []byte, t token.Token) ([]byte, error) {

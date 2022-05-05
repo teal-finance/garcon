@@ -20,6 +20,7 @@ import (
 
 	"github.com/teal-finance/garcon/a85"
 	"github.com/teal-finance/garcon/session/incorruptible"
+	"github.com/teal-finance/garcon/session/incorruptible/bits"
 	"github.com/teal-finance/garcon/session/token"
 )
 
@@ -62,7 +63,7 @@ func (ck *Checker) Decode(a string) (t token.Token, err error) {
 		return t, err
 	}
 
-	magic := incorruptible.MagicCode(plaintext)
+	magic := bits.MagicCode(plaintext)
 	if magic != ck.magic {
 		return t, errors.New("bad magic code")
 	}

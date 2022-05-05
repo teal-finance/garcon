@@ -18,9 +18,13 @@ import (
 	"net"
 	"reflect"
 	"testing"
+	"time"
 
+	"github.com/teal-finance/garcon/session/incorruptible/bits"
 	"github.com/teal-finance/garcon/session/token"
 )
+
+var expiry = time.Date(bits.ExpiryStartYear, 1, 1, 0, 0, 0, 0, time.UTC).Unix()
 
 var cases = []struct {
 	name    string
@@ -28,66 +32,66 @@ var cases = []struct {
 	wantErr bool
 	token   token.Token
 }{
-//	{
-//		"noneIPv4", 0x51, false,
-//		token.Token{
-//			Expiry: 11223344,
-//			IP:     net.IPv4(11, 22, 33, 44),
-//			Values: [][]byte{},
-//		},
-//	},
-//	{
-//		"noneIPv6", 0x51, false,
-//		token.Token{
-//			Expiry: 11223344,
-//			IP:     net.IP{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
-//			Values: [][]byte{},
-//		},
-//	},
-//	{
-//		"1emptyIPv6", 0x51, false,
-//		token.Token{
-//			Expiry: 11223344,
-//			IP:     net.IP{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
-//			Values: [][]byte{[]byte("")},
-//		},
-//	},
-//	{
-//		"4emptyIPv6", 0x51, false,
-//		token.Token{
-//			Expiry: 11223344,
-//			IP:     net.IP{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
-//			Values: [][]byte{[]byte(""), []byte(""), []byte(""), []byte("")},
-//		},
-//	},
-//	{
-//		"1smallIPv6", 0x51, false,
-//		token.Token{
-//			Expiry: 11223344,
-//			IP:     net.IP{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
-//			Values: [][]byte{[]byte("1")},
-//		},
-//	},
-//	{
-//		"1valIPv6", 0x51, false,
-//		token.Token{
-//			Expiry: 11223344,
-//			IP:     net.IP{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
-//			Values: [][]byte{[]byte("123456789-B-123456789-C-123456789-D-123456789-E-123456789")},
-//		},
-//	},
-//	{
-//		"1moreIPv6", 0x51, false,
-//		token.Token{
-//			Expiry: 11223344,
-//			IP:     net.IP{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
-//			Values: [][]byte{[]byte("123456789-B-123456789-C-123456789-D-123456789-E-123456789-")},
-//		},
-//	},
+	{
+		"noneIPv4", 0x51, false,
+		token.Token{
+			Expiry: expiry,
+			IP:     net.IPv4(11, 22, 33, 44),
+			Values: [][]byte{},
+		},
+	},
+	{
+		"noneIPv6", 0x51, false,
+		token.Token{
+			Expiry: expiry,
+			IP:     net.IP{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+			Values: [][]byte{},
+		},
+	},
+	{
+		"1emptyIPv6", 0x51, false,
+		token.Token{
+			Expiry: expiry,
+			IP:     net.IP{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+			Values: [][]byte{[]byte("")},
+		},
+	},
+	{
+		"4emptyIPv6", 0x51, false,
+		token.Token{
+			Expiry: expiry,
+			IP:     net.IP{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+			Values: [][]byte{[]byte(""), []byte(""), []byte(""), []byte("")},
+		},
+	},
+	{
+		"1smallIPv6", 0x51, false,
+		token.Token{
+			Expiry: expiry,
+			IP:     net.IP{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+			Values: [][]byte{[]byte("1")},
+		},
+	},
+	{
+		"1valIPv6", 0x51, false,
+		token.Token{
+			Expiry: expiry,
+			IP:     net.IP{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+			Values: [][]byte{[]byte("123456789-B-123456789-C-123456789-D-123456789-E-123456789")},
+		},
+	},
+	{
+		"1moreIPv6", 0x51, false,
+		token.Token{
+			Expiry: expiry,
+			IP:     net.IP{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+			Values: [][]byte{[]byte("123456789-B-123456789-C-123456789-D-123456789-E-123456789-")},
+		},
+	},
 	{
 		"Compress 10valIPv6", 0x51, false,
 		token.Token{
-			Expiry: 11223344,
+			Expiry: expiry,
 			IP:     net.IP{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
 			Values: [][]byte{
 				[]byte("123456789-B-123456789-C-123456789-D-123456789-E-123456789"),
@@ -103,7 +107,7 @@ var cases = []struct {
 	{
 		"too much values", 0x51, true,
 		token.Token{
-			Expiry: 11223344,
+			Expiry: expiry,
 			IP:     net.IP{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
 			Values: [][]byte{{1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9},
 				{10}, {11}, {12}, {13}, {14}, {15}, {16}, {17}, {18}, {19},
@@ -138,7 +142,7 @@ func TestUnmarshal(t *testing.T) {
 			}
 			t.Logf("b[:%d] %v", n, b[:n])
 
-			magic := MagicCode(b)
+			magic := bits.MagicCode(b)
 			if magic != c.magic {
 				t.Errorf("MagicCode() got = %x, want = %x", magic, c.magic)
 				return
@@ -155,8 +159,20 @@ func TestUnmarshal(t *testing.T) {
 				return
 			}
 
-			if !reflect.DeepEqual(got, c.token) {
-				t.Errorf("Unmarshal() = %v, want %v", got, c.token)
+			min := c.token.Expiry - bits.PrecisionInSeconds
+			max := c.token.Expiry + bits.PrecisionInSeconds
+			validExpiry := (min <= got.Expiry) && (got.Expiry <= max)
+			if !validExpiry {
+				t.Errorf("Expiry too different got=%v original=%v want in [%d %d]",
+					got.Expiry, c.token.Expiry, min, max)
+			}
+
+			if !reflect.DeepEqual(got.IP, c.token.IP) {
+				t.Errorf("Mismatch IP got %v, want %v", got.IP, c.token.IP)
+			}
+
+			if !reflect.DeepEqual(got.Values, c.token.Values) {
+				t.Errorf("Mismatch Values got %v, want %v", got.Values, c.token.Values)
 			}
 		})
 	}

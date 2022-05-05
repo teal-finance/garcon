@@ -20,38 +20,38 @@ import (
 
 	"github.com/klauspost/compress/s2"
 
+	"github.com/teal-finance/garcon/session/incorruptible/bits"
 	"github.com/teal-finance/garcon/session/token"
 )
 
 func Unmarshal(b []byte) (t token.Token, err error) {
-	if len(b) < headerSize+expirySize+net.IPv4len {
+	if len(b) < bits.HeaderSize+bits.ExpirySize+net.IPv4len {
 		return t, fmt.Errorf("not enough bytes (%d) for header+expiry+IP", len(b))
 	}
 
-	m := extractMetadata(b)
-	b = b[headerSize:] // drop header
+	m := bits.GetMetadata(b)
+	b = b[bits.HeaderSize:] // drop header
 
 	b, err = dropPadding(b)
 	if err != nil {
 		return t, err
 	}
 
-	if m.isCompressed() {
+	if m.IsCompressed() {
 		b, err = s2.Decode(nil, b)
 		if err != nil {
 			return t, fmt.Errorf("s2.Decode %w", err)
 		}
 	}
 
-	if len(b) < expirySize+m.ipLength()+m.nValues() {
-		return t, fmt.Errorf("not enough bytes (%d) for expiry+IP+payload", len(b))
+	if len(b) < m.PayloadMinSize() {
+		return t, fmt.Errorf("not enough bytes for payload %d < %d", len(b), m.PayloadMinSize())
 	}
 
-	t.Expiry = expiry(b)
-	t.IP = ip(b, m.ipLength())
-	b = b[expirySize+m.ipLength():] // drop expiry and IP bytes
+	b, t.Expiry = bits.DecodeExpiry(b)
+	b, t.IP = m.DecodeIP(b)
 
-	t.Values, err = parseValues(b, m.nValues())
+	t.Values, err = parseValues(b, m.NValues())
 	if err != nil {
 		return t, err
 	}
