@@ -144,7 +144,7 @@ func extractDevOrigins(urls []*url.URL) (devOrigins []string) {
 	return devOrigins
 }
 
-func createCookie(name string, secure bool, dns, path string, a85 string) http.Cookie {
+func createCookie(name string, secure bool, dns, path, a85 string) http.Cookie {
 	// remove trailing slash
 	if path != "" && path[len(path)-1] == '/' {
 		path = path[:len(path)-1]

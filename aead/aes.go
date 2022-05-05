@@ -54,7 +54,7 @@ type Cipher struct {
 	nonce []byte
 }
 
-// prefer 16 bytes (AES-128, faster) over 32 (AES-256, irrelevant extra security)
+// prefer 16 bytes (AES-128, faster) over 32 (AES-256, irrelevant extra security).
 func New(secretKey [16]byte) (c Cipher, err error) {
 	block, err := aes.NewCipher(secretKey[:])
 	if err != nil {

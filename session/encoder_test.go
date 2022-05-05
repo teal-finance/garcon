@@ -31,56 +31,56 @@ var cases = []struct {
 }{
 	{
 		"noneIPv4", false, token.Token{
-			Expiry: 123456789,
+			Expiry: 11223344,
 			IP:     net.IPv4(11, 22, 33, 44),
 			Values: [][]byte{},
 		},
 	},
 	{
 		"noneIPv6", false, token.Token{
-			Expiry: 123456789,
+			Expiry: 11223344,
 			IP:     net.IP{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
 			Values: [][]byte{},
 		},
 	},
 	{
 		"1emptyIPv6", false, token.Token{
-			Expiry: 123456789,
+			Expiry: 11223344,
 			IP:     net.IP{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
 			Values: [][]byte{[]byte("")},
 		},
 	},
 	{
 		"4emptyIPv6", false, token.Token{
-			Expiry: 123456789,
+			Expiry: 11223344,
 			IP:     net.IP{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
 			Values: [][]byte{[]byte(""), []byte(""), []byte(""), []byte("")},
 		},
 	},
 	{
 		"1smallIPv6", false, token.Token{
-			Expiry: 123456789,
+			Expiry: 11223344,
 			IP:     net.IP{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
 			Values: [][]byte{[]byte("1")},
 		},
 	},
 	{
 		"1valIPv6", false, token.Token{
-			Expiry: 123456789,
+			Expiry: 11223344,
 			IP:     net.IP{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
 			Values: [][]byte{[]byte("123456789-B-123456789-C-123456789-D-123456789-E-123456789")},
 		},
 	},
 	{
 		"1moreIPv6", false, token.Token{
-			Expiry: 123456789,
+			Expiry: 11223344,
 			IP:     net.IP{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
 			Values: [][]byte{[]byte("123456789-B-123456789-C-123456789-D-123456789-E-123456789-")},
 		},
 	},
 	{
 		"Compress 10valIPv6", false, token.Token{
-			Expiry: 123456789,
+			Expiry: 11223344,
 			IP:     net.IP{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
 			Values: [][]byte{
 				[]byte("123456789-B-123456789-C-123456789-D-123456789-E-123456789"),
@@ -95,7 +95,7 @@ var cases = []struct {
 	},
 	{
 		"too much values", true, token.Token{
-			Expiry: 123456789,
+			Expiry: 11223344,
 			IP:     net.IP{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
 			Values: [][]byte{{1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9},
 				{10}, {11}, {12}, {13}, {14}, {15}, {16}, {17}, {18}, {19},

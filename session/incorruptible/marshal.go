@@ -22,11 +22,8 @@
 package incorruptible
 
 import (
-	"encoding/binary"
 	"fmt"
 	"math/rand"
-	"net"
-	"unsafe"
 
 	"github.com/klauspost/compress/s2"
 
@@ -38,7 +35,7 @@ const (
 	saltSize       = 1
 	metadataSize   = 1
 	headerSize     = magicCodeSize + saltSize + metadataSize
-	expirySize     = int(unsafe.Sizeof(int64(0))) // int64 = 8 bytes
+	expirySize     = 3 // 3 bytes = 24 bits = 3 years with 10 seconds precision
 	paddingMaxSize = 8
 
 	lengthMayCompress  = 100
@@ -121,14 +118,6 @@ func (s Serializer) buffer() []byte {
 	length := headerSize + expirySize
 	capacity := length + s.ipLength + s.valLenSum + paddingMaxSize
 	return make([]byte, length, capacity)
-}
-
-func putExpiryTime(b []byte, expiry uint64) {
-	binary.BigEndian.PutUint64(b[headerSize:], expiry)
-}
-
-func appendIP(b []byte, ip net.IP) []byte {
-	return append(b, ip...)
 }
 
 func (s Serializer) appendValues(b []byte, t token.Token) ([]byte, error) {

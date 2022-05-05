@@ -15,7 +15,6 @@
 package incorruptible
 
 import (
-	"encoding/binary"
 	"fmt"
 	"net"
 
@@ -38,9 +37,6 @@ func Unmarshal(b []byte) (t token.Token, err error) {
 	}
 
 	if m.isCompressed() {
-		if len(b) < lengthMayCompress {
-			return t, fmt.Errorf("not enough bytes (%d) for compressed payload", len(b))
-		}
 		b, err = s2.Decode(nil, b)
 		if err != nil {
 			return t, fmt.Errorf("s2.Decode %w", err)
@@ -51,8 +47,8 @@ func Unmarshal(b []byte) (t token.Token, err error) {
 		return t, fmt.Errorf("not enough bytes (%d) for expiry+IP+payload", len(b))
 	}
 
-	t.Expiry = parseExpiry(b)
-	t.IP = parseIP(b, m.ipLength())
+	t.Expiry = expiry(b)
+	t.IP = ip(b, m.ipLength())
 	b = b[expirySize+m.ipLength():] // drop expiry and IP bytes
 
 	t.Values, err = parseValues(b, m.nValues())
@@ -61,18 +57,6 @@ func Unmarshal(b []byte) (t token.Token, err error) {
 	}
 
 	return t, nil
-}
-
-func parseExpiry(payload []byte) uint64 {
-	expiry := binary.BigEndian.Uint64(payload)
-	return expiry
-}
-
-func parseIP(payload []byte, ipLen int) net.IP {
-	i := expirySize
-	j := expirySize + ipLen
-	ip := payload[i:j]
-	return ip
 }
 
 func parseValues(b []byte, nV int) ([][]byte, error) {
