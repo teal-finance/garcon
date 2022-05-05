@@ -19,7 +19,6 @@
 package session
 
 import (
-	"context"
 	"errors"
 	"log"
 	"net/http"
@@ -30,19 +29,20 @@ import (
 	"github.com/teal-finance/garcon/aead"
 	"github.com/teal-finance/garcon/reserr"
 	"github.com/teal-finance/garcon/security"
+	"github.com/teal-finance/garcon/session/token"
 )
 
 type Checker struct {
 	resErr     reserr.ResErr
 	cookie     http.Cookie
 	devOrigins []string
-	magic      byte
 	cipher     aead.Cipher
+	magic      byte
 }
 
 const (
 	authScheme        = "Bearer "
-	secretTokenScheme = "i1" // See RFC 8959, i = the "incorruptible" format, 1 = the v1 version
+	secretTokenScheme = "i" // See RFC 8959, "i" means "incorruptible" format
 	prefixScheme      = authScheme + secretTokenScheme + ":"
 
 	invalidCookie = "invalid cookie"
@@ -63,20 +63,29 @@ func New(urls []*url.URL, resErr reserr.ResErr, secretKey [16]byte) *Checker {
 	}
 
 	secure, dns, path := extractMainDomain(urls[0])
-	cookie := createCookie("session", secure, dns, path, "a85 TODO")
 
 	cipher, err := aead.New(secretKey)
 	if err != nil {
 		log.Panic("AES NewCipher ", err)
 	}
 
-	return &Checker{
+	ck := Checker{
 		resErr:     resErr,
-		cookie:     cookie,
+		cookie:     createCookie("session", secure, dns, path),
 		devOrigins: extractDevOrigins(urls),
-		magic:      secretKey[0],
 		cipher:     cipher,
+		magic:      secretKey[0],
 	}
+
+	var emptyToken token.Token
+	a85, err := ck.Encode(emptyToken)
+	if err != nil {
+		log.Panic("Encode(emptyToken) ", err)
+	}
+
+	ck.cookie.Value = string(a85)
+
+	return &ck
 }
 
 const (
@@ -144,9 +153,9 @@ func extractDevOrigins(urls []*url.URL) (devOrigins []string) {
 	return devOrigins
 }
 
-func createCookie(name string, secure bool, dns, path, a85 string) http.Cookie {
-	// remove trailing slash
+func createCookie(name string, secure bool, dns, path string) http.Cookie {
 	if path != "" && path[len(path)-1] == '/' {
+		// remove trailing slash
 		path = path[:len(path)-1]
 	}
 
@@ -154,7 +163,7 @@ func createCookie(name string, secure bool, dns, path, a85 string) http.Cookie {
 
 	return http.Cookie{
 		Name:       name,
-		Value:      a85,
+		Value:      "",
 		Path:       path,
 		Domain:     dns,
 		Expires:    time.Time{},
@@ -182,7 +191,6 @@ func (ck *Checker) IsDevOrigin(r *http.Request) bool {
 				log.Print("No token but addr=http://localhost => Accept any origin=", sanitized)
 				return true
 			}
-
 			if strings.HasPrefix(origin, prefix) {
 				log.Printf("No token but origin=%v is a valid dev origin", sanitized)
 				return true
@@ -193,27 +201,4 @@ func (ck *Checker) IsDevOrigin(r *http.Request) bool {
 	}
 
 	return false
-}
-
-type Perm struct{}
-
-// --------------------------------------
-// Read/write permissions to/from context
-
-// From gets the permission information from the request context.
-func From(r *http.Request) Perm {
-	perm, ok := r.Context().Value(permKey).(Perm)
-	if !ok {
-		log.Print("WRN token No permissions within the context ", r.URL.Path)
-	}
-	return perm
-}
-
-var permKey struct{}
-
-// StoreInContext stores the permission info within the request context.
-func (perm Perm) StoreInContext(r *http.Request) *http.Request {
-	parentCtx := r.Context()
-	childCtx := context.WithValue(parentCtx, permKey, perm)
-	return r.WithContext(childCtx)
 }

@@ -15,8 +15,10 @@
 package token
 
 import (
+	"context"
 	"fmt"
 	"net"
+	"net/http"
 	"time"
 
 	"github.com/teal-finance/garcon/session/incorruptible/bits"
@@ -209,4 +211,24 @@ func (t *Token) set(i int, b []byte) {
 	}
 
 	t.Values[i] = b
+}
+
+// --------------------------------------
+// Manage token in request context.
+var tokenKey struct{}
+
+// PutInContext stores the decoded token in the request context.
+func (t Token) PutInContext(r *http.Request) *http.Request {
+	parent := r.Context()
+	child := context.WithValue(parent, tokenKey, t)
+	return r.WithContext(child)
+}
+
+// FromContext gets the permission information from the request context.
+func FromContext(r *http.Request) (Token, error) {
+	t, ok := r.Context().Value(tokenKey).(Token)
+	if !ok {
+		return t, fmt.Errorf("no token in context %s", r.URL.Path)
+	}
+	return t, nil
 }
