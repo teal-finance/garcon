@@ -43,21 +43,29 @@ const (
 
 // unixToInternalExpiry converts Unix time to the internal 3-byte coding.
 func unixToInternalExpiry(unix int64) (uint32, error) {
-	secondsSinceInternalStarYear := unix + unixToInternal
-	internalExpiry := secondsSinceInternalStarYear / PrecisionInSeconds
+	if unix == 0 {
+		return 0, nil
+	}
 
-	if internalExpiry < 0 {
+	secondsSinceInternalStarYear := unix + unixToInternal
+	expiry := secondsSinceInternalStarYear / PrecisionInSeconds
+
+	if expiry < 0 {
 		return 0, fmt.Errorf("unix time too low (%d s) %s < %d", unix, time.Unix(unix, 0), ExpiryStartYear)
 	}
-	if internalExpiry >= expiryMax {
+	if expiry >= expiryMax {
 		return 0, fmt.Errorf("unix time too high (%d s) %s > %d", unix, time.Unix(unix, 0), ExpiryMaxYear)
 	}
 
-	return uint32(internalExpiry), nil
+	return uint32(expiry), nil
 }
 
 // internalExpiryToUnix converts the internal expiry to Unix time format: seconds since epoch (1970 UTC).
 func internalExpiryToUnix(expiry uint32) int64 {
+	if expiry == 0 {
+		return 0
+	}
+
 	seconds := int64(expiry) * PrecisionInSeconds
 	unix := seconds + internalToUnix
 	return unix
