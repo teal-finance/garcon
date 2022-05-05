@@ -22,6 +22,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -44,9 +45,6 @@ const (
 	// (proof-of-possession).
 	authScheme = "Bearer "
 
-	invalidCookie = "invalid cookie"
-	expiredRToken = "Refresh token has expired (or invalid)"
-
 	defaultCookieName = "g" // g as in garcon
 	defaultPlanName   = "DefaultPlan"
 	defaultPermValue  = 3600     // one hour
@@ -55,8 +53,10 @@ const (
 )
 
 var (
-	ErrUnauthorized = errors.New("JWT not authorized")
-	ErrNoTokenFound = errors.New("no JWT found")
+	ErrUnauthorized  = errors.New("JWT not authorized")
+	ErrNoTokenFound  = errors.New("no JWT found")
+	ErrInvalidCookie = errors.New("invalid cookie")
+	ErrExpiredToken  = errors.New("expired or invalid refresh token")
 )
 
 type Perm struct {
@@ -246,12 +246,12 @@ func (ck *Checker) Set(next http.Handler) http.Handler {
 // Chk accepts the HTTP request only if it contains a valid cookie.
 func (ck *Checker) Chk(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		perm, errMsg := ck.permFromCookie(r)
-		if errMsg != "" {
+		perm, err := ck.permFromCookie(r)
+		if err != nil {
 			if ck.isDevOrigin(r) {
 				perm = ck.perms[0]
 			} else {
-				ck.resErr.Write(w, r, http.StatusUnauthorized, errMsg)
+				ck.resErr.Write(w, r, http.StatusUnauthorized, err.Error())
 				return
 			}
 		}
@@ -264,12 +264,12 @@ func (ck *Checker) Chk(next http.Handler) http.Handler {
 // is in the cookie or in the first "Authorization" header.
 func (ck *Checker) Vet(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		perm, errMsg := ck.permFromBearerOrCookie(r)
-		if errMsg != "" {
+		perm, err := ck.permFromBearerOrCookie(r)
+		if err != nil {
 			if ck.isDevOrigin(r) {
 				perm = ck.perms[0]
 			} else {
-				ck.resErr.Write(w, r, http.StatusUnauthorized, errMsg)
+				ck.resErr.Write(w, r, http.StatusUnauthorized, err.Error())
 				return
 			}
 		}
@@ -290,8 +290,8 @@ func (ck *Checker) getPerm(r *http.Request) (perm Perm, ok bool) {
 		}
 	}
 
-	perm, errMsg := ck.permFromJWT(cookie.Value)
-	return perm, (errMsg == "")
+	perm, err = ck.permFromJWT(cookie.Value)
+	return perm, (err == nil)
 }
 
 func (ck *Checker) isDevOrigin(r *http.Request) bool {
@@ -314,67 +314,68 @@ func (ck *Checker) isDevOrigin(r *http.Request) bool {
 	return false
 }
 
-func (ck *Checker) permFromBearerOrCookie(r *http.Request) (perm Perm, errC string) {
+func (ck *Checker) permFromBearerOrCookie(r *http.Request) (perm Perm, errC error) {
 	jwt, err := ck.jwtFromBearer(r)
-	if err != "" {
+	if err != nil {
 		jwt, errC = ck.jwtFromCookie(r)
-		if errC != "" {
-			err += " or " + errC
+		if errC != nil {
+			err = fmt.Errorf("%w or %w", err, errC)
 			return perm, err
 		}
 	}
 	return ck.permFromJWT(jwt)
 }
 
-func (ck *Checker) permFromCookie(r *http.Request) (perm Perm, errMsg string) {
-	jwt, errMsg := ck.jwtFromCookie(r)
-	if errMsg != "" {
-		return perm, errMsg
+func (ck *Checker) permFromCookie(r *http.Request) (perm Perm, err error) {
+	jwt, err := ck.jwtFromCookie(r)
+	if err != nil {
+		return perm, err
 	}
 	return ck.permFromJWT(jwt)
 }
 
-func (ck *Checker) jwtFromBearer(r *http.Request) (jwt, errMsg string) {
+func (ck *Checker) jwtFromBearer(r *http.Request) (jwt string, err error) {
 	auth := r.Header.Get("Authorization")
 
 	n := len(authScheme)
 	if len(auth) > n && auth[:n] == authScheme {
-		return auth[n:], "" // Success
+		return auth[n:], nil
 	}
 
 	if auth == "" {
-		return "", "Provide your JWT within the 'Authorization Bearer' HTTP header"
+		return "", errors.New("Provide your JWT within the 'Authorization Bearer' HTTP header")
 	}
 
-	return "", invalidCookie
+	return "", ErrInvalidCookie
 }
 
-func (ck *Checker) jwtFromCookie(r *http.Request) (jwt, errMsg string) {
+func (ck *Checker) jwtFromCookie(r *http.Request) (jwt string, err error) {
 	c, err := r.Cookie(ck.cookies[0].Name)
 	if err != nil {
-		return "", "visit the official " + ck.cookies[0].Domain + " web site to get a valid Cookie"
+		return "", errors.New("visit the official " +
+			ck.cookies[0].Domain + " web site to get a valid Cookie")
 	}
-	return c.Value, "" // Success
+	return c.Value, nil
 }
 
-func (ck *Checker) permFromJWT(jwt string) (perm Perm, errMsg string) {
+func (ck *Checker) permFromJWT(jwt string) (perm Perm, err error) {
 	for i, c := range ck.cookies {
 		if c.Value == jwt {
-			return ck.perms[i], "" // Success
+			return ck.perms[i], nil
 		}
 	}
 
-	parts, errMsg := ck.partsFromJWT(jwt)
-	if errMsg != "" {
-		return perm, errMsg
+	parts, err := ck.partsFromJWT(jwt)
+	if err != nil {
+		return perm, err
 	}
 
-	perm, errMsg = ck.permFromRefreshBytes(parts)
-	if errMsg != "" {
-		return perm, expiredRToken
+	perm, err = ck.permFromRefreshBytes(parts)
+	if err != nil {
+		return perm, ErrExpiredToken
 	}
 
-	return perm, "" // Success
+	return perm, nil
 }
 
 func (ck *Checker) permFromRefreshClaims(claims *tokens.RefreshClaims) Perm {
@@ -387,53 +388,53 @@ func (ck *Checker) permFromRefreshClaims(claims *tokens.RefreshClaims) Perm {
 	return ck.perms[0]
 }
 
-func (ck *Checker) decomposeJWT(jwt string) (parts []string, errMsg string) {
+func (ck *Checker) decomposeJWT(jwt string) (parts []string, err error) {
 	parts = strings.Split(jwt, ".")
 	if len(parts) != 3 {
-		return nil, "JWT is not composed by three segments (separated by dots)"
+		return nil, errors.New("JWT is not composed by three segments (separated by dots)")
 	}
 
-	if errMsg = ck.verifySignature(parts); errMsg != "" {
-		return nil, errMsg
+	if err = ck.verifySignature(parts); err != nil {
+		return nil, err
 	}
 
-	return parts, "" // Success
+	return parts, nil
 }
 
-func (ck *Checker) partsFromJWT(jwt string) (claimsJSON []byte, errMsg string) {
-	parts, errMsg := ck.decomposeJWT(jwt)
-	if errMsg != "" {
-		return nil, errMsg
-	}
-
-	claimsJSON, err := ck.b64encoding.DecodeString(parts[1])
+func (ck *Checker) partsFromJWT(jwt string) (claimsJSON []byte, err error) {
+	parts, err := ck.decomposeJWT(jwt)
 	if err != nil {
-		return nil, "The token claims (second part of the JWT) is not base64-valid"
+		return nil, err
 	}
 
-	return claimsJSON, "" // Success
+	claimsJSON, err = ck.b64encoding.DecodeString(parts[1])
+	if err != nil {
+		return nil, errors.New("The token claims (second part of the JWT) is not base64-valid")
+	}
+
+	return claimsJSON, nil
 }
 
 // verifySignature of HS256 tokens.
-func (ck *Checker) verifySignature(parts []string) (errMsg string) {
+func (ck *Checker) verifySignature(parts []string) (err error) {
 	signingString := strings.Join(parts[0:2], ".")
 	signedString := ck.sign(signingString)
 
 	if signature := parts[2]; signature != signedString {
-		return "JWT signature mismatch"
+		return errors.New("JWT signature mismatch")
 	}
 
-	return "" // Success
+	return nil
 }
 
-func (ck *Checker) permFromRefreshBytes(claimsJSON []byte) (perm Perm, errMsg string) {
+func (ck *Checker) permFromRefreshBytes(claimsJSON []byte) (perm Perm, err error) {
 	claims := &tokens.RefreshClaims{
 		Namespace: "",
 		UserName:  "",
 		StandardClaims: jwt.StandardClaims{
 			Audience:  "",
 			ExpiresAt: 0,
-			Id:        invalidCookie,
+			Id:        ErrInvalidCookie.Error(),
 			IssuedAt:  0,
 			Issuer:    "",
 			NotBefore: 0,
@@ -442,17 +443,17 @@ func (ck *Checker) permFromRefreshBytes(claimsJSON []byte) (perm Perm, errMsg st
 	}
 
 	if err := json.Unmarshal(claimsJSON, claims); err != nil {
-		return perm, err.Error() + " while unmarshaling RefreshClaims: " +
-			security.Sanitize(string(claimsJSON))
+		return perm, fmt.Errorf("%w while unmarshaling RefreshClaims: "+
+			security.Sanitize(string(claimsJSON)), err)
 	}
 
 	if err := claims.Valid(); err != nil {
-		return perm, err.Error() + " in RefreshClaims: " +
-			security.Sanitize(string(claimsJSON))
+		return perm, fmt.Errorf("%w in RefreshClaims: "+
+			security.Sanitize(string(claimsJSON)), err)
 	}
 
 	perm = ck.permFromRefreshClaims(claims)
-	return perm, "" // Success
+	return perm, nil
 }
 
 // sign allocates the hasher each time to avoid race condition.
