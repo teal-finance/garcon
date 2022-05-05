@@ -13,7 +13,7 @@
 // #endregion </editor-fold>
 
 // Package session provides a safer, shorter, faster session cookie.
-// Safer because of random salt generated for each token and understandable/auditable source code.
+// Safer because of random salt in the tokens and understandable/auditable source code.
 // Shorter because of Ascii85 (no Base64), compression and index instead of key names.
 // Faster because of AES (no RSA) and custom bar-metal serializer.
 package session
@@ -29,11 +29,12 @@ import (
 	"github.com/teal-finance/garcon/aead"
 	"github.com/teal-finance/garcon/reserr"
 	"github.com/teal-finance/garcon/security"
-	"github.com/teal-finance/garcon/session/token"
+	"github.com/teal-finance/garcon/session/dtoken"
 )
 
 type Checker struct {
 	resErr     reserr.ResErr
+	dtoken     dtoken.DToken
 	cookie     http.Cookie
 	devOrigins []string
 	cipher     aead.Cipher
@@ -48,8 +49,8 @@ const (
 	invalidCookie = "invalid cookie"
 	expiredRToken = "Refresh token has expired (or invalid)"
 
-	oneYearInSeconds = 31556952 // average including leap years
-	oneYearInNS      = oneYearInSeconds * 1_000_000_000
+	secondsPerYear = 31556952 // average including leap years
+	nsPerYear      = secondsPerYear * 1_000_000_000
 )
 
 var (
@@ -71,18 +72,20 @@ func New(urls []*url.URL, resErr reserr.ResErr, secretKey [16]byte) *Checker {
 
 	ck := Checker{
 		resErr:     resErr,
-		cookie:     createCookie("session", secure, dns, path),
+		dtoken:     dtoken.DToken{Expiry: 0, IP: nil, Values: nil}, // tiny token
+		cookie:     emptyCookie("session", secure, dns, path),
 		devOrigins: extractDevOrigins(urls),
 		cipher:     cipher,
 		magic:      secretKey[0],
 	}
 
-	var emptyToken token.Token
-	a85, err := ck.Encode(emptyToken)
+	// serialize the tiny token (with encryption and Ascii85 encoding)
+	a85, err := ck.Encode(ck.dtoken)
 	if err != nil {
 		log.Panic("Encode(emptyToken) ", err)
 	}
 
+	// insert this generated token in the cookie
 	ck.cookie.Value = string(a85)
 
 	return &ck
@@ -153,22 +156,19 @@ func extractDevOrigins(urls []*url.URL) (devOrigins []string) {
 	return devOrigins
 }
 
-func createCookie(name string, secure bool, dns, path string) http.Cookie {
+func emptyCookie(name string, secure bool, dns, path string) http.Cookie {
 	if path != "" && path[len(path)-1] == '/' {
-		// remove trailing slash
-		path = path[:len(path)-1]
+		path = path[:len(path)-1] // remove trailing slash
 	}
-
-	log.Print("Create cookie ", name, " secure=", secure, " domain=", dns, " path=", path)
 
 	return http.Cookie{
 		Name:       name,
-		Value:      "",
+		Value:      "", // emptyCookie because no token
 		Path:       path,
 		Domain:     dns,
 		Expires:    time.Time{},
 		RawExpires: "",
-		MaxAge:     oneYearInSeconds,
+		MaxAge:     secondsPerYear,
 		Secure:     secure,
 		HttpOnly:   true,
 		SameSite:   http.SameSiteStrictMode,

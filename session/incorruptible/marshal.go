@@ -12,7 +12,7 @@
 // or online at <https://www.gnu.org/licenses/lgpl-3.0.html>
 // #endregion </editor-fold>
 
-// Package incorruptible serialize a Token to the incorruptible format.
+// Package incorruptible serialize a DToken with the incorruptible format.
 // An incorruptible is provided by a garcon, a drink served by a waiter.
 // The incorruptible uses grapefruit and orange juice with lemonade.
 // (see https://www.shakeitdrinkit.com/incorruptible-cocktail-1618.html)
@@ -27,8 +27,8 @@ import (
 
 	"github.com/klauspost/compress/s2"
 
+	"github.com/teal-finance/garcon/session/dtoken"
 	"github.com/teal-finance/garcon/session/incorruptible/bits"
-	"github.com/teal-finance/garcon/session/token"
 )
 
 const (
@@ -78,7 +78,7 @@ func doesCompress(payloadSize int) bool {
 	}
 }
 
-func Marshal(t token.Token, magic uint8) ([]byte, error) {
+func Marshal(t dtoken.DToken, magic uint8) ([]byte, error) {
 	s := newSerializer(t)
 
 	b, err := s.putHeaderExpiryIP(magic, t)
@@ -121,7 +121,7 @@ func (s Serializer) allocateBuffer() []byte {
 	return make([]byte, length, capacity)
 }
 
-func (s Serializer) putHeaderExpiryIP(magic uint8, t token.Token) ([]byte, error) {
+func (s Serializer) putHeaderExpiryIP(magic uint8, t dtoken.DToken) ([]byte, error) {
 	b := s.allocateBuffer()
 
 	m, err := bits.NewMetadata(s.ipLength, s.compressed, s.nValues)
@@ -141,7 +141,7 @@ func (s Serializer) putHeaderExpiryIP(magic uint8, t token.Token) ([]byte, error
 	return b, nil
 }
 
-func (s Serializer) appendValues(b []byte, t token.Token) ([]byte, error) {
+func (s Serializer) appendValues(b []byte, t dtoken.DToken) ([]byte, error) {
 	for _, v := range t.Values {
 		if len(v) > 255 {
 			return nil, fmt.Errorf("too large %d > 255", v)

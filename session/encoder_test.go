@@ -22,8 +22,8 @@ import (
 	"time"
 
 	"github.com/teal-finance/garcon/reserr"
+	"github.com/teal-finance/garcon/session/dtoken"
 	"github.com/teal-finance/garcon/session/incorruptible/bits"
-	"github.com/teal-finance/garcon/session/token"
 )
 
 var expiry = time.Date(bits.ExpiryStartYear, 1, 1, 0, 0, 0, 0, time.UTC).Unix()
@@ -31,59 +31,59 @@ var expiry = time.Date(bits.ExpiryStartYear, 1, 1, 0, 0, 0, 0, time.UTC).Unix()
 var cases = []struct {
 	name    string
 	wantErr bool
-	token   token.Token
+	dtoken  dtoken.DToken
 }{
 	{
-		"noneIPv4", false, token.Token{
+		"noneIPv4", false, dtoken.DToken{
 			Expiry: expiry,
 			IP:     net.IPv4(11, 22, 33, 44),
 			Values: [][]byte{},
 		},
 	},
 	{
-		"noneIPv6", false, token.Token{
+		"noneIPv6", false, dtoken.DToken{
 			Expiry: expiry,
 			IP:     net.IP{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
 			Values: [][]byte{},
 		},
 	},
 	{
-		"1emptyIPv6", false, token.Token{
+		"1emptyIPv6", false, dtoken.DToken{
 			Expiry: expiry,
 			IP:     net.IP{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
 			Values: [][]byte{[]byte("")},
 		},
 	},
 	{
-		"4emptyIPv6", false, token.Token{
+		"4emptyIPv6", false, dtoken.DToken{
 			Expiry: expiry,
 			IP:     net.IP{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
 			Values: [][]byte{[]byte(""), []byte(""), []byte(""), []byte("")},
 		},
 	},
 	{
-		"1smallIPv6", false, token.Token{
+		"1smallIPv6", false, dtoken.DToken{
 			Expiry: expiry,
 			IP:     net.IP{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
 			Values: [][]byte{[]byte("1")},
 		},
 	},
 	{
-		"1valIPv6", false, token.Token{
+		"1valIPv6", false, dtoken.DToken{
 			Expiry: expiry,
 			IP:     net.IP{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
 			Values: [][]byte{[]byte("123456789-B-123456789-C-123456789-D-123456789-E-123456789")},
 		},
 	},
 	{
-		"1moreIPv6", false, token.Token{
+		"1moreIPv6", false, dtoken.DToken{
 			Expiry: expiry,
 			IP:     net.IP{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
 			Values: [][]byte{[]byte("123456789-B-123456789-C-123456789-D-123456789-E-123456789-")},
 		},
 	},
 	{
-		"Compress 10valIPv6", false, token.Token{
+		"Compress 10valIPv6", false, dtoken.DToken{
 			Expiry: expiry,
 			IP:     net.IP{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
 			Values: [][]byte{
@@ -98,7 +98,7 @@ var cases = []struct {
 		},
 	},
 	{
-		"too much values", true, token.Token{
+		"too much values", true, dtoken.DToken{
 			Expiry: expiry,
 			IP:     net.IP{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
 			Values: [][]byte{{1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9},
@@ -125,9 +125,9 @@ func TestDecode(t *testing.T) {
 		ck := New([]*url.URL{u}, reserr.New("path/doc"), key)
 
 		t.Run(c.name, func(t *testing.T) {
-			c.token.ShortenIP()
+			c.dtoken.ShortenIP()
 
-			a85, err := ck.Encode(c.token)
+			a85, err := ck.Encode(c.dtoken)
 			if (err == nil) == c.wantErr {
 				t.Errorf("Encode() error = %v, wantErr %v", err, c.wantErr)
 				return
@@ -150,20 +150,20 @@ func TestDecode(t *testing.T) {
 				return
 			}
 
-			min := c.token.Expiry - bits.PrecisionInSeconds
-			max := c.token.Expiry + bits.PrecisionInSeconds
+			min := c.dtoken.Expiry - bits.PrecisionInSeconds
+			max := c.dtoken.Expiry + bits.PrecisionInSeconds
 			validExpiry := (min <= got.Expiry) && (got.Expiry <= max)
 			if !validExpiry {
 				t.Errorf("Expiry too different got=%v original=%v want in [%d %d]",
-					got.Expiry, c.token.Expiry, min, max)
+					got.Expiry, c.dtoken.Expiry, min, max)
 			}
 
-			if !reflect.DeepEqual(got.IP, c.token.IP) {
-				t.Errorf("Mismatch IP got %v, want %v", got.IP, c.token.IP)
+			if !reflect.DeepEqual(got.IP, c.dtoken.IP) {
+				t.Errorf("Mismatch IP got %v, want %v", got.IP, c.dtoken.IP)
 			}
 
-			if !reflect.DeepEqual(got.Values, c.token.Values) {
-				t.Errorf("Mismatch Values got %v, want %v", got.Values, c.token.Values)
+			if !reflect.DeepEqual(got.Values, c.dtoken.Values) {
+				t.Errorf("Mismatch Values got %v, want %v", got.Values, c.dtoken.Values)
 			}
 		})
 	}

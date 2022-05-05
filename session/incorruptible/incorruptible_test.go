@@ -20,8 +20,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/teal-finance/garcon/session/dtoken"
 	"github.com/teal-finance/garcon/session/incorruptible/bits"
-	"github.com/teal-finance/garcon/session/token"
 )
 
 var expiry = time.Date(bits.ExpiryStartYear, 1, 1, 0, 0, 0, 0, time.UTC).Unix()
@@ -30,11 +30,11 @@ var cases = []struct {
 	name    string
 	magic   uint8
 	wantErr bool
-	token   token.Token
+	dtoken  dtoken.DToken
 }{
 	{
 		"noneIPv4", 0x51, false,
-		token.Token{
+		dtoken.DToken{
 			Expiry: expiry,
 			IP:     net.IPv4(11, 22, 33, 44),
 			Values: [][]byte{},
@@ -42,7 +42,7 @@ var cases = []struct {
 	},
 	{
 		"noneIPv6", 0x51, false,
-		token.Token{
+		dtoken.DToken{
 			Expiry: expiry,
 			IP:     net.IP{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
 			Values: [][]byte{},
@@ -50,7 +50,7 @@ var cases = []struct {
 	},
 	{
 		"1emptyIPv6", 0x51, false,
-		token.Token{
+		dtoken.DToken{
 			Expiry: expiry,
 			IP:     net.IP{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
 			Values: [][]byte{[]byte("")},
@@ -58,7 +58,7 @@ var cases = []struct {
 	},
 	{
 		"4emptyIPv6", 0x51, false,
-		token.Token{
+		dtoken.DToken{
 			Expiry: expiry,
 			IP:     net.IP{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
 			Values: [][]byte{[]byte(""), []byte(""), []byte(""), []byte("")},
@@ -66,7 +66,7 @@ var cases = []struct {
 	},
 	{
 		"1smallIPv6", 0x51, false,
-		token.Token{
+		dtoken.DToken{
 			Expiry: expiry,
 			IP:     net.IP{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
 			Values: [][]byte{[]byte("1")},
@@ -74,7 +74,7 @@ var cases = []struct {
 	},
 	{
 		"1valIPv6", 0x51, false,
-		token.Token{
+		dtoken.DToken{
 			Expiry: expiry,
 			IP:     net.IP{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
 			Values: [][]byte{[]byte("123456789-B-123456789-C-123456789-D-123456789-E-123456789")},
@@ -82,7 +82,7 @@ var cases = []struct {
 	},
 	{
 		"1moreIPv6", 0x51, false,
-		token.Token{
+		dtoken.DToken{
 			Expiry: expiry,
 			IP:     net.IP{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
 			Values: [][]byte{[]byte("123456789-B-123456789-C-123456789-D-123456789-E-123456789-")},
@@ -90,7 +90,7 @@ var cases = []struct {
 	},
 	{
 		"Compress 10valIPv6", 0x51, false,
-		token.Token{
+		dtoken.DToken{
 			Expiry: expiry,
 			IP:     net.IP{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
 			Values: [][]byte{
@@ -106,7 +106,7 @@ var cases = []struct {
 	},
 	{
 		"too much values", 0x51, true,
-		token.Token{
+		dtoken.DToken{
 			Expiry: expiry,
 			IP:     net.IP{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
 			Values: [][]byte{{1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9},
@@ -123,9 +123,9 @@ var cases = []struct {
 func TestUnmarshal(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			c.token.ShortenIP()
+			c.dtoken.ShortenIP()
 
-			b, err := Marshal(c.token, c.magic)
+			b, err := Marshal(c.dtoken, c.magic)
 			if (err == nil) == c.wantErr {
 				t.Errorf("Marshal() error = %v, wantErr %v", err, c.wantErr)
 				return
@@ -159,20 +159,20 @@ func TestUnmarshal(t *testing.T) {
 				return
 			}
 
-			min := c.token.Expiry - bits.PrecisionInSeconds
-			max := c.token.Expiry + bits.PrecisionInSeconds
+			min := c.dtoken.Expiry - bits.PrecisionInSeconds
+			max := c.dtoken.Expiry + bits.PrecisionInSeconds
 			validExpiry := (min <= got.Expiry) && (got.Expiry <= max)
 			if !validExpiry {
 				t.Errorf("Expiry too different got=%v original=%v want in [%d %d]",
-					got.Expiry, c.token.Expiry, min, max)
+					got.Expiry, c.dtoken.Expiry, min, max)
 			}
 
-			if !reflect.DeepEqual(got.IP, c.token.IP) {
-				t.Errorf("Mismatch IP got %v, want %v", got.IP, c.token.IP)
+			if !reflect.DeepEqual(got.IP, c.dtoken.IP) {
+				t.Errorf("Mismatch IP got %v, want %v", got.IP, c.dtoken.IP)
 			}
 
-			if !reflect.DeepEqual(got.Values, c.token.Values) {
-				t.Errorf("Mismatch Values got %v, want %v", got.Values, c.token.Values)
+			if !reflect.DeepEqual(got.Values, c.dtoken.Values) {
+				t.Errorf("Mismatch Values got %v, want %v", got.Values, c.dtoken.Values)
 			}
 		})
 	}

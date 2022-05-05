@@ -12,7 +12,8 @@
 // or online at <https://www.gnu.org/licenses/lgpl-3.0.html>
 // #endregion </editor-fold>
 
-package token
+// Package token represents the decoded form of a "session" token.
+package dtoken
 
 import (
 	"context"
@@ -31,19 +32,19 @@ const (
 	secondsPerYear   = 365.2425 * secondsPerDay // = 31556952 = average including leap years
 )
 
-type Token struct {
+type DToken struct {
 	Expiry int64 // Unix time UTC (seconds since 1970)
 	IP     net.IP
 	Values [][]byte
 }
 
-func (t *Token) SetExpiry(secondsSinceNow int64) {
+func (t *DToken) SetExpiry(secondsSinceNow int64) {
 	now := time.Now().Unix()
 	unix := now + secondsSinceNow
 	t.Expiry = unix
 }
 
-func (t *Token) CompareExpiry() int {
+func (t *DToken) CompareExpiry() int {
 	now := time.Now().Unix()
 	if t.Expiry < now {
 		return -1
@@ -54,18 +55,21 @@ func (t *Token) CompareExpiry() int {
 	return 0
 }
 
-func (t *Token) IsExpiryValid() bool {
+func (t *DToken) IsExpiryValid() bool {
 	c := t.CompareExpiry()
 	return (c == 0)
 }
 
-func (t *Token) ShortenIP() {
+func (t *DToken) ShortenIP() {
+	if t.IP == nil {
+		return
+	}
 	if v4 := t.IP.To4(); v4 != nil {
 		t.IP = v4
 	}
 }
 
-func (t *Token) SetUint64(i int, v uint64) error {
+func (t *DToken) SetUint64(i int, v uint64) error {
 	if err := t.check(i); err != nil {
 		return err
 	}
@@ -96,7 +100,7 @@ func (t *Token) SetUint64(i int, v uint64) error {
 	return nil
 }
 
-func (t *Token) Uint64(i int) (uint64, error) {
+func (t *DToken) Uint64(i int) (uint64, error) {
 	if (i < 0) || (i >= len(t.Values)) {
 		return 0, fmt.Errorf("i=%d out of range (%d values)", i, len(t.Values))
 	}
@@ -137,7 +141,7 @@ func (t *Token) Uint64(i int) (uint64, error) {
 	return r, nil
 }
 
-func (t *Token) SetBool(i int, value bool) error {
+func (t *DToken) SetBool(i int, value bool) error {
 	if err := t.check(i); err != nil {
 		return err
 	}
@@ -151,7 +155,7 @@ func (t *Token) SetBool(i int, value bool) error {
 	return nil
 }
 
-func (t *Token) Bool(i int) (bool, error) {
+func (t *DToken) Bool(i int) (bool, error) {
 	if (i < 0) || (i >= len(t.Values)) {
 		return false, fmt.Errorf("i=%d out of range (%d values)", i, len(t.Values))
 	}
@@ -168,7 +172,7 @@ func (t *Token) Bool(i int) (bool, error) {
 	}
 }
 
-func (t *Token) SetString(i int, s string) error {
+func (t *DToken) SetString(i int, s string) error {
 	if err := t.check(i); err != nil {
 		return err
 	}
@@ -177,14 +181,14 @@ func (t *Token) SetString(i int, s string) error {
 	return nil
 }
 
-func (t *Token) String(i int) (string, error) {
+func (t *DToken) String(i int) (string, error) {
 	if (i < 0) || (i >= len(t.Values)) {
 		return "", fmt.Errorf("i=%d out of range (%d values)", i, len(t.Values))
 	}
 	return string(t.Values[i]), nil
 }
 
-func (t *Token) check(i int) error {
+func (t *DToken) check(i int) error {
 	if i < 0 {
 		return fmt.Errorf("negative i=%d", i)
 	}
@@ -194,7 +198,7 @@ func (t *Token) check(i int) error {
 	return nil
 }
 
-func (t *Token) set(i int, b []byte) {
+func (t *DToken) set(i int, b []byte) {
 	if i == len(t.Values) {
 		t.Values = append(t.Values, b)
 		return
@@ -217,16 +221,16 @@ func (t *Token) set(i int, b []byte) {
 // Manage token in request context.
 var tokenKey struct{}
 
-// PutInContext stores the decoded token in the request context.
-func (t Token) PutInContext(r *http.Request) *http.Request {
+// PutInCtx stores the decoded token in the request context.
+func (t DToken) PutInCtx(r *http.Request) *http.Request {
 	parent := r.Context()
 	child := context.WithValue(parent, tokenKey, t)
 	return r.WithContext(child)
 }
 
-// FromContext gets the permission information from the request context.
-func FromContext(r *http.Request) (Token, error) {
-	t, ok := r.Context().Value(tokenKey).(Token)
+// FromCtx gets the decoded token from the request context.
+func FromCtx(r *http.Request) (DToken, error) {
+	t, ok := r.Context().Value(tokenKey).(DToken)
 	if !ok {
 		return t, fmt.Errorf("no token in context %s", r.URL.Path)
 	}

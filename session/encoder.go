@@ -19,9 +19,9 @@ import (
 	"fmt"
 
 	"github.com/teal-finance/garcon/a85"
+	"github.com/teal-finance/garcon/session/dtoken"
 	"github.com/teal-finance/garcon/session/incorruptible"
 	"github.com/teal-finance/garcon/session/incorruptible/bits"
-	"github.com/teal-finance/garcon/session/token"
 )
 
 const (
@@ -29,7 +29,7 @@ const (
 	ciphertextMinSize = 12
 )
 
-func (ck *Checker) Encode(t token.Token) ([]byte, error) {
+func (ck *Checker) Encode(t dtoken.DToken) ([]byte, error) {
 	plaintext, err := incorruptible.Marshal(t, ck.magic)
 	if err != nil {
 		return nil, err
@@ -44,7 +44,7 @@ func (ck *Checker) Encode(t token.Token) ([]byte, error) {
 	return a, nil
 }
 
-func (ck *Checker) Decode(a string) (t token.Token, err error) {
+func (ck *Checker) Decode(a string) (t dtoken.DToken, err error) {
 	if len(a) < a85MinSize {
 		return t, fmt.Errorf("Ascii85 string too short: %d < min=%d", len(a), a85MinSize)
 	}

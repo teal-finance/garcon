@@ -20,11 +20,11 @@ import (
 
 	"github.com/klauspost/compress/s2"
 
+	"github.com/teal-finance/garcon/session/dtoken"
 	"github.com/teal-finance/garcon/session/incorruptible/bits"
-	"github.com/teal-finance/garcon/session/token"
 )
 
-func Unmarshal(b []byte) (t token.Token, err error) {
+func Unmarshal(b []byte) (t dtoken.DToken, err error) {
 	if len(b) < bits.HeaderSize+bits.ExpirySize+net.IPv4len {
 		return t, fmt.Errorf("not enough bytes (%d) for header+expiry+IP", len(b))
 	}
