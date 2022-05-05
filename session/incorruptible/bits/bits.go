@@ -30,6 +30,8 @@ const (
 	maskIPv4     = 0b_1000_0000
 	maskCompress = 0b_0100_0000
 	maskNValues  = 0b_0011_1111
+
+	MaxValues int = maskNValues
 )
 
 func MagicCode(b []byte) uint8 {
@@ -56,8 +58,8 @@ func NewMetadata(ipLength int, compressed bool, nValues int) (Metadata, error) {
 	if nValues < 0 {
 		return 0, fmt.Errorf("negative nValues %d", nValues)
 	}
-	if nValues > maskNValues {
-		return 0, fmt.Errorf("too much values %d > %d", nValues, maskNValues)
+	if nValues > MaxValues {
+		return 0, fmt.Errorf("too much values %d > %d", nValues, MaxValues)
 	}
 
 	m |= uint8(nValues)
