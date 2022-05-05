@@ -173,7 +173,7 @@ func emptyCookie(name string, secure bool, dns, path string) http.Cookie {
 		HttpOnly:   true,
 		SameSite:   http.SameSiteStrictMode,
 		Raw:        "",
-		Unparsed:   []string{},
+		Unparsed:   nil,
 	}
 }
 

@@ -224,7 +224,7 @@ func createCookie(plan string, secure bool, dns, path string, secretKey []byte) 
 		HttpOnly:   true,
 		SameSite:   http.SameSiteStrictMode,
 		Raw:        "",
-		Unparsed:   []string{},
+		Unparsed:   nil,
 	}
 }
 
@@ -278,22 +278,6 @@ func (ck *Checker) Vet(next http.Handler) http.Handler {
 	})
 }
 
-func (ck *Checker) getPerm(r *http.Request) (perm Perm, ok bool) {
-	cookie, err := r.Cookie(ck.cookies[0].Name)
-	if err != nil {
-		return perm, false
-	}
-
-	for i, c := range ck.cookies {
-		if cookie.Value == c.Value {
-			return ck.perms[i], true
-		}
-	}
-
-	perm, err = ck.permFromJWT(cookie.Value)
-	return perm, (err == nil)
-}
-
 func (ck *Checker) isDevOrigin(r *http.Request) bool {
 	if len(ck.devOrigins) == 0 {
 		return false
@@ -312,6 +296,22 @@ func (ck *Checker) isDevOrigin(r *http.Request) bool {
 	}
 
 	return false
+}
+
+func (ck *Checker) getPerm(r *http.Request) (perm Perm, ok bool) {
+	cookie, err := r.Cookie(ck.cookies[0].Name)
+	if err != nil {
+		return perm, false
+	}
+
+	for i, c := range ck.cookies {
+		if cookie.Value == c.Value {
+			return ck.perms[i], true
+		}
+	}
+
+	perm, err = ck.permFromJWT(cookie.Value)
+	return perm, (err == nil)
 }
 
 func (ck *Checker) permFromBearerOrCookie(r *http.Request) (perm Perm, err error) {

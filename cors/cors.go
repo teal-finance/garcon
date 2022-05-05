@@ -25,12 +25,12 @@ import (
 // Handler uses restrictive CORS values.
 func Handler(origins []string, debug bool) func(next http.Handler) http.Handler {
 	options := cors.Options{
-		AllowedOrigins:         []string{},
+		AllowedOrigins:         nil,
 		AllowOriginFunc:        nil,
 		AllowOriginRequestFunc: nil,
 		AllowedMethods:         []string{http.MethodGet, http.MethodPost},
 		AllowedHeaders:         []string{"Origin", "Accept", "Content-Type", "Authorization", "Cookie"},
-		ExposedHeaders:         []string{},
+		ExposedHeaders:         nil,
 		MaxAge:                 24 * 3600, // https://developer.mozilla.org/docs/Web/HTTP/Headers/Access-Control-Max-Age
 		AllowCredentials:       true,
 		OptionsPassthrough:     false,
