@@ -47,13 +47,13 @@ type Serializer struct {
 	compressed   bool
 }
 
-func newSerializer(t dtoken.DToken) (s Serializer) {
-	s.ipLength = len(t.IP) // can be 0, 4 or 16
+func newSerializer(dt dtoken.DToken) (s Serializer) {
+	s.ipLength = len(dt.IP) // can be 0, 4 or 16
 
-	s.nValues = len(t.Values)
+	s.nValues = len(dt.Values)
 
 	s.valTotalSize = s.nValues
-	for _, v := range t.Values {
+	for _, v := range dt.Values {
 		s.valTotalSize += len(v)
 	}
 
@@ -78,15 +78,15 @@ func doesCompress(payloadSize int) bool {
 	}
 }
 
-func Marshal(t dtoken.DToken, magic uint8) ([]byte, error) {
-	s := newSerializer(t)
+func Marshal(dt dtoken.DToken, magic uint8) ([]byte, error) {
+	s := newSerializer(dt)
 
-	b, err := s.putHeaderExpiryIP(magic, t)
+	b, err := s.putHeaderExpiryIP(magic, dt)
 	if err != nil {
 		return nil, err
 	}
 
-	b, err = s.appendValues(b, t)
+	b, err = s.appendValues(b, dt)
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +121,7 @@ func (s Serializer) allocateBuffer() []byte {
 	return make([]byte, length, capacity)
 }
 
-func (s Serializer) putHeaderExpiryIP(magic uint8, t dtoken.DToken) ([]byte, error) {
+func (s Serializer) putHeaderExpiryIP(magic uint8, dt dtoken.DToken) ([]byte, error) {
 	b := s.allocateBuffer()
 
 	m, err := bits.NewMetadata(s.ipLength, s.compressed, s.nValues)
@@ -131,18 +131,18 @@ func (s Serializer) putHeaderExpiryIP(magic uint8, t dtoken.DToken) ([]byte, err
 
 	m.PutHeader(b, magic)
 
-	err = bits.PutExpiry(b, t.Expiry)
+	err = bits.PutExpiry(b, dt.Expiry)
 	if err != nil {
 		return nil, err
 	}
 
-	b = bits.AppendIP(b, t.IP)
+	b = bits.AppendIP(b, dt.IP)
 
 	return b, nil
 }
 
-func (s Serializer) appendValues(b []byte, t dtoken.DToken) ([]byte, error) {
-	for _, v := range t.Values {
+func (s Serializer) appendValues(b []byte, dt dtoken.DToken) ([]byte, error) {
+	for _, v := range dt.Values {
 		if len(v) > 255 {
 			return nil, fmt.Errorf("too large %d > 255", v)
 		}

@@ -38,39 +38,39 @@ type DToken struct {
 	Values [][]byte
 }
 
-func (t *DToken) SetExpiry(secondsSinceNow int64) {
+func (dt *DToken) SetExpiry(secondsSinceNow int64) {
 	now := time.Now().Unix()
 	unix := now + secondsSinceNow
-	t.Expiry = unix
+	dt.Expiry = unix
 }
 
-func (t *DToken) CompareExpiry() int {
+func (dt DToken) CompareExpiry() int {
 	now := time.Now().Unix()
-	if t.Expiry < now {
+	if dt.Expiry < now {
 		return -1
 	}
-	if t.Expiry > now+secondsPerYear {
+	if dt.Expiry > now+secondsPerYear {
 		return 1
 	}
 	return 0
 }
 
-func (t *DToken) IsExpiryValid() bool {
-	c := t.CompareExpiry()
+func (dt DToken) IsExpiryValid() bool {
+	c := dt.CompareExpiry()
 	return (c == 0)
 }
 
-func (t *DToken) ShortenIP() {
-	if t.IP == nil {
+func (dt *DToken) ShortenIP() {
+	if dt.IP == nil {
 		return
 	}
-	if v4 := t.IP.To4(); v4 != nil {
-		t.IP = v4
+	if v4 := dt.IP.To4(); v4 != nil {
+		dt.IP = v4
 	}
 }
 
-func (t *DToken) SetUint64(i int, v uint64) error {
-	if err := t.check(i); err != nil {
+func (dt *DToken) SetUint64(i int, v uint64) error {
+	if err := dt.check(i); err != nil {
 		return err
 	}
 
@@ -96,16 +96,16 @@ func (t *DToken) SetUint64(i int, v uint64) error {
 		b = []byte{byte(v), byte(v >> 8), byte(v >> 16), byte(v >> 24), byte(v >> 32), byte(v >> 40), byte(v >> 48), byte(v >> 56)}
 	}
 
-	t.set(i, b)
+	dt.set(i, b)
 	return nil
 }
 
-func (t *DToken) Uint64(i int) (uint64, error) {
-	if (i < 0) || (i >= len(t.Values)) {
-		return 0, fmt.Errorf("i=%d out of range (%d values)", i, len(t.Values))
+func (dt DToken) Uint64(i int) (uint64, error) {
+	if (i < 0) || (i >= len(dt.Values)) {
+		return 0, fmt.Errorf("i=%d out of range (%d values)", i, len(dt.Values))
 	}
 
-	b := t.Values[i]
+	b := dt.Values[i]
 
 	var r uint64
 	switch len(b) {
@@ -141,8 +141,8 @@ func (t *DToken) Uint64(i int) (uint64, error) {
 	return r, nil
 }
 
-func (t *DToken) SetBool(i int, value bool) error {
-	if err := t.check(i); err != nil {
+func (dt *DToken) SetBool(i int, value bool) error {
+	if err := dt.check(i); err != nil {
 		return err
 	}
 
@@ -151,16 +151,16 @@ func (t *DToken) SetBool(i int, value bool) error {
 		b = []byte{0} // true --> length=1
 	}
 
-	t.set(i, b)
+	dt.set(i, b)
 	return nil
 }
 
-func (t *DToken) Bool(i int) (bool, error) {
-	if (i < 0) || (i >= len(t.Values)) {
-		return false, fmt.Errorf("i=%d out of range (%d values)", i, len(t.Values))
+func (dt DToken) Bool(i int) (bool, error) {
+	if (i < 0) || (i >= len(dt.Values)) {
+		return false, fmt.Errorf("i=%d out of range (%d values)", i, len(dt.Values))
 	}
 
-	b := t.Values[i]
+	b := dt.Values[i]
 
 	switch len(b) {
 	default:
@@ -172,23 +172,23 @@ func (t *DToken) Bool(i int) (bool, error) {
 	}
 }
 
-func (t *DToken) SetString(i int, s string) error {
-	if err := t.check(i); err != nil {
+func (dt *DToken) SetString(i int, s string) error {
+	if err := dt.check(i); err != nil {
 		return err
 	}
 
-	t.set(i, []byte(s))
+	dt.set(i, []byte(s))
 	return nil
 }
 
-func (t *DToken) String(i int) (string, error) {
-	if (i < 0) || (i >= len(t.Values)) {
-		return "", fmt.Errorf("i=%d out of range (%d values)", i, len(t.Values))
+func (dt DToken) String(i int) (string, error) {
+	if (i < 0) || (i >= len(dt.Values)) {
+		return "", fmt.Errorf("i=%d out of range (%d values)", i, len(dt.Values))
 	}
-	return string(t.Values[i]), nil
+	return string(dt.Values[i]), nil
 }
 
-func (t *DToken) check(i int) error {
+func (dt DToken) check(i int) error {
 	if i < 0 {
 		return fmt.Errorf("negative i=%d", i)
 	}
@@ -198,23 +198,23 @@ func (t *DToken) check(i int) error {
 	return nil
 }
 
-func (t *DToken) set(i int, b []byte) {
-	if i == len(t.Values) {
-		t.Values = append(t.Values, b)
+func (dt *DToken) set(i int, b []byte) {
+	if i == len(dt.Values) {
+		dt.Values = append(dt.Values, b)
 		return
 	}
 
-	if i >= cap(t.Values) {
+	if i >= cap(dt.Values) {
 		values := make([][]byte, i+1)
-		copy(values, t.Values)
-		t.Values = values
+		copy(values, dt.Values)
+		dt.Values = values
 	}
 
-	if i >= len(t.Values) {
-		t.Values = t.Values[:i+1]
+	if i >= len(dt.Values) {
+		dt.Values = dt.Values[:i+1]
 	}
 
-	t.Values[i] = b
+	dt.Values[i] = b
 }
 
 // --------------------------------------
@@ -222,17 +222,17 @@ func (t *DToken) set(i int, b []byte) {
 var tokenKey struct{}
 
 // PutInCtx stores the decoded token in the request context.
-func (t DToken) PutInCtx(r *http.Request) *http.Request {
+func (dt DToken) PutInCtx(r *http.Request) *http.Request {
 	parent := r.Context()
-	child := context.WithValue(parent, tokenKey, t)
+	child := context.WithValue(parent, tokenKey, dt)
 	return r.WithContext(child)
 }
 
 // FromCtx gets the decoded token from the request context.
 func FromCtx(r *http.Request) (DToken, error) {
-	t, ok := r.Context().Value(tokenKey).(DToken)
+	dt, ok := r.Context().Value(tokenKey).(DToken)
 	if !ok {
-		return t, fmt.Errorf("no token in context %s", r.URL.Path)
+		return dt, fmt.Errorf("no token in context %s", r.URL.Path)
 	}
-	return t, nil
+	return dt, nil
 }

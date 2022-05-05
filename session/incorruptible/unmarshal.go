@@ -24,9 +24,9 @@ import (
 	"github.com/teal-finance/garcon/session/incorruptible/bits"
 )
 
-func Unmarshal(b []byte) (t dtoken.DToken, err error) {
+func Unmarshal(b []byte) (dt dtoken.DToken, err error) {
 	if len(b) < bits.HeaderSize+bits.ExpirySize+net.IPv4len {
-		return t, fmt.Errorf("not enough bytes (%d) for header+expiry+IP", len(b))
+		return dt, fmt.Errorf("not enough bytes (%d) for header+expiry+IP", len(b))
 	}
 
 	m := bits.GetMetadata(b)
@@ -35,30 +35,30 @@ func Unmarshal(b []byte) (t dtoken.DToken, err error) {
 	if enablePadding {
 		b, err = dropPadding(b)
 		if err != nil {
-			return t, err
+			return dt, err
 		}
 	}
 
 	if m.IsCompressed() {
 		b, err = s2.Decode(nil, b)
 		if err != nil {
-			return t, fmt.Errorf("s2.Decode %w", err)
+			return dt, fmt.Errorf("s2.Decode %w", err)
 		}
 	}
 
 	if len(b) < m.PayloadMinSize() {
-		return t, fmt.Errorf("not enough bytes for payload %d < %d", len(b), m.PayloadMinSize())
+		return dt, fmt.Errorf("not enough bytes for payload %d < %d", len(b), m.PayloadMinSize())
 	}
 
-	b, t.Expiry = bits.DecodeExpiry(b)
-	b, t.IP = m.DecodeIP(b)
+	b, dt.Expiry = bits.DecodeExpiry(b)
+	b, dt.IP = m.DecodeIP(b)
 
-	t.Values, err = parseValues(b, m.NValues())
+	dt.Values, err = parseValues(b, m.NValues())
 	if err != nil {
-		return t, err
+		return dt, err
 	}
 
-	return t, nil
+	return dt, nil
 }
 
 func parseValues(b []byte, nV int) ([][]byte, error) {
