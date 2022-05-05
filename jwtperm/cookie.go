@@ -314,12 +314,15 @@ func (ck *Checker) isDevOrigin(r *http.Request) bool {
 	return false
 }
 
-func (ck *Checker) permFromBearerOrCookie(r *http.Request) (perm Perm, errC error) {
-	jwt, err := ck.jwtFromBearer(r)
-	if err != nil {
-		jwt, errC = ck.jwtFromCookie(r)
-		if errC != nil {
-			err = fmt.Errorf("%w or %w", err, errC)
+func (ck *Checker) permFromBearerOrCookie(r *http.Request) (perm Perm, err error) {
+	jwt, errBearer := ck.jwtFromBearer(r)
+	if errBearer != nil {
+		jwt, err = ck.jwtFromCookie(r)
+		if err != nil {
+			err = fmt.Errorf("cannot find a valid JWT in either "+
+				"the first 'Authorization' HTTP header or "+
+				"one of the available cookies. the underlying errors are: "+
+				"%w and %v", errBearer, err.Error())
 			return perm, err
 		}
 	}
