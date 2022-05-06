@@ -38,34 +38,63 @@ type DToken struct {
 	Values [][]byte
 }
 
-func (dt *DToken) Valid(r *http.Request) error {
-	if dt.Expiry != 0 {
-		if !dt.ValidExpiry() {
-			return fmt.Errorf("expired or malformed date %v", dt.Expiry)
-		}
+func (dt *DToken) SetExpiry(d time.Duration) {
+	dt.Expiry = time.Now().Add(d).Unix()
+}
+
+func (dt DToken) ExpiryTime() time.Time {
+	return time.Unix(dt.Expiry, 0)
+}
+
+func (dt *DToken) SetRemoteIP(r *http.Request) error {
+	ip, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return fmt.Errorf("setting IP but %w", err)
+	}
+	dt.IP = net.ParseIP(ip)
+	dt.ShortenIP()
+	return nil
+}
+
+func (dt DToken) Valid(r *http.Request) error {
+	if !dt.ValidExpiry() {
+		return fmt.Errorf("expired or malformed or date in the far future: %v", dt.Expiry)
 	}
 
-	if len(dt.IP) > 0 {
-		ip, _, err := net.SplitHostPort(r.RemoteAddr)
-		if err != nil {
-			return fmt.Errorf("checking token but %w", err)
-		}
-		if !dt.IP.Equal(net.ParseIP(ip)) {
-			return fmt.Errorf("token says IP=%v but got %v", dt.IP, ip)
-		}
+	return dt.ValidIP(r)
+}
+
+func (dt DToken) ValidExpiry() bool {
+	if dt.Expiry == 0 {
+		return true
+	}
+	c := dt.CompareExpiry()
+	return (c == 0)
+}
+
+func (dt DToken) ValidIP(r *http.Request) error {
+	if len(dt.IP) == 0 {
+		return nil // anonymous token without IP
+	}
+
+	ip, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return fmt.Errorf("checking token but %w", err)
+	}
+	if !dt.IP.Equal(net.ParseIP(ip)) {
+		return fmt.Errorf("token says IP=%v but got %v", dt.IP, ip)
 	}
 
 	return nil
 }
 
-func (dt *DToken) SetExpiry(secondsSinceNow int64) {
-	now := time.Now().Unix()
-	unix := now + secondsSinceNow
-	dt.Expiry = unix
-}
-
-func (dt *DToken) ExpiryTime() time.Time {
-	return time.Unix(dt.Expiry, 0)
+func (dt *DToken) ShortenIP() {
+	if dt.IP == nil {
+		return
+	}
+	if v4 := dt.IP.To4(); v4 != nil {
+		dt.IP = v4
+	}
 }
 
 func (dt DToken) CompareExpiry() int {
@@ -77,20 +106,6 @@ func (dt DToken) CompareExpiry() int {
 		return 1
 	}
 	return 0
-}
-
-func (dt DToken) ValidExpiry() bool {
-	c := dt.CompareExpiry()
-	return (c == 0)
-}
-
-func (dt *DToken) ShortenIP() {
-	if dt.IP == nil {
-		return
-	}
-	if v4 := dt.IP.To4(); v4 != nil {
-		dt.IP = v4
-	}
 }
 
 func (dt *DToken) SetUint64(i int, v uint64) error {
