@@ -5,13 +5,13 @@ go 1.18
 require (
 	github.com/go-chi/chi/v5 v5.0.7
 	github.com/golang-jwt/jwt v3.2.2+incompatible
-	github.com/klauspost/compress v1.15.2
+	github.com/klauspost/compress v1.15.3
 	github.com/mailru/easyjson v0.7.7
 	github.com/open-policy-agent/opa v0.40.0
 	github.com/pkg/profile v1.6.0
 	github.com/prometheus/client_golang v1.12.1
 	github.com/rs/cors v1.8.2
-	github.com/teal-finance/quid v0.0.0-20220428124114-a60352f02629
+	github.com/teal-finance/quid v0.0.0-20220504094056-4f2ecce730cb
 	golang.org/x/time v0.0.0-20220411224347-583f2d630306
 )
 
