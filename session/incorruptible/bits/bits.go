@@ -123,16 +123,6 @@ func DecodeExpiry(b []byte) ([]byte, int64) {
 	return b[ExpirySize:], unix
 }
 
-func putInternalExpiry(b []byte, e uint32) {
-	// Expiry is store just after the header
-	b[HeaderSize+0] = byte(e)
-	b[HeaderSize+1] = byte(e >> 8)
-}
-
-func internalExpiry(b []byte) uint32 {
-	return uint32(b[0]) | uint32(b[1])<<8
-}
-
 func AppendIP(b []byte, ip net.IP) []byte {
 	return append(b, ip...)
 }

@@ -24,11 +24,11 @@ const (
 	ExpiryStartYear = 2022
 	ExpiryMaxYear   = ExpiryStartYear + rangeInYears
 
-	ExpirySize = 2 // 16 bits = 22 years with 30-second precision
+	ExpirySize = 3 // 24 bits = 10 years with 20-second precision
 	expiryBits = ExpirySize * 8
 	expiryMax  = 1 << expiryBits
 
-	PrecisionInSeconds     = 30
+	PrecisionInSeconds     = 20
 	rangeInSeconds     int = expiryMax * PrecisionInSeconds
 	rangeInYears           = rangeInSeconds / secondsPerYear
 
@@ -51,10 +51,10 @@ func unixToInternalExpiry(unix int64) (uint32, error) {
 	expiry := secondsSinceInternalStarYear / PrecisionInSeconds
 
 	if expiry < 0 {
-		return 0, fmt.Errorf("unix time too low (%d s) %s < %d", unix, time.Unix(unix, 0), ExpiryStartYear)
+		return 0, fmt.Errorf("unix time too low (%d s) %s < %d (internal=%d)", unix, time.Unix(unix, 0), ExpiryStartYear, expiry)
 	}
 	if expiry >= expiryMax {
-		return 0, fmt.Errorf("unix time too high (%d s) %s > %d", unix, time.Unix(unix, 0), ExpiryMaxYear)
+		return 0, fmt.Errorf("unix time too high (%d s) %s > %d (internal=%d)", unix, time.Unix(unix, 0), ExpiryMaxYear, expiry)
 	}
 
 	return uint32(expiry), nil
@@ -69,4 +69,28 @@ func internalExpiryToUnix(expiry uint32) int64 {
 	seconds := int64(expiry) * PrecisionInSeconds
 	unix := seconds + internalToUnix
 	return unix
+}
+
+func putInternalExpiry(b []byte, e uint32) {
+	// Expiry is store just after the header
+	b[HeaderSize+0] = byte(e)
+	b[HeaderSize+1] = byte(e >> 8)
+	if ExpirySize > 3 {
+		b[HeaderSize+2] = byte(e >> 16)
+	}
+	if ExpirySize > 4 {
+		b[HeaderSize+3] = byte(e >> 24)
+	}
+}
+
+func internalExpiry(b []byte) uint32 {
+	e := uint32(b[0])
+	e |= uint32(b[1]) << 8
+	if ExpirySize > 3 {
+		e |= uint32(b[2]) << 16
+	}
+	if ExpirySize > 4 {
+		e |= uint32(b[3]) << 24
+	}
+	return e
 }
