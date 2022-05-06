@@ -25,8 +25,8 @@ import (
 )
 
 const (
-	a85MinSize        = 16
-	ciphertextMinSize = 12
+	a85MinSize        = 20
+	ciphertextMinSize = 16
 )
 
 func (ck *Checker) Encode(dt dtoken.DToken) ([]byte, error) {
