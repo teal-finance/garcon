@@ -321,8 +321,8 @@ func (ck *Checker) permFromBearerOrCookie(r *http.Request) (perm Perm, err error
 		if err != nil {
 			err = fmt.Errorf("cannot find a valid JWT in either "+
 				"the first 'Authorization' HTTP header or "+
-				"one of the available cookies. the underlying errors are: "+
-				"%w and %v", errBearer, err.Error())
+				"in the cookie %q because: %w and %v",
+				ck.cookies[0].Name, errBearer, err.Error())
 			return perm, err
 		}
 	}
