@@ -38,10 +38,34 @@ type DToken struct {
 	Values [][]byte
 }
 
+func (dt *DToken) Valid(r *http.Request) error {
+	if dt.Expiry != 0 {
+		if !dt.ValidExpiry() {
+			return fmt.Errorf("expired or malformed date %v", dt.Expiry)
+		}
+	}
+
+	if len(dt.IP) > 0 {
+		ip, _, err := net.SplitHostPort(r.RemoteAddr)
+		if err != nil {
+			return fmt.Errorf("checking token but %w", err)
+		}
+		if !dt.IP.Equal(net.ParseIP(ip)) {
+			return fmt.Errorf("token says IP=%v but got %v", dt.IP, ip)
+		}
+	}
+
+	return nil
+}
+
 func (dt *DToken) SetExpiry(secondsSinceNow int64) {
 	now := time.Now().Unix()
 	unix := now + secondsSinceNow
 	dt.Expiry = unix
+}
+
+func (dt *DToken) ExpiryTime() time.Time {
+	return time.Unix(dt.Expiry, 0)
 }
 
 func (dt DToken) CompareExpiry() int {
@@ -55,7 +79,7 @@ func (dt DToken) CompareExpiry() int {
 	return 0
 }
 
-func (dt DToken) IsExpiryValid() bool {
+func (dt DToken) ValidExpiry() bool {
 	c := dt.CompareExpiry()
 	return (c == 0)
 }
