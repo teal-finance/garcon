@@ -14,7 +14,7 @@
 
 // Package session provides a safer, shorter, faster session cookie.
 // Safer because of random salt in the tokens and understandable/auditable source code.
-// Shorter because of Ascii85 (no Base64), compression and index instead of key names.
+// Shorter because of Base92 (no Base64), compression and index instead of key names.
 // Faster because of AES (no RSA) and custom bar-metal serializer.
 package session
 
@@ -82,31 +82,31 @@ func New(urls []*url.URL, resErr reserr.ResErr, secretKey [16]byte, expiry time.
 		magic:      secretKey[0],
 	}
 
-	// serialize the "tiny" token (with encryption and Ascii85 encoding)
-	ascii85, err := s.Encode(s.dtoken)
+	// serialize the "tiny" token (with encryption and Base92 encoding)
+	base92, err := s.Encode(s.dtoken)
 	if err != nil {
 		log.Panic("Encode(emptyToken) ", err)
 	}
 
 	// insert this generated token in the cookie
-	s.cookie.Value = secretTokenScheme + ascii85
+	s.cookie.Value = secretTokenScheme + base92
 
 	return &s
 }
 
 func (s Session) NewCookie(dt dtoken.DToken) (http.Cookie, error) {
-	ascii85, err := s.Encode(dt)
+	base92, err := s.Encode(dt)
 	if err != nil {
 		return s.cookie, err
 	}
 
-	cookie := s.NewCookieFromToken(ascii85, dt.ExpiryTime())
+	cookie := s.NewCookieFromToken(base92, dt.ExpiryTime())
 	return cookie, nil
 }
 
-func (s Session) NewCookieFromToken(ascii85 string, expiry time.Time) http.Cookie {
+func (s Session) NewCookieFromToken(base92 string, expiry time.Time) http.Cookie {
 	cookie := s.cookie
-	cookie.Value = secretTokenScheme + ascii85
+	cookie.Value = secretTokenScheme + base92
 
 	if expiry.IsZero() {
 		cookie.Expires = time.Now().Add(nsPerYear)
@@ -204,19 +204,19 @@ func (s *Session) DecodeToken(r *http.Request) (dtoken.DToken, error) {
 	var i int
 
 	for i = 0; i < 2; i++ {
-		var ascii85 string
+		var base92 string
 		if i == 0 {
-			ascii85, err[0] = s.CookieToken(r)
+			base92, err[0] = s.CookieToken(r)
 		} else {
-			ascii85, err[1] = s.BearerToken(r)
+			base92, err[1] = s.BearerToken(r)
 		}
 		if err[i] != nil {
 			continue
 		}
-		if s.equalDefaultToken(ascii85) {
+		if s.equalDefaultToken(base92) {
 			return s.dtoken, nil
 		}
-		if dt, err[i] = s.Decode(ascii85); err[i] != nil {
+		if dt, err[i] = s.Decode(base92); err[i] != nil {
 			continue
 		}
 		if err[i] = dt.Valid(r); err[i] != nil {
@@ -236,34 +236,34 @@ func (s *Session) DecodeToken(r *http.Request) (dtoken.DToken, error) {
 }
 
 func (s *Session) DecodeCookieToken(r *http.Request) (dt dtoken.DToken, err error) {
-	ascii85, err := s.CookieToken(r)
+	base92, err := s.CookieToken(r)
 	if err != nil {
 		return dt, err
 	}
-	if s.equalDefaultToken(ascii85) {
+	if s.equalDefaultToken(base92) {
 		return s.dtoken, nil
 	}
-	if dt, err = s.Decode(ascii85); err != nil {
+	if dt, err = s.Decode(base92); err != nil {
 		return dt, err
 	}
 	return dt, dt.Valid(r)
 }
 
 func (s *Session) DecodeBearerToken(r *http.Request) (dt dtoken.DToken, err error) {
-	ascii85, err := s.BearerToken(r)
+	base92, err := s.BearerToken(r)
 	if err != nil {
 		return dt, err
 	}
-	if s.equalDefaultToken(ascii85) {
+	if s.equalDefaultToken(base92) {
 		return s.dtoken, nil
 	}
-	if dt, err = s.Decode(ascii85); err != nil {
+	if dt, err = s.Decode(base92); err != nil {
 		return dt, err
 	}
 	return dt, dt.Valid(r)
 }
 
-func (s *Session) CookieToken(r *http.Request) (ascii85 string, err error) {
+func (s *Session) CookieToken(r *http.Request) (base92 string, err error) {
 	cookie, err := r.Cookie(s.cookie.Name)
 	if err != nil {
 		return "", err
@@ -282,7 +282,7 @@ func (s *Session) CookieToken(r *http.Request) (ascii85 string, err error) {
 	return trimTokenScheme(cookie.Value)
 }
 
-func (s *Session) BearerToken(r *http.Request) (ascii85 string, err error) {
+func (s *Session) BearerToken(r *http.Request) (base92 string, err error) {
 	auth := r.Header.Get("Authorization")
 	if auth == "" {
 		return "", errors.New("no 'Authorization: " + secretTokenScheme + "xxxxxxxx' in the request header")
@@ -406,15 +406,15 @@ func extractDevURLs(urls []*url.URL) (devURLs []*url.URL) {
 
 // equalDefaultToken compares with the default token
 // by skiping the token scheme.
-func (s *Session) equalDefaultToken(ascii85 string) bool {
+func (s *Session) equalDefaultToken(base92 string) bool {
 	const n = len(secretTokenScheme)
-	return (ascii85 == s.cookie.Value[n:])
+	return (base92 == s.cookie.Value[n:])
 }
 
-func trimTokenScheme(uri string) (ascii85 string, err error) {
+func trimTokenScheme(uri string) (base92 string, err error) {
 	const n = len(secretTokenScheme)
-	if len(uri) < n+a85MinSize {
-		return "", fmt.Errorf("token URI too short (%d bytes) want %d", len(uri), n+a85MinSize)
+	if len(uri) < n+base92MinSize {
+		return "", fmt.Errorf("token URI too short (%d bytes) want %d", len(uri), n+base92MinSize)
 	}
 	if uri[:n] != secretTokenScheme {
 		return "", fmt.Errorf("want token URI '"+secretTokenScheme+"xxxxxxxx' got %q", uri)
@@ -422,10 +422,10 @@ func trimTokenScheme(uri string) (ascii85 string, err error) {
 	return uri[n:], nil
 }
 
-func trimBearerScheme(auth string) (ascii85 string, err error) {
+func trimBearerScheme(auth string) (base92 string, err error) {
 	const n = len(prefixScheme)
-	if len(auth) < n+a85MinSize {
-		return "", fmt.Errorf("bearer too short (%d bytes) want %d", len(auth), n+a85MinSize)
+	if len(auth) < n+base92MinSize {
+		return "", fmt.Errorf("bearer too short (%d bytes) want %d", len(auth), n+base92MinSize)
 	}
 	if auth[:n] != prefixScheme {
 		return "", fmt.Errorf("want '"+prefixScheme+"xxxxxxxx' got %s", auth)

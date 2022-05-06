@@ -18,14 +18,14 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/teal-finance/garcon/a85"
+	"github.com/teal-finance/garcon/base92"
 	"github.com/teal-finance/garcon/session/dtoken"
 	"github.com/teal-finance/garcon/session/incorruptible"
 	"github.com/teal-finance/garcon/session/incorruptible/bits"
 )
 
 const (
-	a85MinSize        = 20
+	base92MinSize     = 20
 	ciphertextMinSize = 16
 )
 
@@ -40,16 +40,16 @@ func (s *Session) Encode(dt dtoken.DToken) (string, error) {
 		return "", err
 	}
 
-	a := a85.Encode(ciphertext)
-	return string(a), nil
+	str := base92.Encode(ciphertext)
+	return str, nil
 }
 
-func (s *Session) Decode(a string) (dt dtoken.DToken, err error) {
-	if len(a) < a85MinSize {
-		return dt, fmt.Errorf("Ascii85 string too short: %d < min=%d", len(a), a85MinSize)
+func (s *Session) Decode(str string) (dt dtoken.DToken, err error) {
+	if len(str) < base92MinSize {
+		return dt, fmt.Errorf("Base92 string too short: %d < min=%d", len(str), base92MinSize)
 	}
 
-	ciphertext, err := a85.Decode(a)
+	ciphertext, err := base92.Decode(str)
 	if err != nil {
 		return dt, err
 	}

@@ -148,24 +148,24 @@ func TestDecode(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			c.dtoken.ShortenIP()
 
-			a85, err := s.Encode(c.dtoken)
+			str, err := s.Encode(c.dtoken)
 			if (err == nil) == c.wantErr {
 				t.Errorf("Encode() error = %v, wantErr %v", err, c.wantErr)
 				return
 			}
 
-			t.Log("len(a85)", len(a85))
+			t.Log("len(str)", len(str))
 
-			n := len(a85)
+			n := len(str)
 			if n == 0 {
 				return
 			}
 			if n > 70 {
 				n = 70 // print max the first 70 characters
 			}
-			t.Logf("a85[:%d] %v", n, a85[:n])
+			t.Logf("str len=%d [:%d]=%q", len(str), n, str[:n])
 
-			got, err := s.Decode(a85)
+			got, err := s.Decode(str)
 			if err != nil {
 				t.Errorf("Decode() error = %v", err)
 				return
