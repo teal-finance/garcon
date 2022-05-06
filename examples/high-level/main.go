@@ -13,10 +13,10 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/teal-finance/garcon"
-	"github.com/teal-finance/garcon/jwtperm"
 	"github.com/teal-finance/garcon/reserr"
 	"github.com/teal-finance/garcon/webserver"
 )
@@ -31,9 +31,12 @@ const (
 	hmacSHA256 = "9d2e0a02121179a3c3de1b035ae1355b1548781c8ce8538a1dc0853a12dfb13d"
 )
 
+var aes128bits = [16]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6}
+
 func main() {
 	auth := flag.Bool("auth", false, "Enable OPA authorization specified in file "+authCfg)
 	prod := flag.Bool("prod", false, "Use settings for production")
+	jwt := flag.Bool("jwt", false, "Use JWT in lieu of the incorruptible token")
 	flag.Parse()
 
 	opaFilenames := []string{}
@@ -48,11 +51,16 @@ func main() {
 		addr = "http://localhost:" + strconv.Itoa(mainPort) + "/myapp"
 	}
 
+	tokenConfiguration := garcon.WithTkn(aes128bits, time.Minute, true)
+	if *jwt {
+		tokenConfiguration = garcon.WithJWT([]byte(hmacSHA256), "FreePlan", 10, "PremiumPlan", 100)
+	}
+
 	g, err := garcon.New(
+		tokenConfiguration,
 		garcon.WithURLs(addr),
 		garcon.WithDocURL("/doc"),
 		garcon.WithServerHeader("MyApp-1.2.0"),
-		garcon.WithJWT([]byte(hmacSHA256), "FreePlan", 10, "PremiumPlan", 100),
 		garcon.WithOPA(opaFilenames...),
 		garcon.WithReqLogs(),
 		garcon.WithLimiter(burst, perMinute),
@@ -65,14 +73,14 @@ func main() {
 	}
 
 	// handles both REST API and static web files
-	h := handler(g.ResErr, g.JWT)
+	h := handler(g.ResErr, g.Checker)
 
 	err = g.Run(h, mainPort)
 	log.Fatal(err)
 }
 
 // handler creates the mapping between the endpoints and the handler functions.
-func handler(resErr reserr.ResErr, jc *jwtperm.Checker) http.Handler {
+func handler(resErr reserr.ResErr, jc garcon.TokenChecker) http.Handler {
 	r := chi.NewRouter()
 
 	// Static website files

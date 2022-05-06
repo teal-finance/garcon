@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+
 	"github.com/teal-finance/garcon/chain"
 	"github.com/teal-finance/garcon/cors"
 	"github.com/teal-finance/garcon/jwtperm"
@@ -36,6 +37,8 @@ import (
 	"github.com/teal-finance/garcon/reqlog"
 	"github.com/teal-finance/garcon/reserr"
 	"github.com/teal-finance/garcon/security"
+	"github.com/teal-finance/garcon/session"
+	"github.com/teal-finance/garcon/session/dtoken"
 )
 
 // DevOrigins provides the development origins:
@@ -51,10 +54,30 @@ var DevOrigins = []*url.URL{
 
 type Garcon struct {
 	ConnState      func(net.Conn, http.ConnState)
-	JWT            *jwtperm.Checker
+	Checker        TokenChecker
 	ResErr         reserr.ResErr
 	AllowedOrigins []string
 	Middlewares    chain.Chain
+}
+
+type TokenChecker interface {
+	// Set sets a cookie in the response when the request has no valid token.
+	// Set searches the token in a cookie and in the first "Authorization" header.
+	// Finally, Set stores the token attributes in the request context.
+	Set(next http.Handler) http.Handler
+
+	// Chk accepts requests only if it has a valid cookie.
+	// Chk does not verify the "Authorization" header.
+	// See the Vet() function to also verify the "Authorization" header.
+	// Chk also stores the token attributes in the request context.
+	// In dev. testing, Chk accepts any request but does not store invalid tokens.
+	Chk(next http.Handler) http.Handler
+
+	// Vet accepts requests having a valid token either in
+	// the cookie or in the first "Authorization" header.
+	// Vet also stores the decoded token in the request context.
+	// In dev. testing, Vet accepts any request but does not store invalid tokens.
+	Vet(next http.Handler) http.Handler
 }
 
 type parameters struct {
@@ -102,11 +125,11 @@ func New(opts ...Option) (*Garcon, error) {
 
 func (s parameters) new() (*Garcon, error) {
 	g := Garcon{
-		AllowedOrigins: OriginsFromURLs(s.urls),
-		ResErr:         reserr.New(s.docURL),
-		Middlewares:    nil,
 		ConnState:      nil,
-		JWT:            nil,
+		Checker:        nil,
+		ResErr:         reserr.New(s.docURL),
+		AllowedOrigins: OriginsFromURLs(s.urls),
+		Middlewares:    nil,
 	}
 
 	g.Middlewares, g.ConnState = metrics.StartServer(s.expPort, s.expNamespace)
@@ -132,7 +155,19 @@ func (s parameters) new() (*Garcon, error) {
 		cors.Handler(g.AllowedOrigins, s.devMode),
 	)
 
-	g.JWT = g.NewJWTChecker(s.urls, s.secretKey, s.planPerm...)
+	if len(s.planPerm) == 1 {
+		dt, ok := s.planPerm[0].(dtoken.DToken)
+		if ok {
+			setIP := (dt.IP != nil)
+			var key [16]byte
+			copy(key[:], s.secretKey)
+			g.Checker = g.NewTknSession(s.urls, key, time.Duration(dt.Expiry), setIP)
+		}
+	}
+
+	if g.Checker == nil {
+		g.Checker = g.NewJWTChecker(s.urls, s.secretKey, s.planPerm...)
+	}
 
 	// Authentication rules (Open Policy Agent)
 	if len(s.opaFilenames) > 0 {
@@ -167,10 +202,30 @@ func WithServerHeader(nameVersion string) Option {
 }
 
 // WithJWT requires WithURLs() to set the Cookie name, secure, domain and path.
+// WithJWT is not compatible with WithTkn: use only one of them.
 func WithJWT(secretKey []byte, planPerm ...interface{}) Option {
 	return func(p *parameters) {
 		p.secretKey = secretKey
 		p.planPerm = planPerm
+	}
+}
+
+// WithTkn enables the "session" cookies based on the "incorruptible" token format.
+// WithTkn requires WithURLs() to set the Cookie name, secure, domain and path.
+// WithTkn is not compatible with WithJWT: use only one of them.
+func WithTkn(secretKey [16]byte, expiry time.Duration, setIP bool) Option {
+	return func(p *parameters) {
+		p.secretKey = secretKey[:]
+		// ugly trick to store parameters for the "incorruptible" token
+		var ip net.IP
+		if setIP {
+			ip = []byte{}
+		}
+		p.planPerm = []interface{}{dtoken.DToken{
+			Expiry: expiry.Nanoseconds(),
+			IP:     ip,
+			Values: nil,
+		}}
 	}
 }
 
@@ -287,6 +342,10 @@ func (g *Garcon) Run(h http.Handler, port int) error {
 	log.Printf("ERR: Get the process using port %v: sudo ss -pan | grep %v", port, port)
 
 	return err
+}
+
+func (g *Garcon) NewTknSession(urls []*url.URL, secretKey [16]byte, expiry time.Duration, setIP bool) *session.Session {
+	return session.New(urls, g.ResErr, secretKey, expiry, setIP)
 }
 
 func (g *Garcon) NewJWTChecker(urls []*url.URL, secretKey []byte, planPerm ...interface{}) *jwtperm.Checker {
