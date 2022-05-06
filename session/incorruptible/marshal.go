@@ -23,6 +23,7 @@ package incorruptible
 
 import (
 	"fmt"
+	"log"
 	"math/rand"
 
 	"github.com/klauspost/compress/s2"
@@ -32,11 +33,12 @@ import (
 )
 
 const (
-	paddingMaxSize = 8
 	enablePadding  = false
+	paddingStep    = 8
+	paddingMaxSize = 3 * paddingStep // result must be less than 256 bytes
 
-	lengthMayCompress  = 100
-	lengthMustCompress = 180
+	sizeMayCompress  = 50 // by experience, cannot be below than 24 bytes
+	sizeMustCompress = 99
 )
 
 type Serializer struct {
@@ -69,9 +71,9 @@ func newSerializer(dt dtoken.DToken) (s Serializer) {
 // to limit the "chosen plaintext" attack.
 func doesCompress(payloadSize int) bool {
 	switch {
-	case payloadSize < lengthMayCompress:
+	case payloadSize < sizeMayCompress:
 		return false
-	case payloadSize < lengthMustCompress:
+	case payloadSize < sizeMustCompress:
 		return (0 == rand.Intn(1))
 	default:
 		return true
@@ -153,15 +155,17 @@ func (s Serializer) appendValues(b []byte, dt dtoken.DToken) ([]byte, error) {
 }
 
 // appendPadding adds random padding bytes.
-// Ascii85 encoding is based on 4-byte block (32 bits).
-// This function optimizes the Ascii85 encoding.
 func (s *Serializer) appendPadding(b []byte) []byte {
-	trailing := len(b) % 4
-	missing := 4 - trailing
-	missing += 4 * rand.Intn(paddingMaxSize/4-1)
+	trailing := len(b) % paddingStep
+	missing := paddingStep - trailing
+	missing += paddingStep * rand.Intn(paddingMaxSize/paddingStep-1)
 
 	for i := 1; i < missing; i++ {
 		b = append(b, uint8(rand.Intn(256)))
+	}
+
+	if missing > 255 {
+		log.Panic("cannot append more than 255 padding bytes got=", missing)
 	}
 
 	// last byte is the padding length
