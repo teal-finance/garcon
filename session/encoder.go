@@ -29,13 +29,13 @@ const (
 	ciphertextMinSize = 16
 )
 
-func (ck *Checker) Encode(dt dtoken.DToken) ([]byte, error) {
-	plaintext, err := incorruptible.Marshal(dt, ck.magic)
+func (s *Session) Encode(dt dtoken.DToken) ([]byte, error) {
+	plaintext, err := incorruptible.Marshal(dt, s.magic)
 	if err != nil {
 		return nil, err
 	}
 
-	ciphertext, err := ck.cipher.Encrypt(plaintext)
+	ciphertext, err := s.cipher.Encrypt(plaintext)
 	if err != nil {
 		return nil, err
 	}
@@ -44,7 +44,7 @@ func (ck *Checker) Encode(dt dtoken.DToken) ([]byte, error) {
 	return a, nil
 }
 
-func (ck *Checker) Decode(a string) (dt dtoken.DToken, err error) {
+func (s *Session) Decode(a string) (dt dtoken.DToken, err error) {
 	if len(a) < a85MinSize {
 		return dt, fmt.Errorf("Ascii85 string too short: %d < min=%d", len(a), a85MinSize)
 	}
@@ -58,13 +58,13 @@ func (ck *Checker) Decode(a string) (dt dtoken.DToken, err error) {
 		return dt, fmt.Errorf("ciphertext too short: %d < min=%d", len(ciphertext), ciphertextMinSize)
 	}
 
-	plaintext, err := ck.cipher.Decrypt(ciphertext)
+	plaintext, err := s.cipher.Decrypt(ciphertext)
 	if err != nil {
 		return dt, err
 	}
 
 	magic := bits.MagicCode(plaintext)
-	if magic != ck.magic {
+	if magic != s.magic {
 		return dt, errors.New("bad magic code")
 	}
 

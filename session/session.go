@@ -33,7 +33,7 @@ import (
 	"github.com/teal-finance/garcon/session/dtoken"
 )
 
-type Checker struct {
+type Session struct {
 	resErr     reserr.ResErr
 	dtoken     dtoken.DToken
 	cookie     http.Cookie
@@ -47,9 +47,6 @@ const (
 	secretTokenScheme = "i:" // See RFC 8959, "i" means "incorruptible" format
 	prefixScheme      = authScheme + secretTokenScheme
 
-	invalidCookie = "invalid cookie"
-	expiredRToken = "Refresh token has expired (or invalid)"
-
 	secondsPerYear = 31556952 // average including leap years
 	nsPerYear      = secondsPerYear * 1_000_000_000
 )
@@ -59,7 +56,7 @@ var (
 	ErrNoTokenFound = errors.New("no token found")
 )
 
-func New(urls []*url.URL, resErr reserr.ResErr, secretKey [16]byte) *Checker {
+func New(urls []*url.URL, resErr reserr.ResErr, secretKey [16]byte) *Session {
 	if len(urls) == 0 {
 		log.Panic("No urls => Cannot set Cookie domain")
 	}
@@ -71,7 +68,7 @@ func New(urls []*url.URL, resErr reserr.ResErr, secretKey [16]byte) *Checker {
 		log.Panic("AES NewCipher ", err)
 	}
 
-	ck := Checker{
+	s := Session{
 		resErr:     resErr,
 		dtoken:     dtoken.DToken{Expiry: 0, IP: nil, Values: nil}, // the "tiny" token
 		cookie:     emptyCookie("session", secure, dns, path),
@@ -81,17 +78,211 @@ func New(urls []*url.URL, resErr reserr.ResErr, secretKey [16]byte) *Checker {
 	}
 
 	// serialize the "tiny" token (with encryption and Ascii85 encoding)
-	a85, err := ck.Encode(ck.dtoken)
+	ascii85, err := s.Encode(s.dtoken)
 	if err != nil {
 		log.Panic("Encode(emptyToken) ", err)
 	}
 
 	// insert this generated token in the cookie
-	ck.cookie.Value = secretTokenScheme + string(a85)
+	s.cookie.Value = secretTokenScheme + string(ascii85)
 
-	return &ck
+	return &s
 }
 
+func (s Session) NewCookie(dt dtoken.DToken) (http.Cookie, error) {
+	ascii85, err := s.Encode(dt)
+	if err != nil {
+		return s.cookie, err
+	}
+
+	cookie := s.NewCookieFromToken(string(ascii85), dt.ExpiryTime())
+	return cookie, nil
+}
+
+func (s Session) NewCookieFromToken(ascii85 string, expiry time.Time) http.Cookie {
+	cookie := s.cookie
+	cookie.Value = secretTokenScheme + ascii85
+
+	if expiry.IsZero() {
+		cookie.Expires = time.Now().Add(nsPerYear)
+	} else {
+		cookie.Expires = expiry
+	}
+
+	return cookie
+}
+
+// Set puts a "session" cookie when the request has no valid "incorruptible" token.
+// The token is searched the "session" cookie and in the first "Authorization" header.
+// The "session" cookie (that is added in the response) contains the "tiny" token.
+// Finally, Set stores the decoded token in the request context.
+func (s *Session) Set(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		dt, err := s.DecodeToken(r)
+		if err != nil {
+			dt = s.dtoken // default token
+			s.cookie.Expires = time.Now().Add(nsPerYear)
+			http.SetCookie(w, &s.cookie)
+		}
+		next.ServeHTTP(w, dt.PutInCtx(r))
+	})
+}
+
+// Chk accepts requests only if it has a valid cookie.
+// Chk does not verify the "Authorization" header.
+// See the Vet() function to also verify the "Authorization" header.
+// Chk also stores the decoded token in the request context.
+// In dev. testing, Chk accepts any request but does not store invalid tokens.
+func (s *Session) Chk(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		dt, err := s.DecodeCookieToken(r)
+		if err == nil { // OK: put the token in the request context
+			r = dt.PutInCtx(r)
+		} else if !s.IsDevOrigin(r) {
+			s.resErr.Write(w, r, http.StatusUnauthorized, err.Error())
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// Vet accepts requests having a valid token either in
+// the "session" cookie or in the first "Authorization" header.
+// Vet also stores the decoded token in the request context.
+// In dev. testing, Vet accepts any request but does not store invalid tokens.
+func (s *Session) Vet(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		dt, err := s.DecodeToken(r)
+		if err == nil { // OK: put the token in the request context
+			r = dt.PutInCtx(r)
+		} else if !s.IsDevOrigin(r) {
+			s.resErr.Write(w, r, http.StatusUnauthorized, err.Error())
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func (s *Session) DecodeToken(r *http.Request) (dtoken.DToken, error) {
+	var dt dtoken.DToken
+	var err [2]error
+	var i int
+
+	for i = 0; i < 2; i++ {
+		var ascii85 string
+		if i == 0 {
+			ascii85, err[0] = s.CookieToken(r)
+		} else {
+			ascii85, err[1] = s.BearerToken(r)
+		}
+		if err[i] != nil {
+			continue
+		}
+		if s.equalDefaultToken(ascii85) {
+			return s.dtoken, nil
+		}
+		if dt, err[i] = s.Decode(ascii85); err[i] != nil {
+			continue
+		}
+		if err[i] = dt.Valid(r); err[i] != nil {
+			continue
+		}
+	}
+
+	if i == 2 {
+		err[0] = fmt.Errorf("no valid 'incorruptible' token "+
+			"in either in the %q cookie or in the first "+
+			"'Authorization' HTTP header because: %w and %v",
+			s.cookie.Name, err[0], err[1].Error())
+		return dt, err[0]
+	}
+
+	return dt, nil
+}
+
+func (s *Session) DecodeCookieToken(r *http.Request) (dt dtoken.DToken, err error) {
+	ascii85, err := s.CookieToken(r)
+	if err != nil {
+		return dt, err
+	}
+	if s.equalDefaultToken(ascii85) {
+		return s.dtoken, nil
+	}
+	if dt, err = s.Decode(ascii85); err != nil {
+		return dt, err
+	}
+	return dt, dt.Valid(r)
+}
+
+func (s *Session) DecodeBearerToken(r *http.Request) (dt dtoken.DToken, err error) {
+	ascii85, err := s.BearerToken(r)
+	if err != nil {
+		return dt, err
+	}
+	if s.equalDefaultToken(ascii85) {
+		return s.dtoken, nil
+	}
+	if dt, err = s.Decode(ascii85); err != nil {
+		return dt, err
+	}
+	return dt, dt.Valid(r)
+}
+
+func (s *Session) CookieToken(r *http.Request) (ascii85 string, err error) {
+	cookie, err := r.Cookie(s.cookie.Name)
+	if err != nil {
+		return "", err
+	}
+
+	if !cookie.HttpOnly {
+		return "", errors.New("no HttpOnly cookie")
+	}
+	if cookie.SameSite != s.cookie.SameSite {
+		return "", fmt.Errorf("want cookie SameSite=%v but got %v", s.cookie.SameSite, cookie.SameSite)
+	}
+	if cookie.Secure != s.cookie.Secure {
+		return "", fmt.Errorf("want cookie Secure=%v but got %v", s.cookie.Secure, cookie.Secure)
+	}
+
+	return trimTokenScheme(cookie.Value)
+}
+
+func (s *Session) BearerToken(r *http.Request) (ascii85 string, err error) {
+	auth := r.Header.Get("Authorization")
+	if auth == "" {
+		return "", errors.New("no 'Authorization: " + secretTokenScheme + "xxxxxxxx' in the request header")
+	}
+
+	return trimBearerScheme(auth)
+}
+
+func (s *Session) IsDevOrigin(r *http.Request) bool {
+	if len(s.devOrigins) == 0 {
+		return false
+	}
+
+	if len(s.devOrigins) > 0 {
+		origin := r.Header.Get("Origin")
+		sanitized := security.Sanitize(origin)
+
+		for _, prefix := range s.devOrigins {
+			if prefix == "*" {
+				log.Print("No token but addr=http://localhost => Accept any origin=", sanitized)
+				return true
+			}
+			if strings.HasPrefix(origin, prefix) {
+				log.Printf("No token but origin=%v is a valid dev origin", sanitized)
+				return true
+			}
+		}
+
+		log.Print("No token and origin=", sanitized, " has not prefixes ", s.devOrigins)
+	}
+
+	return false
+}
+
+// Supported URL shemes.
 const (
 	HTTP  = "http"
 	HTTPS = "https"
@@ -116,23 +307,25 @@ func extractMainDomain(url *url.URL) (secure bool, dns, path string) {
 	return secure, url.Hostname(), url.Path
 }
 
-func extractDevURLs(urls []*url.URL) (devURLs []*url.URL) {
-	if len(urls) == 1 {
-		log.Print("Token required for single domain: ", urls)
-		return nil
+func emptyCookie(name string, secure bool, dns, path string) http.Cookie {
+	if path != "" && path[len(path)-1] == '/' {
+		path = path[:len(path)-1] // remove trailing slash
 	}
 
-	for i, u := range urls {
-		if u == nil {
-			log.Panic("Unexpected nil in URL slide: ", urls)
-		}
-
-		if u.Scheme == HTTP {
-			return urls[i:]
-		}
+	return http.Cookie{
+		Name:       name,
+		Value:      "", // emptyCookie because no token
+		Path:       path,
+		Domain:     dns,
+		Expires:    time.Time{},
+		RawExpires: "",
+		MaxAge:     secondsPerYear,
+		Secure:     secure,
+		HttpOnly:   true,
+		SameSite:   http.SameSiteStrictMode,
+		Raw:        "",
+		Unparsed:   nil,
 	}
-
-	return nil
 }
 
 func extractDevOrigins(urls []*url.URL) (devOrigins []string) {
@@ -157,220 +350,30 @@ func extractDevOrigins(urls []*url.URL) (devOrigins []string) {
 	return devOrigins
 }
 
-func emptyCookie(name string, secure bool, dns, path string) http.Cookie {
-	if path != "" && path[len(path)-1] == '/' {
-		path = path[:len(path)-1] // remove trailing slash
+func extractDevURLs(urls []*url.URL) (devURLs []*url.URL) {
+	if len(urls) == 1 {
+		log.Print("Token required for single domain: ", urls)
+		return nil
 	}
 
-	return http.Cookie{
-		Name:       name,
-		Value:      "", // emptyCookie because no token
-		Path:       path,
-		Domain:     dns,
-		Expires:    time.Time{},
-		RawExpires: "",
-		MaxAge:     secondsPerYear,
-		Secure:     secure,
-		HttpOnly:   true,
-		SameSite:   http.SameSiteStrictMode,
-		Raw:        "",
-		Unparsed:   nil,
-	}
-}
-
-func (ck *Checker) IsDevOrigin(r *http.Request) bool {
-	if len(ck.devOrigins) == 0 {
-		return false
-	}
-
-	if len(ck.devOrigins) > 0 {
-		origin := r.Header.Get("Origin")
-		sanitized := security.Sanitize(origin)
-
-		for _, prefix := range ck.devOrigins {
-			if prefix == "*" {
-				log.Print("No token but addr=http://localhost => Accept any origin=", sanitized)
-				return true
-			}
-			if strings.HasPrefix(origin, prefix) {
-				log.Printf("No token but origin=%v is a valid dev origin", sanitized)
-				return true
-			}
+	for i, u := range urls {
+		if u == nil {
+			log.Panic("Unexpected nil in URL slide: ", urls)
 		}
 
-		log.Print("No token and origin=", sanitized, " has not prefixes ", ck.devOrigins)
-	}
-
-	return false
-}
-
-// Set puts a "session" cookie when the request has no valid "incorruptible" token.
-// The token is searched the "session" cookie and in the first "Authorization" header.
-// The "session" cookie (that is added in the response) contains the "tiny" token.
-// Finally, Set stores the decoded token in the request context.
-func (ck *Checker) Set(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		dt, err := ck.DecodeToken(r)
-		if err != nil {
-			dt = ck.dtoken // default token
-			ck.cookie.Expires = time.Now().Add(nsPerYear)
-			http.SetCookie(w, &ck.cookie)
+		if u.Scheme == HTTP {
+			return urls[i:]
 		}
-		next.ServeHTTP(w, dt.PutInCtx(r))
-	})
-}
-
-// Chk accepts requests only if it has a valid cookie.
-// Chk does not verify the "Authorization" header.
-// See the Vet() function to also verify the "Authorization" header.
-// Chk also stores the decoded token in the request context.
-// In dev. testing, Chk accepts any request but does not store invalid tokens.
-func (ck *Checker) Chk(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		dt, err := ck.DecodeTokenFromCookie(r)
-		if err == nil { // OK: put the token in the request context
-			r = dt.PutInCtx(r)
-		} else if !ck.IsDevOrigin(r) {
-			ck.resErr.Write(w, r, http.StatusUnauthorized, err.Error())
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
-}
-
-// Vet accepts requests having a valid token either in
-// the "session" cookie or in the first "Authorization" header.
-// Vet also stores the decoded token in the request context.
-// In dev. testing, Vet accepts any request but does not store invalid tokens.
-func (ck *Checker) Vet(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		dt, err := ck.DecodeToken(r)
-		if err == nil { // OK: put the token in the request context
-			r = dt.PutInCtx(r)
-		} else if !ck.IsDevOrigin(r) {
-			ck.resErr.Write(w, r, http.StatusUnauthorized, err.Error())
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
-}
-
-func (ck *Checker) DecodeToken(r *http.Request) (dt dtoken.DToken, err error) {
-	var bearer bool
-
-	ascii85, err := ck.TokenFromCookie(r)
-	if err != nil {
-		var errBearer error
-		ascii85, errBearer = ck.TokenFromBearer(r)
-		if errBearer != nil {
-			err = fmt.Errorf("no 'incorruptible' token "+
-				"in either the first 'Authorization' HTTP header "+
-				"or in the cookie %q because: %w and %v",
-				ck.cookie.Name, errBearer, err.Error())
-			return dt, err
-		}
-		bearer = true
 	}
 
-	if ck.equalDefaultToken(ascii85) {
-		return ck.dtoken, nil
-	}
-
-	dt, err = ck.Decode(ascii85)
-	if (err != nil) && !bearer {
-		ascii85, errBearer := ck.TokenFromBearer(r)
-		if errBearer != nil {
-			err = fmt.Errorf("no valid 'incorruptible' token "+
-				"in either the first 'Authorization' HTTP header "+
-				"or in the cookie %q because: %w and %v",
-				ck.cookie.Name, errBearer, err.Error())
-			return dt, err
-		}
-
-		dt, errBearer = ck.Decode(ascii85)
-		if errBearer != nil {
-			err = fmt.Errorf("no valid 'incorruptible' token "+
-				"in either the first 'Authorization' HTTP header "+
-				"or in the cookie %q because: %w and %v",
-				ck.cookie.Name, errBearer, err.Error())
-			return dt, err
-		}
-
-		err = nil
-	}
-
-	return dt, err
-}
-
-func (ck *Checker) DecodeTokenFromCookie(r *http.Request) (dt dtoken.DToken, err error) {
-	ascii85, err := ck.TokenFromCookie(r)
-	if err != nil {
-		return dt, err
-	}
-
-	if ck.equalDefaultToken(ascii85) {
-		return ck.dtoken, nil
-	}
-
-	return ck.Decode(ascii85)
-}
-
-func (ck *Checker) DecodeTokenFromBearer(r *http.Request) (dt dtoken.DToken, err error) {
-	ascii85, err := ck.TokenFromBearer(r)
-	if err != nil {
-		return dt, err
-	}
-
-	if ck.equalDefaultToken(ascii85) {
-		return ck.dtoken, nil
-	}
-
-	return ck.Decode(ascii85)
-}
-
-func (ck *Checker) TokenFromCookie(r *http.Request) (ascii85 string, err error) {
-	cookie, err := r.Cookie(ck.cookie.Name)
-	if err != nil {
-		return "", err
-	}
-
-	if !cookie.HttpOnly {
-		return "", errors.New("no HttpOnly cookie")
-	}
-	if cookie.SameSite != ck.cookie.SameSite {
-		return "", fmt.Errorf("want cookie SameSite=%v but got %v", ck.cookie.SameSite, cookie.SameSite)
-	}
-	if cookie.Secure != ck.cookie.Secure {
-		return "", fmt.Errorf("want cookie Secure=%v but got %v", ck.cookie.Secure, cookie.Secure)
-	}
-
-	ascii85, err = trimTokenScheme(cookie.Value)
-	if err != nil {
-		return "", err
-	}
-
-	return ascii85, nil
-}
-
-func (ck *Checker) TokenFromBearer(r *http.Request) (ascii85 string, err error) {
-	auth := r.Header.Get("Authorization")
-	if auth == "" {
-		return "", errors.New("no 'Authorization: " + secretTokenScheme + "xxxxxxxx' in the request header")
-	}
-
-	ascii85, err = trimBearerScheme(auth)
-	if err != nil {
-		return "", err
-	}
-
-	return ascii85, err
+	return nil
 }
 
 // equalDefaultToken compares with the default token
 // by skiping the token scheme.
-func (ck *Checker) equalDefaultToken(ascii85 string) bool {
+func (s *Session) equalDefaultToken(ascii85 string) bool {
 	const n = len(secretTokenScheme)
-	return (ascii85 == ck.cookie.Value[n:])
+	return (ascii85 == s.cookie.Value[n:])
 }
 
 func trimTokenScheme(uri string) (ascii85 string, err error) {
