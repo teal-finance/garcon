@@ -143,12 +143,12 @@ func TestDecode(t *testing.T) {
 
 		key := [16]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6}
 
-		ck := New([]*url.URL{u}, reserr.New("path/doc"), key, 0, true)
+		s := New([]*url.URL{u}, reserr.New("path/doc"), key, 0, true)
 
 		t.Run(c.name, func(t *testing.T) {
 			c.dtoken.ShortenIP()
 
-			a85, err := ck.Encode(c.dtoken)
+			a85, err := s.Encode(c.dtoken)
 			if (err == nil) == c.wantErr {
 				t.Errorf("Encode() error = %v, wantErr %v", err, c.wantErr)
 				return
@@ -163,9 +163,9 @@ func TestDecode(t *testing.T) {
 			if n > 70 {
 				n = 70 // print max the first 70 characters
 			}
-			t.Logf("a85[:%d] %v", n, string(a85[:n]))
+			t.Logf("a85[:%d] %v", n, a85[:n])
 
-			got, err := ck.Decode(string(a85))
+			got, err := s.Decode(a85)
 			if err != nil {
 				t.Errorf("Decode() error = %v", err)
 				return
@@ -187,6 +187,18 @@ func TestDecode(t *testing.T) {
 			if (len(got.Values) > 0 || len(c.dtoken.Values) > 0) &&
 				!reflect.DeepEqual(got.Values, c.dtoken.Values) {
 				t.Errorf("Mismatch Values got %v, want %v", got.Values, c.dtoken.Values)
+			}
+
+			cookie, err := s.NewCookie(c.dtoken)
+			if err != nil {
+				t.Errorf("NewCookie() %v", err)
+				return
+			}
+
+			err = cookie.Valid()
+			if err != nil {
+				t.Errorf("Invalid cookie %v", err)
+				return
 			}
 		})
 	}

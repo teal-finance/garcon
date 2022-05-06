@@ -129,7 +129,10 @@ func (s Session) SetCookie(w http.ResponseWriter, r *http.Request) dtoken.DToken
 	}
 
 	if s.setIP {
-		dt.SetRemoteIP(r)
+		err := dt.SetRemoteIP(r)
+		if err != nil {
+			log.Panic(err)
+		}
 	}
 
 	requireNewEncoding := (s.expiry > 0) || s.setIP
