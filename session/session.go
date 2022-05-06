@@ -137,11 +137,11 @@ func (s Session) SetCookie(w http.ResponseWriter, r *http.Request) dtoken.DToken
 
 	requireNewEncoding := (s.expiry > 0) || s.setIP
 	if requireNewEncoding {
-		var err error
-		cookie.Value, err = s.Encode(dt)
+		base92, err := s.Encode(dt)
 		if err != nil {
 			log.Panic(err)
 		}
+		cookie.Value = secretTokenScheme + base92
 	}
 
 	http.SetCookie(w, &cookie)
