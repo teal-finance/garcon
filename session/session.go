@@ -35,6 +35,8 @@ import (
 
 type Session struct {
 	resErr     reserr.ResErr
+	expiry     time.Duration
+	setIP      bool
 	dtoken     dtoken.DToken
 	cookie     http.Cookie
 	devOrigins []string
@@ -56,7 +58,7 @@ var (
 	ErrNoTokenFound = errors.New("no token found")
 )
 
-func New(urls []*url.URL, resErr reserr.ResErr, secretKey [16]byte) *Session {
+func New(urls []*url.URL, resErr reserr.ResErr, secretKey [16]byte, expiry time.Duration, setIP bool) *Session {
 	if len(urls) == 0 {
 		log.Panic("No urls => Cannot set Cookie domain")
 	}
@@ -69,8 +71,11 @@ func New(urls []*url.URL, resErr reserr.ResErr, secretKey [16]byte) *Session {
 	}
 
 	s := Session{
-		resErr:     resErr,
-		dtoken:     dtoken.DToken{Expiry: 0, IP: nil, Values: nil}, // the "tiny" token
+		resErr: resErr,
+		expiry: expiry,
+		setIP:  setIP,
+		// the "tiny" token is the default token
+		dtoken:     dtoken.DToken{Expiry: 0, IP: nil, Values: nil},
 		cookie:     emptyCookie("session", secure, dns, path),
 		devOrigins: extractDevOrigins(urls),
 		cipher:     cipher,
@@ -84,7 +89,7 @@ func New(urls []*url.URL, resErr reserr.ResErr, secretKey [16]byte) *Session {
 	}
 
 	// insert this generated token in the cookie
-	s.cookie.Value = secretTokenScheme + string(ascii85)
+	s.cookie.Value = secretTokenScheme + ascii85
 
 	return &s
 }
@@ -95,7 +100,7 @@ func (s Session) NewCookie(dt dtoken.DToken) (http.Cookie, error) {
 		return s.cookie, err
 	}
 
-	cookie := s.NewCookieFromToken(string(ascii85), dt.ExpiryTime())
+	cookie := s.NewCookieFromToken(ascii85, dt.ExpiryTime())
 	return cookie, nil
 }
 
@@ -112,6 +117,34 @@ func (s Session) NewCookieFromToken(ascii85 string, expiry time.Time) http.Cooki
 	return cookie
 }
 
+func (s Session) SetCookie(w http.ResponseWriter, r *http.Request) dtoken.DToken {
+	dt := s.dtoken     // copy the "tiny" token
+	cookie := s.cookie // copy the default cookie
+
+	if s.expiry <= 0 {
+		cookie.Expires = time.Now().Add(nsPerYear) // does not expires
+	} else {
+		cookie.Expires = time.Now().Add(s.expiry)
+		dt.SetExpiry(s.expiry)
+	}
+
+	if s.setIP {
+		dt.SetRemoteIP(r)
+	}
+
+	requireNewEncoding := (s.expiry > 0) || s.setIP
+	if requireNewEncoding {
+		var err error
+		cookie.Value, err = s.Encode(dt)
+		if err != nil {
+			log.Panic(err)
+		}
+	}
+
+	http.SetCookie(w, &cookie)
+	return dt
+}
+
 // Set puts a "session" cookie when the request has no valid "incorruptible" token.
 // The token is searched the "session" cookie and in the first "Authorization" header.
 // The "session" cookie (that is added in the response) contains the "tiny" token.
@@ -120,9 +153,8 @@ func (s *Session) Set(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		dt, err := s.DecodeToken(r)
 		if err != nil {
-			dt = s.dtoken // default token
-			s.cookie.Expires = time.Now().Add(nsPerYear)
-			http.SetCookie(w, &s.cookie)
+			// no valid token found => set a new token
+			dt = s.SetCookie(w, r)
 		}
 		next.ServeHTTP(w, dt.PutInCtx(r))
 	})

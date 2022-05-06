@@ -29,19 +29,19 @@ const (
 	ciphertextMinSize = 16
 )
 
-func (s *Session) Encode(dt dtoken.DToken) ([]byte, error) {
+func (s *Session) Encode(dt dtoken.DToken) (string, error) {
 	plaintext, err := incorruptible.Marshal(dt, s.magic)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	ciphertext, err := s.cipher.Encrypt(plaintext)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	a := a85.Encode(ciphertext)
-	return a, nil
+	return string(a), nil
 }
 
 func (s *Session) Decode(a string) (dt dtoken.DToken, err error) {
