@@ -12,25 +12,31 @@
 // or online at <https://www.gnu.org/licenses/lgpl-3.0.html>
 // #endregion </editor-fold>
 
-package a85
+// package xascii85 provides convenient Encode()
+// and Decode() functions on top of "encoding/ascii85".
+package xascii85
 
 import (
 	"encoding/ascii85"
 	"fmt"
 )
 
-func Encode(bin []byte) []byte {
+// Encode encodes a slice of bytes into an Ascii85 string
+// allocating the destination buffer at the right size.
+func Encode(bin []byte) string {
 	max := ascii85.MaxEncodedLen(len(bin))
-	a85 := make([]byte, max)
-	n := ascii85.Encode(a85, bin)
-	return a85[:n]
+	str := make([]byte, max)
+	n := ascii85.Encode(str, bin)
+	return string(str[:n])
 }
 
-func Decode(a85 string) ([]byte, error) {
-	max := maxDecodedLen(len(a85))
+// Decode decodes an Ascii85 string into a slice of bytes
+// allocating the destination buffer at the right size.
+func Decode(str string) ([]byte, error) {
+	max := MaxDecodedLen(len(str))
 	bin := make([]byte, max)
 
-	n, _, err := ascii85.Decode(bin, []byte(a85), true)
+	n, _, err := ascii85.Decode(bin, []byte(str), true)
 	if err != nil {
 		return nil, fmt.Errorf("ascii85.Decode %w", err)
 	}
@@ -38,6 +44,6 @@ func Decode(a85 string) ([]byte, error) {
 	return bin[:n], nil
 }
 
-// MaxDecodedSize returns the maximum length of a decoding of n binary bytes.
+// MaxDecodedSize returns the maximum length required to decode n binary bytes.
 // Ascii85 encodes 4 bytes 0x0000 by only one byte "z".
-func maxDecodedLen(n int) int { return 4 * n }
+func MaxDecodedLen(n int) int { return 4 * n }
