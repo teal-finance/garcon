@@ -51,7 +51,7 @@ func main() {
 		addr = "http://localhost:" + strconv.Itoa(mainPort) + "/myapp"
 	}
 
-	tokenConfiguration := garcon.WithTkn(aes128bits, time.Minute, true)
+	tokenConfiguration := garcon.WithSession(aes128bits, time.Minute, true)
 	if *jwt {
 		tokenConfiguration = garcon.WithJWT([]byte(hmacSHA256), "FreePlan", 10, "PremiumPlan", 100)
 	}

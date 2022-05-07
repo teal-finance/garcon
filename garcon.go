@@ -210,10 +210,10 @@ func WithJWT(secretKey []byte, planPerm ...interface{}) Option {
 	}
 }
 
-// WithTkn enables the "session" cookies based on the "incorruptible" token format.
-// WithTkn requires WithURLs() to set the Cookie name, secure, domain and path.
-// WithTkn is not compatible with WithJWT: use only one of them.
-func WithTkn(secretKey [16]byte, expiry time.Duration, setIP bool) Option {
+// WithSession enables the "session" cookies based on the "incorruptible" token format.
+// WithSession requires WithURLs() to set the Cookie name, secure, domain and path.
+// WithSession is not compatible with WithJWT: use only one of them.
+func WithSession(secretKey [16]byte, expiry time.Duration, setIP bool) Option {
 	return func(p *parameters) {
 		p.secretKey = secretKey[:]
 		// ugly trick to store parameters for the "incorruptible" token
