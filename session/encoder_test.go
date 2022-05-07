@@ -143,7 +143,7 @@ func TestDecode(t *testing.T) {
 
 		key := [16]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6}
 
-		s := New([]*url.URL{u}, reserr.New("path/doc"), key, 0, true)
+		s := New([]*url.URL{u}, reserr.New("path/doc"), key[:], 0, true)
 
 		t.Run(c.name, func(t *testing.T) {
 			c.dtoken.ShortenIP()

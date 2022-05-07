@@ -15,9 +15,11 @@
 package garcon
 
 import (
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"log"
+	"math/rand"
 	"net"
 	"net/http"
 	"net/url"
@@ -123,7 +125,7 @@ func New(opts ...Option) (*Garcon, error) {
 	return p.new()
 }
 
-func (s parameters) new() (*Garcon, error) {
+func (s *parameters) new() (*Garcon, error) {
 	g := Garcon{
 		ConnState:      nil,
 		Checker:        nil,
@@ -155,18 +157,22 @@ func (s parameters) new() (*Garcon, error) {
 		cors.Handler(g.AllowedOrigins, s.devMode),
 	)
 
-	if len(s.planPerm) == 1 {
-		dt, ok := s.planPerm[0].(dtoken.DToken)
-		if ok {
-			setIP := (dt.IP != nil)
-			var key [16]byte
-			copy(key[:], s.secretKey)
-			g.Checker = g.NewTknSession(s.urls, key, time.Duration(dt.Expiry), setIP)
+	if len(s.secretKey) > 0 {
+		if len(s.planPerm) == 1 {
+			dt, ok := s.planPerm[0].(dtoken.DToken)
+			if ok {
+				setIP := (dt.IP != nil)
+				g.Checker = g.NewSessionToken(s.urls, s.secretKey, time.Duration(dt.Expiry), setIP)
+			}
 		}
-	}
-
-	if g.Checker == nil {
-		g.Checker = g.NewJWTChecker(s.urls, s.secretKey, s.planPerm...)
+		if g.Checker == nil {
+			g.Checker = g.NewJWTChecker(s.urls, s.secretKey, s.planPerm...)
+		}
+		// erase the secret, no longer required
+		for i := range s.secretKey {
+			s.secretKey[i] = byte(rand.Intn(256))
+		}
+		s.secretKey = nil
 	}
 
 	// Authentication rules (Open Policy Agent)
@@ -203,9 +209,17 @@ func WithServerHeader(nameVersion string) Option {
 
 // WithJWT requires WithURLs() to set the Cookie name, secure, domain and path.
 // WithJWT is not compatible with WithTkn: use only one of them.
-func WithJWT(secretKey []byte, planPerm ...interface{}) Option {
+func WithJWT(secretKeyHex string, planPerm ...interface{}) Option {
+	key, err := hex.DecodeString(secretKeyHex)
+	if err != nil {
+		log.Panic("WithJWT: cannot decode the HMAC-SHA256 key, please provide hexadecimal format (64 characters)")
+	}
+	if len(key) < 32 {
+		log.Panic("WithJWT: want HMAC-SHA256 key containing 32 bytes (or more), but got ", len(key))
+	}
+
 	return func(p *parameters) {
-		p.secretKey = secretKey
+		p.secretKey = key
 		p.planPerm = planPerm
 	}
 }
@@ -213,9 +227,17 @@ func WithJWT(secretKey []byte, planPerm ...interface{}) Option {
 // WithSession enables the "session" cookies based on the "incorruptible" token format.
 // WithSession requires WithURLs() to set the Cookie name, secure, domain and path.
 // WithSession is not compatible with WithJWT: use only one of them.
-func WithSession(secretKey [16]byte, expiry time.Duration, setIP bool) Option {
+func WithSession(secretKeyHex string, expiry time.Duration, setIP bool) Option {
+	key, err := hex.DecodeString(secretKeyHex)
+	if err != nil {
+		log.Panic("WithSession: cannot decode the 128-bit AES key, please provide hexadecimal format (32 characters)")
+	}
+	if len(key) < 16 {
+		log.Panic("WithSession: want 128-bit AES key containing 16 bytes, but got ", len(key))
+	}
+
 	return func(p *parameters) {
-		p.secretKey = secretKey[:]
+		p.secretKey = key
 		// ugly trick to store parameters for the "incorruptible" token
 		var ip net.IP
 		if setIP {
@@ -344,7 +366,7 @@ func (g *Garcon) Run(h http.Handler, port int) error {
 	return err
 }
 
-func (g *Garcon) NewTknSession(urls []*url.URL, secretKey [16]byte, expiry time.Duration, setIP bool) *session.Session {
+func (g *Garcon) NewSessionToken(urls []*url.URL, secretKey []byte, expiry time.Duration, setIP bool) *session.Session {
 	return session.New(urls, g.ResErr, secretKey, expiry, setIP)
 }
 

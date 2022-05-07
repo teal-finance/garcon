@@ -29,9 +29,8 @@ const (
 
 	// the HMAC-SHA256 key to decode JWT (to be removed from source code)
 	hmacSHA256 = "9d2e0a02121179a3c3de1b035ae1355b1548781c8ce8538a1dc0853a12dfb13d"
+	aes128bits = "00112233445566778899aabbccddeeff"
 )
-
-var aes128bits = [16]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6}
 
 func main() {
 	auth := flag.Bool("auth", false, "Enable OPA authorization specified in file "+authCfg)
@@ -53,7 +52,7 @@ func main() {
 
 	tokenConfiguration := garcon.WithSession(aes128bits, time.Minute, true)
 	if *jwt {
-		tokenConfiguration = garcon.WithJWT([]byte(hmacSHA256), "FreePlan", 10, "PremiumPlan", 100)
+		tokenConfiguration = garcon.WithJWT(hmacSHA256, "FreePlan", 10, "PremiumPlan", 100)
 	}
 
 	g, err := garcon.New(

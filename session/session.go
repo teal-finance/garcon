@@ -50,7 +50,7 @@ const (
 	// nsPerYear      = secondsPerYear * 1_000_000_000.
 )
 
-func New(urls []*url.URL, resErr reserr.ResErr, secretKey [16]byte, expiry time.Duration, setIP bool) *Session {
+func New(urls []*url.URL, resErr reserr.ResErr, secretKey []byte, expiry time.Duration, setIP bool) *Session {
 	if len(urls) == 0 {
 		log.Panic("No urls => Cannot set Cookie domain")
 	}
