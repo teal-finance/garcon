@@ -24,6 +24,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -167,8 +168,11 @@ func extractDevURLs(urls []*url.URL) (devURLs []*url.URL) {
 }
 
 func extractDevOrigins(urls []*url.URL) (devOrigins []string) {
-	if len(urls) > 0 && urls[0].Scheme == "http" && urls[0].Host == "localhost" {
-		return []string{"*"} // Accept absence of cookie for http://localhost
+	if len(urls) > 0 && urls[0].Scheme == "http" {
+		host, _, _ := net.SplitHostPort(urls[0].Host)
+		if host == "localhost" {
+			return []string{"*"} // Accept absence of cookie for http://localhost
+		}
 	}
 
 	devURLS := extractDevURLs(urls)
