@@ -46,7 +46,7 @@ func EncodeAlphabet(bin []byte, alphabet *Alphabet) string {
 	for _, b := range bin {
 		i = size - 1
 		for carry = uint32(b); i > high || carry != 0; i-- {
-			carry = carry + 256*uint32(out[i])
+			carry += 256 * uint32(out[i])
 			out[i] = byte(carry % uint32(base))
 			carry /= uint32(base)
 		}
