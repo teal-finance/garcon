@@ -19,29 +19,26 @@
 package session
 
 import (
-	"errors"
-	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 
 	"github.com/teal-finance/garcon/aead"
 	"github.com/teal-finance/garcon/reserr"
-	"github.com/teal-finance/garcon/security"
 	"github.com/teal-finance/garcon/session/dtoken"
 )
 
 type Session struct {
-	resErr     reserr.ResErr
-	expiry     time.Duration
-	setIP      bool
-	dtoken     dtoken.DToken
-	cookie     http.Cookie
-	devOrigins []string
-	cipher     aead.Cipher
-	magic      byte
+	resErr      reserr.ResErr
+	expiry      time.Duration
+	setIP       bool          // if true => put the remote IP in the token
+	dtoken      dtoken.DToken // the "tiny" token
+	cookie      http.Cookie
+	isLocalhost bool
+	cipher      aead.Cipher
+	magic       byte
 }
 
 const (
@@ -49,13 +46,8 @@ const (
 	secretTokenScheme = "i:" // See RFC 8959, "i" means "incorruptible" format
 	prefixScheme      = authScheme + secretTokenScheme
 
-	secondsPerYear = 31556952 // average including leap years
-	nsPerYear      = secondsPerYear * 1_000_000_000
-)
-
-var (
-	ErrUnauthorized = errors.New("token not authorized")
-	ErrNoTokenFound = errors.New("no token found")
+	// secondsPerYear = 31556952 // average including leap years
+	// nsPerYear      = secondsPerYear * 1_000_000_000.
 )
 
 func New(urls []*url.URL, resErr reserr.ResErr, secretKey [16]byte, expiry time.Duration, setIP bool) *Session {
@@ -75,11 +67,11 @@ func New(urls []*url.URL, resErr reserr.ResErr, secretKey [16]byte, expiry time.
 		expiry: expiry,
 		setIP:  setIP,
 		// the "tiny" token is the default token
-		dtoken:     dtoken.DToken{Expiry: 0, IP: nil, Values: nil},
-		cookie:     emptyCookie("session", secure, dns, path),
-		devOrigins: extractDevOrigins(urls),
-		cipher:     cipher,
-		magic:      secretKey[0],
+		dtoken:      dtoken.DToken{Expiry: 0, IP: nil, Values: nil},
+		cookie:      emptyCookie("session", secure, dns, path),
+		isLocalhost: isLocalhost(urls),
+		cipher:      cipher,
+		magic:       secretKey[0],
 	}
 
 	// serialize the "tiny" token (with encryption and Base92 encoding)
@@ -109,7 +101,7 @@ func (s Session) NewCookieFromToken(base92 string, expiry time.Time) http.Cookie
 	cookie.Value = secretTokenScheme + base92
 
 	if expiry.IsZero() {
-		cookie.Expires = time.Now().Add(nsPerYear)
+		cookie.Expires = time.Time{} // time.Now().Add(nsPerYear)
 	} else {
 		cookie.Expires = expiry
 	}
@@ -122,7 +114,7 @@ func (s Session) SetCookie(w http.ResponseWriter, r *http.Request) dtoken.DToken
 	cookie := s.cookie // copy the default cookie
 
 	if s.expiry <= 0 {
-		cookie.Expires = time.Now().Add(nsPerYear) // does not expires
+		cookie.Expires = time.Time{} // time.Now().Add(nsPerYear)
 	} else {
 		cookie.Expires = time.Now().Add(s.expiry)
 		dt.SetExpiry(s.expiry)
@@ -146,175 +138,6 @@ func (s Session) SetCookie(w http.ResponseWriter, r *http.Request) dtoken.DToken
 
 	http.SetCookie(w, &cookie)
 	return dt
-}
-
-// Set puts a "session" cookie when the request has no valid "incorruptible" token.
-// The token is searched the "session" cookie and in the first "Authorization" header.
-// The "session" cookie (that is added in the response) contains the "tiny" token.
-// Finally, Set stores the decoded token in the request context.
-func (s *Session) Set(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		dt, err := s.DecodeToken(r)
-		if err != nil {
-			// no valid token found => set a new token
-			dt = s.SetCookie(w, r)
-		}
-		next.ServeHTTP(w, dt.PutInCtx(r))
-	})
-}
-
-// Chk accepts requests only if it has a valid cookie.
-// Chk does not verify the "Authorization" header.
-// See the Vet() function to also verify the "Authorization" header.
-// Chk also stores the decoded token in the request context.
-// In dev. testing, Chk accepts any request but does not store invalid tokens.
-func (s *Session) Chk(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		dt, err := s.DecodeCookieToken(r)
-		if err == nil { // OK: put the token in the request context
-			r = dt.PutInCtx(r)
-		} else if !s.IsDevOrigin(r) {
-			s.resErr.Write(w, r, http.StatusUnauthorized, err.Error())
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
-}
-
-// Vet accepts requests having a valid token either in
-// the "session" cookie or in the first "Authorization" header.
-// Vet also stores the decoded token in the request context.
-// In dev. testing, Vet accepts any request but does not store invalid tokens.
-func (s *Session) Vet(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		dt, err := s.DecodeToken(r)
-		if err == nil { // OK: put the token in the request context
-			r = dt.PutInCtx(r)
-		} else if !s.IsDevOrigin(r) {
-			s.resErr.Write(w, r, http.StatusUnauthorized, err.Error())
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
-}
-
-func (s *Session) DecodeToken(r *http.Request) (dtoken.DToken, error) {
-	var dt dtoken.DToken
-	var err [2]error
-	var i int
-
-	for i = 0; i < 2; i++ {
-		var base92 string
-		if i == 0 {
-			base92, err[0] = s.CookieToken(r)
-		} else {
-			base92, err[1] = s.BearerToken(r)
-		}
-		if err[i] != nil {
-			continue
-		}
-		if s.equalDefaultToken(base92) {
-			return s.dtoken, nil
-		}
-		if dt, err[i] = s.Decode(base92); err[i] != nil {
-			continue
-		}
-		if err[i] = dt.Valid(r); err[i] != nil {
-			continue
-		}
-	}
-
-	if i == 2 {
-		err[0] = fmt.Errorf("no valid 'incorruptible' token "+
-			"in either in the %q cookie or in the first "+
-			"'Authorization' HTTP header because: %w and %v",
-			s.cookie.Name, err[0], err[1].Error())
-		return dt, err[0]
-	}
-
-	return dt, nil
-}
-
-func (s *Session) DecodeCookieToken(r *http.Request) (dt dtoken.DToken, err error) {
-	base92, err := s.CookieToken(r)
-	if err != nil {
-		return dt, err
-	}
-	if s.equalDefaultToken(base92) {
-		return s.dtoken, nil
-	}
-	if dt, err = s.Decode(base92); err != nil {
-		return dt, err
-	}
-	return dt, dt.Valid(r)
-}
-
-func (s *Session) DecodeBearerToken(r *http.Request) (dt dtoken.DToken, err error) {
-	base92, err := s.BearerToken(r)
-	if err != nil {
-		return dt, err
-	}
-	if s.equalDefaultToken(base92) {
-		return s.dtoken, nil
-	}
-	if dt, err = s.Decode(base92); err != nil {
-		return dt, err
-	}
-	return dt, dt.Valid(r)
-}
-
-func (s *Session) CookieToken(r *http.Request) (base92 string, err error) {
-	cookie, err := r.Cookie(s.cookie.Name)
-	if err != nil {
-		return "", err
-	}
-
-	if !cookie.HttpOnly {
-		return "", errors.New("no HttpOnly cookie")
-	}
-	if cookie.SameSite != s.cookie.SameSite {
-		return "", fmt.Errorf("want cookie SameSite=%v but got %v", s.cookie.SameSite, cookie.SameSite)
-	}
-	if cookie.Secure != s.cookie.Secure {
-		return "", fmt.Errorf("want cookie Secure=%v but got %v", s.cookie.Secure, cookie.Secure)
-	}
-
-	return trimTokenScheme(cookie.Value)
-}
-
-func (s *Session) BearerToken(r *http.Request) (base92 string, err error) {
-	auth := r.Header.Get("Authorization")
-	if auth == "" {
-		return "", errors.New("no 'Authorization: " + secretTokenScheme + "xxxxxxxx' in the request header")
-	}
-
-	return trimBearerScheme(auth)
-}
-
-func (s *Session) IsDevOrigin(r *http.Request) bool {
-	if len(s.devOrigins) == 0 {
-		return false
-	}
-
-	if len(s.devOrigins) > 0 {
-		origin := r.Header.Get("Origin")
-		sanitized := security.Sanitize(origin)
-
-		for _, prefix := range s.devOrigins {
-			if prefix == "*" {
-				log.Print("No token but addr=http://localhost => Accept any origin=", sanitized)
-				return true
-			}
-			if strings.HasPrefix(origin, prefix) {
-				log.Printf("No token but origin=%v is a valid dev origin", sanitized)
-				return true
-			}
-		}
-
-		log.Print("No token and origin=", sanitized, " has not prefixes ", s.devOrigins)
-	}
-
-	return false
 }
 
 // Supported URL shemes.
@@ -342,6 +165,19 @@ func extractMainDomain(url *url.URL) (secure bool, dns, path string) {
 	return secure, url.Hostname(), url.Path
 }
 
+func isLocalhost(urls []*url.URL) bool {
+	if len(urls) > 0 && urls[0].Scheme == "http" {
+		host, _, _ := net.SplitHostPort(urls[0].Host)
+		if host == "localhost" {
+			log.Print("Session dev mode accept absence of cookie ", urls[0])
+			return true
+		}
+	}
+
+	log.Print("Session prod mode because no http://localhost in first of ", urls)
+	return false
+}
+
 func emptyCookie(name string, secure bool, dns, path string) http.Cookie {
 	if path != "" && path[len(path)-1] == '/' {
 		path = path[:len(path)-1] // remove trailing slash
@@ -354,81 +190,11 @@ func emptyCookie(name string, secure bool, dns, path string) http.Cookie {
 		Domain:     dns,
 		Expires:    time.Time{},
 		RawExpires: "",
-		MaxAge:     secondsPerYear,
+		MaxAge:     0, // secondsPerYear,
 		Secure:     secure,
 		HttpOnly:   true,
 		SameSite:   http.SameSiteStrictMode,
 		Raw:        "",
 		Unparsed:   nil,
 	}
-}
-
-func extractDevOrigins(urls []*url.URL) (devOrigins []string) {
-	if len(urls) > 0 && urls[0].Scheme == "http" && urls[0].Host == "localhost" {
-		return []string{"*"} // Accept absence of cookie for http://localhost
-	}
-
-	devURLS := extractDevURLs(urls)
-
-	if len(devURLS) == 0 {
-		return nil
-	}
-
-	devOrigins = make([]string, 0, len(urls))
-
-	for _, u := range urls {
-		o := u.Scheme + "://" + u.Host
-		devOrigins = append(devOrigins, o)
-	}
-
-	log.Print("Session not required for dev. origins: ", devOrigins)
-	return devOrigins
-}
-
-func extractDevURLs(urls []*url.URL) (devURLs []*url.URL) {
-	if len(urls) == 1 {
-		log.Print("Token required for single domain: ", urls)
-		return nil
-	}
-
-	for i, u := range urls {
-		if u == nil {
-			log.Panic("Unexpected nil in URL slide: ", urls)
-		}
-
-		if u.Scheme == HTTP {
-			return urls[i:]
-		}
-	}
-
-	return nil
-}
-
-// equalDefaultToken compares with the default token
-// by skiping the token scheme.
-func (s *Session) equalDefaultToken(base92 string) bool {
-	const n = len(secretTokenScheme)
-	return (base92 == s.cookie.Value[n:])
-}
-
-func trimTokenScheme(uri string) (base92 string, err error) {
-	const n = len(secretTokenScheme)
-	if len(uri) < n+base92MinSize {
-		return "", fmt.Errorf("token URI too short (%d bytes) want %d", len(uri), n+base92MinSize)
-	}
-	if uri[:n] != secretTokenScheme {
-		return "", fmt.Errorf("want token URI '"+secretTokenScheme+"xxxxxxxx' got %q", uri)
-	}
-	return uri[n:], nil
-}
-
-func trimBearerScheme(auth string) (base92 string, err error) {
-	const n = len(prefixScheme)
-	if len(auth) < n+base92MinSize {
-		return "", fmt.Errorf("bearer too short (%d bytes) want %d", len(auth), n+base92MinSize)
-	}
-	if auth[:n] != prefixScheme {
-		return "", fmt.Errorf("want '"+prefixScheme+"xxxxxxxx' got %s", auth)
-	}
-	return auth[n:], nil
 }

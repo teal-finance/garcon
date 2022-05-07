@@ -17,6 +17,8 @@ package session
 import (
 	"errors"
 	"fmt"
+	"log"
+	"time"
 
 	"github.com/teal-finance/garcon/base92"
 	"github.com/teal-finance/garcon/session/dtoken"
@@ -25,26 +27,32 @@ import (
 )
 
 const (
-	base92MinSize     = 20
-	ciphertextMinSize = 16
+	base92MinSize     = 26
+	ciphertextMinSize = 22
+
+	doPrint = true
 )
 
 func (s *Session) Encode(dt dtoken.DToken) (string, error) {
+	printDT("Encode", dt)
+
 	plaintext, err := incorruptible.Marshal(dt, s.magic)
 	if err != nil {
 		return "", err
 	}
+	printBin("Encode plaintext", plaintext)
 
-	ciphertext, err := s.cipher.Encrypt(plaintext)
-	if err != nil {
-		return "", err
-	}
+	ciphertext := s.cipher.Encrypt(plaintext)
+	printBin("Encode ciphertext", ciphertext)
 
 	str := base92.Encode(ciphertext)
+	printStr("Encode base92", str)
 	return str, nil
 }
 
 func (s *Session) Decode(str string) (dt dtoken.DToken, err error) {
+	printStr("Decode base92", str)
+
 	if len(str) < base92MinSize {
 		return dt, fmt.Errorf("Base92 string too short: %d < min=%d", len(str), base92MinSize)
 	}
@@ -53,6 +61,7 @@ func (s *Session) Decode(str string) (dt dtoken.DToken, err error) {
 	if err != nil {
 		return dt, err
 	}
+	printBin("Decode ciphertext", ciphertext)
 
 	if len(ciphertext) < ciphertextMinSize {
 		return dt, fmt.Errorf("ciphertext too short: %d < min=%d", len(ciphertext), ciphertextMinSize)
@@ -62,11 +71,41 @@ func (s *Session) Decode(str string) (dt dtoken.DToken, err error) {
 	if err != nil {
 		return dt, err
 	}
+	printBin("Decode plaintext", plaintext)
 
 	magic := bits.MagicCode(plaintext)
 	if magic != s.magic {
 		return dt, errors.New("bad magic code")
 	}
 
-	return incorruptible.Unmarshal(plaintext)
+	dt, err = incorruptible.Unmarshal(plaintext)
+	printDT("Decode", dt)
+	return dt, err
+}
+
+func printStr(name, s string) {
+	if doPrint {
+		n := len(s)
+		if n > 30 {
+			n = 30
+		}
+		log.Printf("Session%s len=%d %q", name, len(s), s[:n])
+	}
+}
+
+func printBin(name string, b []byte) {
+	if doPrint {
+		n := len(b)
+		if n > 30 {
+			n = 30
+		}
+		log.Printf("Session%s len=%d cap=%d %x", name, len(b), cap(b), b[:n])
+	}
+}
+
+func printDT(name string, dt dtoken.DToken) {
+	if doPrint {
+		log.Printf("Session%s dt %v %v n=%d", name,
+			time.Unix(dt.Expiry, 0), dt.IP, len(dt.Values))
+	}
 }
