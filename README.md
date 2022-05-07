@@ -83,7 +83,7 @@ func main() {
         garcon.WithDev(),
     )
 
-    h := handler(g.ResErr, g.JWTChecker)
+    h := handler(g.ResErr, g.Checker)
 
     g.Run(h, 8080)
 }
