@@ -102,7 +102,9 @@ func New(opts ...Option) (*Garcon, error) {
 	var p parameters
 
 	for _, opt := range opts {
-		opt(&p)
+		if opt != nil {
+			opt(&p)
+		}
 	}
 
 	pprof.StartServer(p.pprofPort)
