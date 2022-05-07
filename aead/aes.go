@@ -46,7 +46,6 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"io"
-	"log"
 )
 
 type Cipher struct {
@@ -77,21 +76,13 @@ func New(secretKey [16]byte) (c Cipher, err error) {
 // Encrypt encrypts data using 256-bit AES-GCM.  This both hides the content of
 // the data and provides a check that it hasn't been altered. Output takes the
 // form nonce|ciphertext|tag where '|' indicates concatenation.
-func (c *Cipher) Encrypt(plaintext []byte) ([]byte, error) {
-	ciphertext := c.gcm.Seal(nil, c.nonce, plaintext, nil)
-
-	log.Printf("Encrypt: %d %x\n", len(ciphertext), ciphertext)
-
-	return ciphertext, nil
+func (c *Cipher) Encrypt(plaintext []byte) (ciphertext []byte) {
+	return c.gcm.Seal(nil, c.nonce, plaintext, nil)
 }
 
 // Decrypt decrypts data using 256-bit AES-GCM.  This both hides the content of
 // the data and provides a check that it hasn't been altered. Expects input
 // form nonce|ciphertext|tag where '|' indicates concatenation.
 func (c *Cipher) Decrypt(ciphertext []byte) (plaintext []byte, err error) {
-	plaintext, err = c.gcm.Open(nil, c.nonce, ciphertext, nil)
-
-	log.Printf("Decrypt: %d %x\n", len(plaintext), plaintext)
-
-	return plaintext, err
+	return c.gcm.Open(nil, c.nonce, ciphertext, nil)
 }
