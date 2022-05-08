@@ -216,8 +216,8 @@ func WithJWT(secretKeyHex string, planPerm ...interface{}) Option {
 	if err != nil {
 		log.Panic("WithJWT: cannot decode the HMAC-SHA256 key, please provide hexadecimal format (64 characters)")
 	}
-	if len(key) < 32 {
-		log.Panic("WithJWT: want HMAC-SHA256 key containing 32 bytes (or more), but got ", len(key))
+	if len(key) != 32 {
+		log.Panic("WithJWT: want HMAC-SHA256 key containing 32 bytes, but got ", len(key))
 	}
 
 	return func(p *parameters) {

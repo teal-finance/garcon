@@ -13,7 +13,6 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/teal-finance/garcon"
@@ -50,13 +49,13 @@ func main() {
 		addr = "http://localhost:" + strconv.Itoa(mainPort) + "/myapp"
 	}
 
-	tokenConfiguration := garcon.WithSession(aes128bits, time.Minute, true)
+	tokenOption := garcon.WithSession(aes128bits, 0 /*FIXME time.Minute*/, true)
 	if *jwt {
-		tokenConfiguration = garcon.WithJWT(hmacSHA256, "FreePlan", 10, "PremiumPlan", 100)
+		tokenOption = garcon.WithJWT(hmacSHA256, "FreePlan", 10, "PremiumPlan", 100)
 	}
 
 	g, err := garcon.New(
-		tokenConfiguration,
+		tokenOption,
 		garcon.WithURLs(addr),
 		garcon.WithDocURL("/doc"),
 		garcon.WithServerHeader("MyApp-1.2.0"),
@@ -66,6 +65,7 @@ func main() {
 		garcon.WithPProf(pprofPort),
 		garcon.WithProm(expPort, "https://example.com/path/myapp/"),
 		garcon.WithDev(!*prod),
+		nil, // just to test "none" option
 	)
 	if err != nil {
 		log.Fatal(err)
