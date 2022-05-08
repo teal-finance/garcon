@@ -193,8 +193,8 @@ func extractDevOrigins(urls []*url.URL) (devOrigins []string) {
 }
 
 func createCookie(plan string, secure bool, dns, path string, secretKey []byte) http.Cookie {
-	if len(secretKey) < 32 {
-		log.Panic("Want HMAC-SHA256 key containing 32 bytes (or more), but got ", len(secretKey))
+	if len(secretKey) != 32 {
+		log.Panic("Want HMAC-SHA256 key containing 32 bytes, but got ", len(secretKey))
 	}
 
 	jwt, err := tokens.GenRefreshToken("1y", "1y", plan, "", secretKey)
