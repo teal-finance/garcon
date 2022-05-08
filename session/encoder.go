@@ -20,7 +20,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/teal-finance/garcon/base92"
+	basexx "github.com/teal-finance/BaseXX/base91"
 	"github.com/teal-finance/garcon/session/dtoken"
 	"github.com/teal-finance/garcon/session/incorruptible"
 	"github.com/teal-finance/garcon/session/incorruptible/bits"
@@ -34,7 +34,7 @@ const (
 )
 
 func (s *Session) Encode(dt dtoken.DToken) (string, error) {
-	printDT("Encode", dt)
+	printDT("Encode", dt, errors.New(""))
 
 	plaintext, err := incorruptible.Marshal(dt, s.magic)
 	if err != nil {
@@ -45,19 +45,20 @@ func (s *Session) Encode(dt dtoken.DToken) (string, error) {
 	ciphertext := s.cipher.Encrypt(plaintext)
 	printBin("Encode ciphertext", ciphertext)
 
-	str := base92.Encode(ciphertext)
-	printStr("Encode base92", str)
+	str := basexx.Encode(ciphertext)
+	printStr("Encode BaseXX", str)
 	return str, nil
 }
 
-func (s *Session) Decode(str string) (dt dtoken.DToken, err error) {
-	printStr("Decode base92", str)
+func (s *Session) Decode(str string) (dtoken.DToken, error) {
+	printStr("Decode BaseXX", str)
 
+	var dt dtoken.DToken
 	if len(str) < base92MinSize {
-		return dt, fmt.Errorf("Base92 string too short: %d < min=%d", len(str), base92MinSize)
+		return dt, fmt.Errorf("BaseXX string too short: %d < min=%d", len(str), base92MinSize)
 	}
 
-	ciphertext, err := base92.Decode(str)
+	ciphertext, err := basexx.Decode(str)
 	if err != nil {
 		return dt, err
 	}
@@ -79,7 +80,7 @@ func (s *Session) Decode(str string) (dt dtoken.DToken, err error) {
 	}
 
 	dt, err = incorruptible.Unmarshal(plaintext)
-	printDT("Decode", dt)
+	printDT("Decode", dt, err)
 	return dt, err
 }
 
@@ -103,9 +104,9 @@ func printBin(name string, b []byte) {
 	}
 }
 
-func printDT(name string, dt dtoken.DToken) {
+func printDT(name string, dt dtoken.DToken, err error) {
 	if doPrint {
-		log.Printf("Session%s dt %v %v n=%d", name,
-			time.Unix(dt.Expiry, 0), dt.IP, len(dt.Values))
+		log.Printf("Session%s dt %v %v n=%d err=%s", name,
+			time.Unix(dt.Expiry, 0), dt.IP, len(dt.Values), err)
 	}
 }

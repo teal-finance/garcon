@@ -11,6 +11,7 @@ require (
 	github.com/pkg/profile v1.6.0
 	github.com/prometheus/client_golang v1.12.1
 	github.com/rs/cors v1.8.2
+	github.com/teal-finance/BaseXX v0.0.0-20220508035811-67fac8aaecb1
 	github.com/teal-finance/quid v0.0.0-20220504094056-4f2ecce730cb
 	golang.org/x/time v0.0.0-20220411224347-583f2d630306
 )

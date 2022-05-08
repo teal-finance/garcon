@@ -885,6 +885,8 @@ github.com/syndtr/gocapability v0.0.0-20170704070218-db04d3cc01c8/go.mod h1:hkRG
 github.com/syndtr/gocapability v0.0.0-20180916011248-d98352740cb2/go.mod h1:hkRG7XYTFWNJGYcbNJQlaLq0fg1yr4J4t/NcTQtrfww=
 github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635/go.mod h1:hkRG7XYTFWNJGYcbNJQlaLq0fg1yr4J4t/NcTQtrfww=
 github.com/tchap/go-patricia v2.2.6+incompatible/go.mod h1:bmLyhP68RS6kStMGxByiQ23RP/odRBOTVjwp2cDyi6I=
+github.com/teal-finance/BaseXX v0.0.0-20220508035811-67fac8aaecb1 h1:W/OR6bbEqms+OMohvfFn1HI9sU8pTJYploDmz9lAY9s=
+github.com/teal-finance/BaseXX v0.0.0-20220508035811-67fac8aaecb1/go.mod h1:AzZ5TLgH+AAOdwo+Z83ZinBTOpI127DI0fXj6wzULeA=
 github.com/teal-finance/emo v0.0.0-20220422152121-4c5a065f1100 h1:CAkErpAFARMjF6tmHSQpiwRuMHM37wZkDFGYyPePLNA=
 github.com/teal-finance/emo v0.0.0-20220422152121-4c5a065f1100/go.mod h1:1PNyO4kPCk3rmmQr5bDpsuvLIrIZ3YDvYqecRdU4Nzo=
 github.com/teal-finance/quid v0.0.0-20220504094056-4f2ecce730cb h1:GohVMeckXl74nkpaABda3i+1l+oSnNXOSgS9dn6G7FE=
