@@ -114,6 +114,7 @@ func (s *Session) DecodeToken(r *http.Request) (dtoken.DToken, error) {
 		if err[i] = dt.Valid(r); err[i] != nil {
 			continue
 		}
+		break
 	}
 
 	if i == 2 {
