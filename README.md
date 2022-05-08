@@ -7,7 +7,7 @@ This library is used by
 [Rainbow](https://github.com/teal-finance/rainbow)
 and other internal projects at Teal.Finance.
 
-Please propose a PR to add here your project that also uses Garcon.
+Please propose a [Pull Request](https://github.com/teal-finance/garcon/pulls) to add here your project that also uses Garcon.
 
 ## Features
 
@@ -470,3 +470,4 @@ Except some source code that is released to the public domain or is not owned by
 
 * <https://github.com/kambahr/go-webstandard>
 * <https://github.com/go-aah/aah>
+* <https://github.com/xyproto/algernon>
