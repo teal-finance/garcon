@@ -20,7 +20,7 @@ import (
 	"log"
 	"time"
 
-	basexx "github.com/teal-finance/BaseXX/base91"
+	basexx "github.com/teal-finance/BaseXX/base92"
 	"github.com/teal-finance/garcon/session/dtoken"
 	"github.com/teal-finance/garcon/session/incorruptible"
 	"github.com/teal-finance/garcon/session/incorruptible/bits"
