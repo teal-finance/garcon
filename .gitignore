@@ -1,12 +1,10 @@
 .DS_Store
-.vscode
+.ignore/
 *.log
 *.xcf
-/.golangci.yml
 /.vscode
 /cpu.pprof
 /dev
-/doc/ignore
 /go.work
 /go.work.sum
 /high-level
