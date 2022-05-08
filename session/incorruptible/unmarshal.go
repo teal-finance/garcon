@@ -16,6 +16,7 @@ package incorruptible
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/klauspost/compress/s2"
 
@@ -23,7 +24,11 @@ import (
 	"github.com/teal-finance/garcon/session/incorruptible/bits"
 )
 
+const doPrint = true
+
 func Unmarshal(b []byte) (dt dtoken.DToken, err error) {
+	printDebug("Unmarshal", b)
+
 	if len(b) < bits.HeaderSize+bits.ExpirySize {
 		return dt, fmt.Errorf("not enough bytes (%d) for header+expiry", len(b))
 	}
@@ -31,11 +36,14 @@ func Unmarshal(b []byte) (dt dtoken.DToken, err error) {
 	m := bits.GetMetadata(b)
 	b = b[bits.HeaderSize:] // drop header
 
+	printDebug("Unmarshal Metadata", b)
+
 	if enablePadding {
 		b, err = dropPadding(b)
 		if err != nil {
 			return dt, err
 		}
+		printDebug("Unmarshal Padding", b)
 	}
 
 	if m.IsCompressed() {
@@ -43,6 +51,7 @@ func Unmarshal(b []byte) (dt dtoken.DToken, err error) {
 		if err != nil {
 			return dt, fmt.Errorf("s2.Decode %w", err)
 		}
+		printDebug("Unmarshal Uncompress", b)
 	}
 
 	if len(b) < m.PayloadMinSize() {
@@ -52,10 +61,14 @@ func Unmarshal(b []byte) (dt dtoken.DToken, err error) {
 	b, dt.Expiry = bits.DecodeExpiry(b)
 	b, dt.IP = m.DecodeIP(b)
 
+	printDebug("Unmarshal Expiry IP", b)
+
 	dt.Values, err = parseValues(b, m.NValues())
 	if err != nil {
 		return dt, err
 	}
+
+	printDebug("Unmarshal Values", b)
 
 	return dt, nil
 }
@@ -96,4 +109,10 @@ func dropPadding(b []byte) ([]byte, error) {
 
 	b = b[:len(b)-paddingSize] // drop padding
 	return b, nil
+}
+
+func printDebug(name string, b []byte) {
+	if doPrint {
+		log.Printf("Session%s len=%d", name, len(b))
+	}
 }

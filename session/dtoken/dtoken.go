@@ -58,7 +58,8 @@ func (dt *DToken) SetRemoteIP(r *http.Request) error {
 
 func (dt DToken) Valid(r *http.Request) error {
 	if !dt.ValidExpiry() {
-		return fmt.Errorf("expired or malformed or date in the far future: %v", dt.Expiry)
+		return fmt.Errorf("expired or malformed or date in the far future: %ds %v",
+			dt.Expiry, time.Unix(dt.Expiry, 0))
 	}
 
 	return dt.ValidIP(r)

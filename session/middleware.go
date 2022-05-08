@@ -161,15 +161,15 @@ func (s *Session) CookieToken(r *http.Request) (base92 string, err error) {
 		return "", err
 	}
 
-	if !cookie.HttpOnly {
-		return "", errors.New("no HttpOnly cookie")
-	}
-	if cookie.SameSite != s.cookie.SameSite {
-		return "", fmt.Errorf("want cookie SameSite=%v but got %v", s.cookie.SameSite, cookie.SameSite)
-	}
-	if cookie.Secure != s.cookie.Secure {
-		return "", fmt.Errorf("want cookie Secure=%v but got %v", s.cookie.Secure, cookie.Secure)
-	}
+	// if !cookie.HttpOnly {
+	// 	return "", errors.New("no HttpOnly cookie")
+	// }
+	// if cookie.SameSite != s.cookie.SameSite {
+	// 	return "", fmt.Errorf("want cookie SameSite=%v but got %v", s.cookie.SameSite, cookie.SameSite)
+	// }
+	// if cookie.Secure != s.cookie.Secure {
+	// 	return "", fmt.Errorf("want cookie Secure=%v but got %v", s.cookie.Secure, cookie.Secure)
+	// }
 
 	return trimTokenScheme(cookie.Value)
 }
