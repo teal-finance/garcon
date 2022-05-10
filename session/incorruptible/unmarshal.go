@@ -24,7 +24,7 @@ import (
 	"github.com/teal-finance/garcon/session/incorruptible/bits"
 )
 
-const doPrint = true
+const doPrint = false
 
 func Unmarshal(b []byte) (dt dtoken.DToken, err error) {
 	printDebug("Unmarshal", b)

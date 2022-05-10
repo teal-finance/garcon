@@ -30,7 +30,7 @@ const (
 	base92MinSize     = 26
 	ciphertextMinSize = 22
 
-	doPrint = true
+	doPrint = false
 )
 
 func (s *Session) Encode(dt dtoken.DToken) (string, error) {
