@@ -13,6 +13,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/teal-finance/garcon"
@@ -49,7 +50,7 @@ func main() {
 		addr = "http://localhost:" + strconv.Itoa(mainPort) + "/myapp"
 	}
 
-	tokenOption := garcon.WithSession(aes128bits, 0 /*FIXME time.Minute*/, true)
+	tokenOption := garcon.WithSession(aes128bits, time.Minute, true)
 	if *jwt {
 		tokenOption = garcon.WithJWT(hmacSHA256, "FreePlan", 10, "PremiumPlan", 100)
 	}

@@ -75,10 +75,10 @@ func putInternalExpiry(b []byte, e uint32) {
 	// Expiry is store just after the header
 	b[HeaderSize+0] = byte(e)
 	b[HeaderSize+1] = byte(e >> 8)
-	if ExpirySize > 3 {
+	if ExpirySize >= 3 {
 		b[HeaderSize+2] = byte(e >> 16)
 	}
-	if ExpirySize > 4 {
+	if ExpirySize >= 4 {
 		b[HeaderSize+3] = byte(e >> 24)
 	}
 }
@@ -86,10 +86,10 @@ func putInternalExpiry(b []byte, e uint32) {
 func internalExpiry(b []byte) uint32 {
 	e := uint32(b[0])
 	e |= uint32(b[1]) << 8
-	if ExpirySize > 3 {
+	if ExpirySize >= 3 {
 		e |= uint32(b[2]) << 16
 	}
-	if ExpirySize > 4 {
+	if ExpirySize >= 4 {
 		e |= uint32(b[3]) << 24
 	}
 	return e
