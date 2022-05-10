@@ -55,7 +55,9 @@ type Cipher struct {
 }
 
 // prefer 16 bytes (AES-128, faster) over 32 (AES-256, irrelevant extra security).
-func New(secretKey []byte) (c Cipher, err error) {
+func New(secretKey []byte) (Cipher, error) {
+	var c Cipher
+
 	if len(secretKey) != 16 {
 		log.Panic("Want 128-bit AES key containing 16 bytes, but got ", len(secretKey))
 	}

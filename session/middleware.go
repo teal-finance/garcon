@@ -39,7 +39,7 @@ func (s *Session) Set(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		dt, err := s.DecodeToken(r)
 		if err != nil {
-			printInfo("Set new token", err)
+			printDebug("Set new token", err)
 			// no valid token found => set a new token
 			dt = s.SetCookie(w, r)
 		}
@@ -53,15 +53,16 @@ func (s *Session) Set(next http.Handler) http.Handler {
 // Chk also stores the decoded token in the request context.
 // In dev. testing, Chk accepts any request but does not store invalid tokens.
 func (s *Session) Chk(next http.Handler) http.Handler {
-	log.Printf("Middleware SessionChk cookie localhost=%v", s.isLocalhost)
+	log.Printf("Middleware SessionChk cookie DevMode=%v", s.isDev)
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		dt, err := s.DecodeCookieToken(r)
-		if err == nil { // OK: put the token in the request context
+		switch {
+		case err == nil: // OK: put the token in the request context
 			r = dt.PutInCtx(r)
-		} else if s.isLocalhost {
-			printInfo("Chk no cookie", err)
-		} else {
+		case s.isDev:
+			printDebug("Chk DevMode no cookie", err)
+		default:
 			s.resErr.Write(w, r, http.StatusUnauthorized, err.Error())
 			return
 		}
@@ -74,15 +75,16 @@ func (s *Session) Chk(next http.Handler) http.Handler {
 // Vet also stores the decoded token in the request context.
 // In dev. testing, Vet accepts any request but does not store invalid tokens.
 func (s *Session) Vet(next http.Handler) http.Handler {
-	log.Printf("Middleware SessionVet cookie/bearer localhost=%v", s.isLocalhost)
+	log.Printf("Middleware SessionVet cookie/bearer DevMode=%v", s.isDev)
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		dt, err := s.DecodeToken(r)
-		if err == nil { // OK: put the token in the request context
-			r = dt.PutInCtx(r)
-		} else if s.isLocalhost {
-			printInfo("Vet no token", err)
-		} else {
+		switch {
+		case err == nil:
+			r = dt.PutInCtx(r) // put the token in the request context
+		case s.isDev:
+			printDebug("Vet DevMode no token", err)
+		default:
 			s.resErr.Write(w, r, http.StatusUnauthorized, err.Error())
 			return
 		}
@@ -213,7 +215,7 @@ func trimBearerScheme(auth string) (base92 string, err error) {
 	return auth[n:], nil
 }
 
-func printInfo(str string, err error) {
+func printDebug(str string, err error) {
 	if doPrint {
 		log.Printf("Session%s: %v", str, err)
 	}

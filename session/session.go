@@ -31,14 +31,14 @@ import (
 )
 
 type Session struct {
-	resErr      reserr.ResErr
-	expiry      time.Duration
-	setIP       bool          // if true => put the remote IP in the token
-	dtoken      dtoken.DToken // the "tiny" token
-	cookie      http.Cookie
-	isLocalhost bool
-	cipher      aead.Cipher
-	magic       byte
+	resErr reserr.ResErr
+	expiry time.Duration
+	setIP  bool          // if true => put the remote IP in the token
+	dtoken dtoken.DToken // the "tiny" token
+	cookie http.Cookie
+	isDev  bool
+	cipher aead.Cipher
+	magic  byte
 }
 
 const (
@@ -67,11 +67,11 @@ func New(urls []*url.URL, resErr reserr.ResErr, secretKey []byte, expiry time.Du
 		expiry: expiry,
 		setIP:  setIP,
 		// the "tiny" token is the default token
-		dtoken:      dtoken.DToken{Expiry: 0, IP: nil, Values: nil},
-		cookie:      emptyCookie("session", secure, dns, path),
-		isLocalhost: isLocalhost(urls),
-		cipher:      cipher,
-		magic:       secretKey[0],
+		dtoken: dtoken.DToken{Expiry: 0, IP: nil, Values: nil},
+		cookie: emptyCookie("session", secure, dns, path),
+		isDev:  isLocalhost(urls),
+		cipher: cipher,
+		magic:  secretKey[0],
 	}
 
 	// serialize the "tiny" token (with encryption and Base92 encoding)
@@ -169,12 +169,12 @@ func isLocalhost(urls []*url.URL) bool {
 	if len(urls) > 0 && urls[0].Scheme == "http" {
 		host, _, _ := net.SplitHostPort(urls[0].Host)
 		if host == "localhost" {
-			log.Print("Session dev mode accept absence of cookie ", urls[0])
+			log.Print("Session DevMode accept missing/invalid token ", urls[0])
 			return true
 		}
 	}
 
-	log.Print("Session prod mode because no http://localhost in first of ", urls)
+	log.Print("Session ProdMode (require valid token) because no http://localhost in first of ", urls)
 	return false
 }
 

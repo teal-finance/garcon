@@ -354,7 +354,7 @@ func (ck *Checker) jwtFromBearer(r *http.Request) (jwt string, err error) {
 	}
 
 	if auth == "" {
-		return "", errors.New("Provide your JWT within the 'Authorization Bearer' HTTP header")
+		return "", errors.New("provide your JWT within the 'Authorization Bearer' HTTP header")
 	}
 
 	return "", ErrInvalidCookie
@@ -420,7 +420,7 @@ func (ck *Checker) partsFromJWT(jwt string) (claimsJSON []byte, err error) {
 
 	claimsJSON, err = ck.b64encoding.DecodeString(parts[1])
 	if err != nil {
-		return nil, errors.New("The token claims (second part of the JWT) is not base64-valid")
+		return nil, errors.New("the token claims (second part of the JWT) is not base64-valid")
 	}
 
 	return claimsJSON, nil
