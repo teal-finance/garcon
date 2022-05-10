@@ -45,7 +45,7 @@ func (s *Session) Encode(dt dtoken.DToken) (string, error) {
 	ciphertext := s.cipher.Encrypt(plaintext)
 	printBin("Encode ciphertext", ciphertext)
 
-	str := basexx.Encode(ciphertext)
+	str := basexx.StdEncoding.EncodeToString(ciphertext)
 	printStr("Encode BaseXX", str)
 	return str, nil
 }
@@ -58,7 +58,7 @@ func (s *Session) Decode(str string) (dtoken.DToken, error) {
 		return dt, fmt.Errorf("BaseXX string too short: %d < min=%d", len(str), base92MinSize)
 	}
 
-	ciphertext, err := basexx.Decode(str)
+	ciphertext, err := basexx.StdEncoding.DecodeString(str)
 	if err != nil {
 		return dt, err
 	}
