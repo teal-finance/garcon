@@ -12,10 +12,6 @@
 // or online at <https://www.gnu.org/licenses/lgpl-3.0.html>
 // #endregion </editor-fold>
 
-// Package session provides a safer, shorter, faster session cookie.
-// Safer because of random salt in the tokens and understandable/auditable source code.
-// Shorter because of Base92 (no Base64), compression and index instead of key names.
-// Faster because of AES (no RSA) and custom bar-metal serializer.
 package session
 
 import (
