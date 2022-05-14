@@ -20,7 +20,6 @@ import (
 	"log"
 	"time"
 
-	basexx "github.com/teal-finance/BaseXX/base92"
 	"github.com/teal-finance/garcon/session/dtoken"
 	"github.com/teal-finance/garcon/session/incorruptible"
 	"github.com/teal-finance/garcon/session/incorruptible/bits"
@@ -29,6 +28,12 @@ import (
 const (
 	base92MinSize     = 26
 	ciphertextMinSize = 22
+
+	// no space, double-quote ", semi-colon ; and back-slash \
+	noSpaceDoubleQuoteSemicolon = "" +
+		"ABCDEFGHIJKLMNOPQRSTUVWXYZ" +
+		"abcdefghijklmnopqrstuvwxyz" +
+		"0123456789!#$%&()*+,-./:<=>?@[]^_`{|}~'"
 
 	doPrint = false
 )
@@ -45,7 +50,7 @@ func (s *Session) Encode(dt dtoken.DToken) (string, error) {
 	ciphertext := s.cipher.Encrypt(plaintext)
 	printBin("Encode ciphertext", ciphertext)
 
-	str := basexx.StdEncoding.EncodeToString(ciphertext)
+	str := s.baseXX.EncodeToString(ciphertext)
 	printStr("Encode BaseXX", str)
 	return str, nil
 }
@@ -58,7 +63,7 @@ func (s *Session) Decode(str string) (dtoken.DToken, error) {
 		return dt, fmt.Errorf("BaseXX string too short: %d < min=%d", len(str), base92MinSize)
 	}
 
-	ciphertext, err := basexx.StdEncoding.DecodeString(str)
+	ciphertext, err := s.baseXX.DecodeString(str)
 	if err != nil {
 		return dt, err
 	}

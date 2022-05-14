@@ -17,7 +17,7 @@
 // :dart: Purpose
 //
 // Safer because of random salt in the tokens and understandable/auditable source code.
-// Shorter because of Base92 (no Base64), compression and index instead of key names.
+// Shorter because of Base91 (no Base64), compression and index instead of key names.
 // Faster because of AES (no RSA) and custom bar-metal serializer.
 //
 // :closed_lock_with_key: Encryption
@@ -51,9 +51,9 @@
 // Then, the 128 bits AES-GCM encryption.
 // This adds 16 bytes of header, including the authentication.
 //
-// Finally, the Base92 encoding, adding some more bytes.
+// Finally, the Base91 encoding, adding some more bytes.
 //
-// In the end, an "incorruptible" of 3 bytes (the minimum) becomes a Base92 of 21 or 22 bytes.
+// In the end, an "incorruptible" of 3 bytes (the minimum) becomes a Base91 of 21 or 22 bytes.
 //
 // :no_entry_sign: Limitations
 //
@@ -71,6 +71,8 @@ import (
 	"net/url"
 	"time"
 
+	// basexx "github.com/teal-finance/BaseXX/base92"
+	basexx "github.com/mtraver/base91"
 	"github.com/teal-finance/garcon/aead"
 	"github.com/teal-finance/garcon/reserr"
 	"github.com/teal-finance/garcon/session/dtoken"
@@ -85,6 +87,7 @@ type Session struct {
 	isDev  bool
 	cipher aead.Cipher
 	magic  byte
+	baseXX *basexx.Encoding
 }
 
 const (
@@ -118,33 +121,34 @@ func New(urls []*url.URL, resErr reserr.ResErr, secretKey []byte, expiry time.Du
 		isDev:  isLocalhost(urls),
 		cipher: cipher,
 		magic:  secretKey[0],
+		baseXX: basexx.NewEncoding(noSpaceDoubleQuoteSemicolon),
 	}
 
-	// serialize the "tiny" token (with encryption and Base92 encoding)
-	base92, err := s.Encode(s.dtoken)
+	// serialize the "tiny" token (with encryption and Base91 encoding)
+	base91, err := s.Encode(s.dtoken)
 	if err != nil {
 		log.Panic("Encode(emptyToken) ", err)
 	}
 
 	// insert this generated token in the cookie
-	s.cookie.Value = secretTokenScheme + base92
+	s.cookie.Value = secretTokenScheme + base91
 
 	return &s
 }
 
 func (s Session) NewCookie(dt dtoken.DToken) (http.Cookie, error) {
-	base92, err := s.Encode(dt)
+	base91, err := s.Encode(dt)
 	if err != nil {
 		return s.cookie, err
 	}
 
-	cookie := s.NewCookieFromToken(base92, dt.ExpiryTime())
+	cookie := s.NewCookieFromToken(base91, dt.ExpiryTime())
 	return cookie, nil
 }
 
-func (s Session) NewCookieFromToken(base92 string, expiry time.Time) http.Cookie {
+func (s Session) NewCookieFromToken(base91 string, expiry time.Time) http.Cookie {
 	cookie := s.cookie
-	cookie.Value = secretTokenScheme + base92
+	cookie.Value = secretTokenScheme + base91
 
 	if expiry.IsZero() {
 		cookie.Expires = time.Time{} // time.Now().Add(nsPerYear)
@@ -175,11 +179,11 @@ func (s Session) SetCookie(w http.ResponseWriter, r *http.Request) dtoken.DToken
 
 	requireNewEncoding := (s.expiry > 0) || s.setIP
 	if requireNewEncoding {
-		base92, err := s.Encode(dt)
+		base91, err := s.Encode(dt)
 		if err != nil {
 			log.Panic(err)
 		}
-		cookie.Value = secretTokenScheme + base92
+		cookie.Value = secretTokenScheme + base91
 	}
 
 	http.SetCookie(w, &cookie)

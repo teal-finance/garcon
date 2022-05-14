@@ -94,19 +94,19 @@ func (s *Session) DecodeToken(r *http.Request) (dtoken.DToken, error) {
 	var i int
 
 	for i = 0; i < 2; i++ {
-		var base92 string
+		var base91 string
 		if i == 0 {
-			base92, err[0] = s.CookieToken(r)
+			base91, err[0] = s.CookieToken(r)
 		} else {
-			base92, err[1] = s.BearerToken(r)
+			base91, err[1] = s.BearerToken(r)
 		}
 		if err[i] != nil {
 			continue
 		}
-		if s.equalDefaultToken(base92) {
+		if s.equalDefaultToken(base91) {
 			return s.dtoken, nil
 		}
-		if dt, err[i] = s.Decode(base92); err[i] != nil {
+		if dt, err[i] = s.Decode(base91); err[i] != nil {
 			continue
 		}
 		if err[i] = dt.Valid(r); err[i] != nil {
@@ -127,34 +127,34 @@ func (s *Session) DecodeToken(r *http.Request) (dtoken.DToken, error) {
 }
 
 func (s *Session) DecodeCookieToken(r *http.Request) (dt dtoken.DToken, err error) {
-	base92, err := s.CookieToken(r)
+	base91, err := s.CookieToken(r)
 	if err != nil {
 		return dt, err
 	}
-	if s.equalDefaultToken(base92) {
+	if s.equalDefaultToken(base91) {
 		return s.dtoken, nil
 	}
-	if dt, err = s.Decode(base92); err != nil {
+	if dt, err = s.Decode(base91); err != nil {
 		return dt, err
 	}
 	return dt, dt.Valid(r)
 }
 
 func (s *Session) DecodeBearerToken(r *http.Request) (dt dtoken.DToken, err error) {
-	base92, err := s.BearerToken(r)
+	base91, err := s.BearerToken(r)
 	if err != nil {
 		return dt, err
 	}
-	if s.equalDefaultToken(base92) {
+	if s.equalDefaultToken(base91) {
 		return s.dtoken, nil
 	}
-	if dt, err = s.Decode(base92); err != nil {
+	if dt, err = s.Decode(base91); err != nil {
 		return dt, err
 	}
 	return dt, dt.Valid(r)
 }
 
-func (s *Session) CookieToken(r *http.Request) (base92 string, err error) {
+func (s *Session) CookieToken(r *http.Request) (base91 string, err error) {
 	cookie, err := r.Cookie(s.cookie.Name)
 	if err != nil {
 		return "", err
@@ -173,7 +173,7 @@ func (s *Session) CookieToken(r *http.Request) (base92 string, err error) {
 	return trimTokenScheme(cookie.Value)
 }
 
-func (s *Session) BearerToken(r *http.Request) (base92 string, err error) {
+func (s *Session) BearerToken(r *http.Request) (base91 string, err error) {
 	auth := r.Header.Get("Authorization")
 	if auth == "" {
 		return "", errors.New("no 'Authorization: " + secretTokenScheme + "xxxxxxxx' in the request header")
@@ -184,12 +184,12 @@ func (s *Session) BearerToken(r *http.Request) (base92 string, err error) {
 
 // equalDefaultToken compares with the default token
 // by skiping the token scheme.
-func (s *Session) equalDefaultToken(base92 string) bool {
+func (s *Session) equalDefaultToken(base91 string) bool {
 	const n = len(secretTokenScheme)
-	return (base92 == s.cookie.Value[n:])
+	return (base91 == s.cookie.Value[n:])
 }
 
-func trimTokenScheme(uri string) (base92 string, err error) {
+func trimTokenScheme(uri string) (base91 string, err error) {
 	const n = len(secretTokenScheme)
 	if len(uri) < n+base92MinSize {
 		return "", fmt.Errorf("token URI too short (%d bytes) want %d", len(uri), n+base92MinSize)
@@ -200,7 +200,7 @@ func trimTokenScheme(uri string) (base92 string, err error) {
 	return uri[n:], nil
 }
 
-func trimBearerScheme(auth string) (base92 string, err error) {
+func trimBearerScheme(auth string) (base91 string, err error) {
 	const n = len(prefixScheme)
 	if len(auth) < n+base92MinSize {
 		return "", fmt.Errorf("bearer too short (%d bytes) want %d", len(auth), n+base92MinSize)
