@@ -250,7 +250,7 @@ func (ck *Checker) Chk(next http.Handler) http.Handler {
 			if ck.isDevOrigin(r) {
 				perm = ck.perms[0]
 			} else {
-				ck.resErr.Write(w, r, http.StatusUnauthorized, err.Error())
+				ck.resErr.Write(w, r, http.StatusUnauthorized, err...)
 				return
 			}
 		}
@@ -268,7 +268,7 @@ func (ck *Checker) Vet(next http.Handler) http.Handler {
 			if ck.isDevOrigin(r) {
 				perm = ck.perms[0]
 			} else {
-				ck.resErr.Write(w, r, http.StatusUnauthorized, err.Error())
+				ck.resErr.Write(w, r, http.StatusUnauthorized, err...)
 				return
 			}
 		}
@@ -309,29 +309,32 @@ func (ck *Checker) getPerm(r *http.Request) (perm Perm, ok bool) {
 		}
 	}
 
-	perm, err = ck.permFromJWT(cookie.Value)
-	return perm, (err == nil)
+	perm, a := ck.permFromJWT(cookie.Value)
+	return perm, (a == nil)
 }
 
-func (ck *Checker) permFromBearerOrCookie(r *http.Request) (perm Perm, err error) {
+func (ck *Checker) permFromBearerOrCookie(r *http.Request) (perm Perm, a []any) {
 	jwt, errBearer := ck.jwtFromBearer(r)
 	if errBearer != nil {
-		jwt, err = ck.jwtFromCookie(r)
-		if err != nil {
-			err = fmt.Errorf("cannot find a valid JWT in either "+
-				"the first 'Authorization' HTTP header or "+
-				"in the cookie %q because: %w and %v",
-				ck.cookies[0].Name, errBearer, err.Error())
-			return perm, err
+		var errCookie error
+		jwt, errCookie = ck.jwtFromCookie(r)
+		if errCookie != nil {
+			return perm, []any{
+				fmt.Errorf("cannot find a valid JWT in either "+
+					"the first 'Authorization' HTTP header or "+
+					"the cookie '%s'",
+					ck.cookies[0].Name),
+				"error_bearer", errBearer,
+				"error_cookie", errCookie}
 		}
 	}
 	return ck.permFromJWT(jwt)
 }
 
-func (ck *Checker) permFromCookie(r *http.Request) (perm Perm, err error) {
+func (ck *Checker) permFromCookie(r *http.Request) (perm Perm, a []any) {
 	jwt, err := ck.jwtFromCookie(r)
 	if err != nil {
-		return perm, err
+		return perm, []any{err}
 	}
 	return ck.permFromJWT(jwt)
 }
@@ -360,7 +363,7 @@ func (ck *Checker) jwtFromCookie(r *http.Request) (jwt string, err error) {
 	return c.Value, nil
 }
 
-func (ck *Checker) permFromJWT(jwt string) (perm Perm, err error) {
+func (ck *Checker) permFromJWT(jwt string) (perm Perm, a []any) {
 	for i, c := range ck.cookies {
 		if c.Value == jwt {
 			return ck.perms[i], nil
@@ -369,12 +372,12 @@ func (ck *Checker) permFromJWT(jwt string) (perm Perm, err error) {
 
 	parts, err := ck.partsFromJWT(jwt)
 	if err != nil {
-		return perm, err
+		return perm, []any{err}
 	}
 
 	perm, err = ck.permFromRefreshBytes(parts)
 	if err != nil {
-		return perm, ErrExpiredToken
+		return perm, []any{ErrExpiredToken}
 	}
 
 	return perm, nil

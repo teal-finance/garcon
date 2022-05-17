@@ -7,8 +7,8 @@ package reserr
 
 import (
 	"fmt"
-	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 )
 
@@ -19,9 +19,24 @@ const (
 
 type ResErr string
 
-// New is useless.
+type msg struct {
+	Error string
+	Doc   string
+	Path  string
+	Query string
+}
+
+// New creates a ResErr structure.
 func New(docURL string) ResErr {
 	return ResErr(docURL)
+}
+
+func NotImplemented(w http.ResponseWriter, r *http.Request) {
+	ResErr("").NotImplemented(w, r)
+}
+
+func InvalidPath(w http.ResponseWriter, r *http.Request) {
+	ResErr("").InvalidPath(w, r)
 }
 
 func (resErr ResErr) NotImplemented(w http.ResponseWriter, r *http.Request) {
@@ -32,20 +47,17 @@ func (resErr ResErr) InvalidPath(w http.ResponseWriter, r *http.Request) {
 	resErr.Write(w, r, http.StatusBadRequest, pathInvalid)
 }
 
-type msg struct {
-	Error string
-	Doc   string
-	Path  string
-	Query string
+func Write(w http.ResponseWriter, r *http.Request, statusCode int, a ...any) {
+	ResErr("").Write(w, r, statusCode, a)
 }
 
-func (resErr ResErr) SafeWrite(w http.ResponseWriter, r *http.Request, statusCode int, text string) {
+func (resErr ResErr) SafeWrite(w http.ResponseWriter, r *http.Request, statusCode int, messages ...any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.WriteHeader(statusCode)
 
 	m := msg{
-		Error: text,
+		Error: fmt.Sprint(messages...),
 		Doc:   string(resErr),
 		Path:  "",
 		Query: "",
@@ -59,61 +71,129 @@ func (resErr ResErr) SafeWrite(w http.ResponseWriter, r *http.Request, statusCod
 	}
 
 	b, err := m.MarshalJSON()
-	if err != nil {
-		log.Print("ResErr MarshalJSON ", m, " err: ", err)
-		return
-	}
-
-	_, err = w.Write(b)
-	if err != nil {
-		log.Print("ResErr Write ", m, " err: ", err)
+	if err == nil {
+		_, _ = w.Write(b)
 	}
 }
 
-// Write is a faster and prettier implementation, but maybe unsafe.
-func (resErr ResErr) Write(w http.ResponseWriter, r *http.Request, statusCode int, values ...any) {
+// Write is a fast and pretty JSON marshaler.
+func (resErr ResErr) Write(w http.ResponseWriter, r *http.Request, statusCode int, messages ...any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.WriteHeader(statusCode)
 
-	if len(values) == 0 {
-		return
-	}
-	message, ok := values[0].(string)
-	if !ok {
-		return
-	}
+	b := make([]byte, 0, 1024)
+	b = append(b, '{')
 
-	b := make([]byte, 0, 300)
-	b = append(b, []byte(`{"error":`)...)
-	b = strconv.AppendQuote(b, message)
+	comma := false
+	if len(messages) > 0 {
+		b = appendMessages(b, messages)
+		comma = true
+	}
 
 	if r != nil {
-		b = append(b, []byte(",\n"+`"path":`)...)
-		b = strconv.AppendQuote(b, r.URL.Path)
-		if r.URL.RawQuery != "" {
-			b = append(b, []byte(",\n"+`"query":`)...)
-			b = strconv.AppendQuote(b, r.URL.RawQuery)
+		if comma {
+			b = append(b, ',')
+			b = append(b, '\n')
 		}
+		b = appendURL(b, r.URL)
+		comma = true
 	}
 
 	if string(resErr) != "" {
-		b = append(b, []byte(",\n"+`"doc":"`)...)
-		b = append(b, []byte(string(resErr))...)
+		if comma {
+			b = append(b, ',')
+			b = append(b, '\n')
+		}
+		b = resErr.appendDoc(b)
 	}
 
-	b = append(b, []byte(`"}`+"\n")...)
+	b = append(b, '}')
 	_, _ = w.Write(b)
 }
 
-func Write(w http.ResponseWriter, r *http.Request, statusCode int, a ...any) {
-	ResErr("").Write(w, r, statusCode, fmt.Sprint(a...))
+func appendMessages(b []byte, messages []any) []byte {
+	b = append(b, []byte(`"error":`)...)
+	b = appendKey(b, messages[0])
+
+	for i := 1; i < len(messages); i += 2 {
+		b = append(b, ',')
+		b = append(b, '\n')
+		b = appendKey(b, messages[i])
+		b = append(b, ':')
+		if i+1 < len(messages) {
+			b = appendValue(b, messages[i+1])
+		} else {
+			b = append(b, '0')
+		}
+	}
+
+	return b
 }
 
-func NotImplemented(w http.ResponseWriter, r *http.Request) {
-	ResErr("").NotImplemented(w, r)
+func appendURL(b []byte, u *url.URL) []byte {
+	b = append(b, []byte(`"path":`)...)
+	b = strconv.AppendQuote(b, u.Path)
+	if u.RawQuery != "" {
+		b = append(b, []byte(",\n"+`"query":`)...)
+		b = strconv.AppendQuote(b, u.RawQuery)
+	}
+	return b
 }
 
-func InvalidPath(w http.ResponseWriter, r *http.Request) {
-	ResErr("").InvalidPath(w, r)
+func (resErr ResErr) appendDoc(b []byte) []byte {
+	b = append(b, []byte(`"doc":"`)...)
+	b = append(b, []byte(string(resErr))...)
+	b = append(b, '"')
+	return b
+}
+
+func appendKey(b []byte, a any) []byte {
+	switch v := a.(type) {
+	case string:
+		return strconv.AppendQuote(b, v)
+	case []byte:
+		return strconv.AppendQuote(b, string(v))
+	default:
+		return strconv.AppendQuote(b, fmt.Sprint(v))
+	}
+}
+
+func appendValue(b []byte, a any) []byte {
+	switch v := a.(type) {
+	case bool:
+		return strconv.AppendBool(b, v)
+	case float32:
+		return strconv.AppendFloat(b, float64(v), 'f', 9, 32)
+	case float64:
+		return strconv.AppendFloat(b, v, 'f', 9, 64)
+	case int:
+		return strconv.AppendInt(b, int64(v), 10)
+	case int8:
+		return strconv.AppendInt(b, int64(v), 10)
+	case int16:
+		return strconv.AppendInt(b, int64(v), 10)
+	case int32:
+		return strconv.AppendInt(b, int64(v), 10)
+	case int64:
+		return strconv.AppendInt(b, int64(v), 10)
+	case uint:
+		return strconv.AppendUint(b, uint64(v), 10)
+	case uint8:
+		return strconv.AppendUint(b, uint64(v), 10)
+	case uint16:
+		return strconv.AppendUint(b, uint64(v), 10)
+	case uint32:
+		return strconv.AppendUint(b, uint64(v), 10)
+	case uint64:
+		return strconv.AppendUint(b, uint64(v), 10)
+	case uintptr:
+		return strconv.AppendUint(b, uint64(v), 10)
+	case string:
+		return strconv.AppendQuote(b, v)
+	case []byte:
+		return strconv.AppendQuote(b, string(v))
+	default: // complex64 complex128
+		return strconv.AppendQuote(b, fmt.Sprint(v))
+	}
 }
