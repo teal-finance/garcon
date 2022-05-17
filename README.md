@@ -436,35 +436,41 @@ go build ./examples/keystore
 
 Then open <http://localhost:8080> to learn more about the implemented features.
 
-## Copyright and license
+## ✨ Contributions Welcome
 
-Copyright (c) 2020-2022 Teal.Finance contributors
+This project needs your help to become better.
+Please propose your enhancements,
+or even a further refactoring.
 
-Teal.Finance/Garcon is licensed under LGPL-3.0-or-later.
-SPDX-License-Identifier: LGPL-3.0-or-later
+We welcome contributions in many forms,
+and there's always plenty to do!
 
-Teal.Finance/Garcon is free software: you can redistribute it
-and/or modify it under the terms of the GNU Lesser General Public License
-either version 3 or any later version, at the licensee’s option.
+## 🗣️ Feedback
+
+If you have some suggestions, or need a new feature,
+please contact us, using the
+[issues](https://github.com/teal-finance/garcon/issues),
+or at Teal.Finance[à]pm.me or
+[@TealFinance](https://twitter.com/TealFinance).
+
+Feel free to propose a
+[Pull Request](https://github.com/teal-finance/garcon/pulls),
+your contributions are welcome. :wink:
+
+## 🗽 Copyright and license
+
+Copyright (c) 2022 Teal.Finance contributors
+
+Teal.Finance/Garcon is free software, and can be redistributed
+and/or modified under the terms of the MIT License.
+SPDX-License-Identifier: MIT
 
 Teal.Finance/Garcon is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty
 of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
-For more details, see the LICENSE file (alongside the source files)
-or online at <https://www.gnu.org/licenses/lgpl-3.0.html>.
-
-[LGPL-3.0-or-later](https://spdx.org/licenses/LGPL-3.0-or-later.html):
-GNU Lesser General Public License v3.0 or later
-([tl;drLegal](https://tldrlegal.com/license/gnu-lesser-general-public-license-v3-(lgpl-3)),
-[ChooseALicense.com](https://choosealicense.com/licenses/lgpl-3.0/)).
-See the [LICENSE](LICENSE) file.
-
-Except some source code that is released to the public domain or is not owned by the Teal.Finance contributors:
-
-* the [example](examples) files under [CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/) ;
-* the file [chain.go](chain/chain.go) (fork) under the [MIT License](https://mit-license.org/) ;
-* the file [cookie.go](jwtperm/cookie.go) (fork) under the [MIT License](https://mit-license.org/) too.
+See the [LICENSE](LICENSE) file (alongside the source files)
+or <https://opensource.org/licenses/MIT>.
 
 ## See also
 
