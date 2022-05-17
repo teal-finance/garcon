@@ -18,8 +18,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-chi/chi/v5"
-
 	"github.com/teal-finance/garcon/chain"
 	"github.com/teal-finance/garcon/cors"
 	"github.com/teal-finance/garcon/jwtperm"
@@ -30,8 +28,10 @@ import (
 	"github.com/teal-finance/garcon/reqlog"
 	"github.com/teal-finance/garcon/reserr"
 	"github.com/teal-finance/garcon/security"
-	"github.com/teal-finance/garcon/session"
-	"github.com/teal-finance/garcon/session/dtoken"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/teal-finance/incorruptible"
+	"github.com/teal-finance/incorruptible/dtoken"
 )
 
 // DevOrigins provides the development origins:
@@ -359,8 +359,8 @@ func (g *Garcon) Run(h http.Handler, port int) error {
 	return err
 }
 
-func (g *Garcon) NewSessionToken(urls []*url.URL, secretKey []byte, expiry time.Duration, setIP bool) *session.Session {
-	return session.New(urls, g.ResErr, secretKey, expiry, setIP)
+func (g *Garcon) NewSessionToken(urls []*url.URL, secretKey []byte, expiry time.Duration, setIP bool) *incorruptible.Session {
+	return incorruptible.New(urls, secretKey, expiry, setIP, g.ResErr.Write)
 }
 
 func (g *Garcon) NewJWTChecker(urls []*url.URL, secretKey []byte, planPerm ...interface{}) *jwtperm.Checker {
