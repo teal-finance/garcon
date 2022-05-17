@@ -217,16 +217,16 @@ func WithJWT(secretKeyHex string, planPerm ...interface{}) Option {
 	}
 }
 
-// WithSession enables the "session" cookies based on the "incorruptible" token format.
-// WithSession requires WithURLs() to set the Cookie name, secure, domain and path.
-// WithSession is not compatible with WithJWT: use only one of them.
-func WithSession(secretKeyHex string, expiry time.Duration, setIP bool) Option {
+// WithIncorruptible enables the "session" cookies based on fast and tiny token.
+// WithIncorruptible requires WithURLs() to set the Cookie name, secure, domain and path.
+// WithIncorruptible is not compatible with WithJWT: use only one of them.
+func WithIncorruptible(secretKeyHex string, expiry time.Duration, setIP bool) Option {
 	key, err := hex.DecodeString(secretKeyHex)
 	if err != nil {
-		log.Panic("WithSession: cannot decode the 128-bit AES key, please provide hexadecimal format (32 characters)")
+		log.Panic("WithIncorruptible: cannot decode the 128-bit AES key, please provide hexadecimal format (32 characters)")
 	}
 	if len(key) < 16 {
-		log.Panic("WithSession: want 128-bit AES key containing 16 bytes, but got ", len(key))
+		log.Panic("WithIncorruptible: want 128-bit AES key containing 16 bytes, but got ", len(key))
 	}
 
 	return func(p *parameters) {
@@ -359,7 +359,7 @@ func (g *Garcon) Run(h http.Handler, port int) error {
 	return err
 }
 
-func (g *Garcon) NewSessionToken(urls []*url.URL, secretKey []byte, expiry time.Duration, setIP bool) *incorruptible.Session {
+func (g *Garcon) NewSessionToken(urls []*url.URL, secretKey []byte, expiry time.Duration, setIP bool) *incorruptible.Incorruptible {
 	return incorruptible.New(urls, secretKey, expiry, setIP, g.ResErr.Write)
 }
 

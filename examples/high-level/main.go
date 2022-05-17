@@ -45,12 +45,12 @@ func main() {
 
 	var addr string
 	if *prod {
-		addr = "https://my-dns.co/myapp/"
+		addr = "https://my-dns.co/myapp"
 	} else {
 		addr = "http://localhost:" + strconv.Itoa(mainPort) + "/myapp"
 	}
 
-	tokenOption := garcon.WithSession(aes128bits, time.Minute, true)
+	tokenOption := garcon.WithIncorruptible(aes128bits, time.Minute, true)
 	if *jwt {
 		tokenOption = garcon.WithJWT(hmacSHA256, "FreePlan", 10, "PremiumPlan", 100)
 	}
