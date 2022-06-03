@@ -6,25 +6,30 @@ require (
 	github.com/go-chi/chi/v5 v5.0.7
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/mailru/easyjson v0.7.7
-	github.com/open-policy-agent/opa v0.40.0
+	github.com/open-policy-agent/opa v0.41.0
 	github.com/pkg/profile v1.6.0
 	github.com/prometheus/client_golang v1.12.2
 	github.com/rs/cors v1.8.2
-	github.com/teal-finance/incorruptible v0.0.0-20220525144608-1c4e49fcda8e
-	github.com/teal-finance/quid v0.0.0-20220525144746-4961906f8053
+	github.com/teal-finance/incorruptible v0.0.0-20220603212104-1bf1de30753c
+	github.com/teal-finance/quid v0.0.0-20220603130436-aa9810a80b67
 	golang.org/x/time v0.0.0-20220411224347-583f2d630306
 )
 
 require (
 	github.com/acmacalister/skittles v0.0.0-20160609003031-7423546701e1 // indirect
+	github.com/agnivade/levenshtein v1.1.1 // indirect
 	github.com/google/flatbuffers v2.0.6+incompatible // indirect
+	github.com/google/go-cmp v0.5.8 // indirect
 	github.com/karrick/tparse/v2 v2.8.2 // indirect
-	github.com/klauspost/compress v1.15.4 // indirect
+	github.com/klauspost/compress v1.15.6 // indirect
 	github.com/kr/pretty v0.3.0 // indirect
 	github.com/mtraver/base91 v1.0.0 // indirect
-	github.com/teal-finance/emo v0.0.0-20220422152121-4c5a065f1100 // indirect
+	github.com/rogpeppe/go-internal v1.8.1 // indirect
+	github.com/teal-finance/emo v0.0.0-20220602102724-3ed209263d5a // indirect
+	github.com/vektah/gqlparser/v2 v2.4.4 // indirect
 	github.com/zhangyunhao116/fastrand v0.3.0 // indirect
-	golang.org/x/xerrors v0.0.0-20220517211312-f3a8303e98df // indirect
+	golang.org/x/net v0.0.0-20220531201128-c960675eff93 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
 require (
