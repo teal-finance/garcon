@@ -1,6 +1,6 @@
 # Teal.Finance/Garcon
 
-![logo](examples/www/myapp/images/garcon.png) | Opinionated boilerplate all-in-one HTTP server with rate-limiter, Cookies, JWT, CORS, OPA, web traffic, Prometheus export, PProf… for API and static website.<br><br><br>[![Go Reference](examples/www/myapp/images/go-ref.svg "Go documentation for Garcon")](https://pkg.go.dev/github.com/teal-finance/garcon)
+![logo](examples/www/myapp/images/garcon.png) | Opinionated boilerplate all-in-one HTTP server with rate-limiter, Cookies, JWT, CORS, OPA, web traffic, Prometheus export, PProf… for API and static website.<br><br><br>[![Go Reference](examples/www/myapp/images/go-ref.svg "Go documentation for Garcon")](https://pkg.go.dev/github.com/teal-finance/garcon) [![Go Report Card](https://goreportcard.com/badge/github.com/teal-finance/garcon)](https://goreportcard.com/report/github.com/teal-finance/garcon)
 -|-
 
 This library is used by
@@ -450,7 +450,7 @@ and there's always plenty to do!
 If you have some suggestions, or need a new feature,
 please contact us, using the
 [issues](https://github.com/teal-finance/garcon/issues),
-or at Teal.Finance[à]pm.me or
+or at Teal.Finance@pm.me or
 [@TealFinance](https://twitter.com/TealFinance).
 
 Feel free to propose a
