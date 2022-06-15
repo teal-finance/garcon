@@ -188,8 +188,8 @@ func createCookie(plan string, secure bool, dns, path string, secretKey []byte) 
 		log.Panic("Want HMAC-SHA256 key containing 32 bytes, but got ", len(secretKey))
 	}
 
-	jwt, err := tokens.GenRefreshToken("1y", "1y", plan, "", secretKey)
-	if err != nil || jwt == "" {
+	JWT, err := tokens.GenRefreshToken("1y", "1y", plan, "", secretKey)
+	if err != nil || JWT == "" {
 		log.Panic("Cannot create JWT: ", err)
 	}
 
@@ -209,11 +209,11 @@ func createCookie(plan string, secure bool, dns, path string, secretKey []byte) 
 		}
 	}
 
-	log.Print("Create cookie plan=", plan, " domain=", dns, " secure=", secure, " ", name, "=", jwt)
+	log.Print("Create cookie plan=", plan, " domain=", dns, " secure=", secure, " ", name, "=", JWT)
 
 	return &http.Cookie{
 		Name:       name,
-		Value:      jwt,
+		Value:      JWT,
 		Path:       path,
 		Domain:     dns,
 		Expires:    time.Time{},
@@ -314,10 +314,10 @@ func (ck *Checker) getPerm(r *http.Request) (Perm, bool) {
 }
 
 func (ck *Checker) permFromBearerOrCookie(r *http.Request) (Perm, []any) {
-	jwt, errBearer := ck.jwtFromBearer(r)
+	JWT, errBearer := ck.jwtFromBearer(r)
 	if errBearer != nil {
 		var errCookie error
-		jwt, errCookie = ck.jwtFromCookie(r)
+		JWT, errCookie = ck.jwtFromCookie(r)
 		if errCookie != nil {
 			return Perm{}, []any{
 				fmt.Errorf("cannot find a valid JWT in either "+
@@ -328,15 +328,15 @@ func (ck *Checker) permFromBearerOrCookie(r *http.Request) (Perm, []any) {
 			}
 		}
 	}
-	return ck.permFromJWT(jwt)
+	return ck.permFromJWT(JWT)
 }
 
 func (ck *Checker) permFromCookie(r *http.Request) (Perm, []any) {
-	jwt, err := ck.jwtFromCookie(r)
+	JWT, err := ck.jwtFromCookie(r)
 	if err != nil {
 		return Perm{}, []any{err}
 	}
-	return ck.permFromJWT(jwt)
+	return ck.permFromJWT(JWT)
 }
 
 func (ck *Checker) jwtFromBearer(r *http.Request) (string, error) {
@@ -363,14 +363,14 @@ func (ck *Checker) jwtFromCookie(r *http.Request) (string, error) {
 	return c.Value, nil
 }
 
-func (ck *Checker) permFromJWT(jwt string) (Perm, []any) {
+func (ck *Checker) permFromJWT(JWT string) (Perm, []any) {
 	for i, c := range ck.cookies {
-		if c.Value == jwt {
+		if c.Value == JWT {
 			return ck.perms[i], nil
 		}
 	}
 
-	parts, err := ck.claimsFromJWT(jwt)
+	parts, err := ck.claimsFromJWT(JWT)
 	if err != nil {
 		return Perm{}, []any{err}
 	}
@@ -393,8 +393,8 @@ func (ck *Checker) permFromRefreshClaims(claims *tokens.RefreshClaims) Perm {
 	return ck.perms[0]
 }
 
-func (ck *Checker) decomposeJWT(jwt string) ([]string, error) {
-	parts := strings.Split(jwt, ".")
+func (ck *Checker) decomposeJWT(JWT string) ([]string, error) {
+	parts := strings.Split(JWT, ".")
 	if len(parts) != 3 {
 		return nil, errors.New("JWT is not composed by three segments (separated by dots)")
 	}
@@ -406,8 +406,8 @@ func (ck *Checker) decomposeJWT(jwt string) ([]string, error) {
 	return parts, nil
 }
 
-func (ck *Checker) claimsFromJWT(jwt string) ([]byte, error) {
-	parts, err := ck.decomposeJWT(jwt)
+func (ck *Checker) claimsFromJWT(JWT string) ([]byte, error) {
+	parts, err := ck.decomposeJWT(JWT)
 	if err != nil {
 		return nil, err
 	}
