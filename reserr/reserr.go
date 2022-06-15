@@ -94,8 +94,7 @@ func (resErr ResErr) Write(w http.ResponseWriter, r *http.Request, statusCode in
 
 	if r != nil {
 		if comma {
-			b = append(b, ',')
-			b = append(b, '\n')
+			b = append(b, ',', '\n')
 		}
 		b = appendURL(b, r.URL)
 		comma = true
@@ -103,8 +102,7 @@ func (resErr ResErr) Write(w http.ResponseWriter, r *http.Request, statusCode in
 
 	if string(resErr) != "" {
 		if comma {
-			b = append(b, ',')
-			b = append(b, '\n')
+			b = append(b, ',', '\n')
 		}
 		b = resErr.appendDoc(b)
 	}
@@ -118,8 +116,7 @@ func appendMessages(b []byte, messages []any) []byte {
 	b = appendKey(b, messages[0])
 
 	for i := 1; i < len(messages); i += 2 {
-		b = append(b, ',')
-		b = append(b, '\n')
+		b = append(b, ',', '\n')
 		b = appendKey(b, messages[i])
 		b = append(b, ':')
 		if i+1 < len(messages) {
@@ -143,7 +140,7 @@ func appendURL(b []byte, u *url.URL) []byte {
 }
 
 func (resErr ResErr) appendDoc(b []byte) []byte {
-	b = append(b, []byte(`"doc":"`)...)
+	b = append(b, '"', 'd', 'o', 'c', '"', ':', '"')
 	b = append(b, []byte(string(resErr))...)
 	b = append(b, '"')
 	return b
