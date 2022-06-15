@@ -61,7 +61,7 @@ type Checker struct {
 	secretKey   []byte
 	perms       []Perm
 	plans       []string
-	cookies     []http.Cookie
+	cookies     []*http.Cookie
 	devOrigins  []string
 }
 
@@ -93,7 +93,7 @@ func New(urls []*url.URL, resErr reserr.ResErr, secretKey []byte, permissions ..
 
 	secure, dns, path := extractMainDomain(urls)
 	perms := make([]Perm, n)
-	cookies := make([]http.Cookie, n)
+	cookies := make([]*http.Cookie, n)
 
 	for i, v := range values {
 		perms[i] = Perm{Value: v}
@@ -183,7 +183,7 @@ func extractDevOrigins(urls []*url.URL) []string {
 	return devOrigins
 }
 
-func createCookie(plan string, secure bool, dns, path string, secretKey []byte) http.Cookie {
+func createCookie(plan string, secure bool, dns, path string, secretKey []byte) *http.Cookie {
 	if len(secretKey) != 32 {
 		log.Panic("Want HMAC-SHA256 key containing 32 bytes, but got ", len(secretKey))
 	}
@@ -211,7 +211,7 @@ func createCookie(plan string, secure bool, dns, path string, secretKey []byte) 
 
 	log.Print("Create cookie plan=", plan, " domain=", dns, " secure=", secure, " ", name, "=", jwt)
 
-	return http.Cookie{
+	return &http.Cookie{
 		Name:       name,
 		Value:      jwt,
 		Path:       path,
@@ -235,7 +235,7 @@ func (ck *Checker) Set(next http.Handler) http.Handler {
 		if !ok {
 			perm = ck.perms[0]
 			ck.cookies[0].Expires = time.Now().Add(oneYearInNS)
-			http.SetCookie(w, &ck.cookies[0])
+			http.SetCookie(w, ck.cookies[0])
 		}
 
 		next.ServeHTTP(w, perm.putInCtx(r))
@@ -322,8 +322,7 @@ func (ck *Checker) permFromBearerOrCookie(r *http.Request) (Perm, []any) {
 			return Perm{}, []any{
 				fmt.Errorf("cannot find a valid JWT in either "+
 					"the first 'Authorization' HTTP header or "+
-					"the cookie '%s'",
-					ck.cookies[0].Name),
+					"the cookie '%s'", ck.cookies[0].Name),
 				"error_bearer", errBearer,
 				"error_cookie", errCookie,
 			}
