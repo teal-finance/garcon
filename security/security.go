@@ -146,12 +146,12 @@ func (h Hash) Obfuscate(s string) (string, error) {
 
 // Obfuscate hashes the input string to prevent logging sensitive information.
 // HighwayHash is a hashing algorithm enabling high speed (especially on AMD64).
-func Obfuscate(s string) (string, error) {
-	hash, err := highwayhash.New([]byte(hashKey32bytes))
+func Obfuscate(str string) (string, error) {
+	h, err := highwayhash.New([]byte(hashKey32bytes))
 	if err != nil {
-		return s, err
+		return str, err
 	}
 
-	checksum := hash.Sum([]byte(s))
+	checksum := h.Sum([]byte(str))
 	return base64.StdEncoding.EncodeToString(checksum), nil
 }
