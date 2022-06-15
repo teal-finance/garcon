@@ -1,3 +1,4 @@
+---
 # Run the last version:
 # go run github.com/golangci/golangci-lint/cmd/golangci-lint@latest run
 # https://golangci-lint.run/usage/configuration/#run-configuration
@@ -5,47 +6,115 @@ run:
   skip-dirs:
     - vendor
     - poc
-  go: '1.18'
+  go: "1.18"
   # timeout for analysis, e.g. 30s, 5m, default is 1m
   deadline: 10m
 
 # List the available linters:
 # go run github.com/golangci/golangci-lint/cmd/golangci-lint@latest linters --no-config
 linters:
-
   enable-all: true
 
   disable:
-
     # DEPRECATED
-    - exhaustivestruct # replaced by exhaustruct (checks if all struct's fields are initialized)
-    - golint           # v1.41 replaced by revive formater
-    - interfacer       # v1.38 archived by the owner (suggests narrower interface types)
-    - maligned         # v1.38 replaced by govet 'fieldalignment' (detect Go structs that would take less memory if their fields were sorted)
-    - scopelint        # v1.39 replaced by exportloopref (checks for unpinned variables in go programs)
-
+    - exhaustivestruct
+    - gofmt
+    - golint
+    - interfacer
+    - maligned
+    - scopelint
+    # Missing go-1.18 support
+    - bodyclose
+    - contextcheck
+    - nilerr
+    - noctx
+    - rowserrcheck
+    - sqlclosecheck
+    - structcheck
+    - tparallel
+    - unparam
+    - wastedassign
     # ANNOYING
-    - execinquery      # execinquery is a linter about query string checker in Query function which reads your Go src files and warning it finds
-    - gci              # Gci controls golang package import order and makes it always deterministic.
-    - gochecknoglobals # check that no global variables exist
-    - goerr113         # Golang linter to check the errors handling expressions
-    - gomnd            # An analyzer to detect magic numbers.
-    - lll              # Reports long lines
-    - nlreturn         # nlreturn checks for a new line before return and branch statements to increase code clarity
-    - nonamedreturns   # Reports all named returns
-    - varnamelen       # checks that the length of a variable's name matches its scope
-    - wrapcheck        # Checks that errors returned from external packages are wrapped
-    - wsl              # Whitespace Linter - Forces you to use empty lines!
+    - gci
+    - gochecknoglobals
+    - nlreturn
+    - varnamelen
+    - wrapcheck
+    - wsl
 
 linters-settings:
+  dupl:
+    threshold: 64
 
-  goimports:
-    local-prefixes: github.com/teal-finance/rainbow
+  funlen:
+    lines: 100
+    statements: 50
+
+  gocyclo:
+    min-complexity: 15
+
+  cyclop:
+    max-complexity: 15
+
+  goconst:
+    min-len: 2
+    min-occurrences: 2
+
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - experimental
+      - opinionated
+      - performance
+      - style
+    disabled-checks:
+      - captLocal
+      - unnamedResult
+    # - dupImport # https://github.com/go-critic/go-critic/issues/845
+    # - ifElseChain
+    # - octalLiteral
+    # - whyNoLint
+    # - wrapperFunc
+    # - yodaStyleExpr
+    # - singleCaseSwitch # Every time this occurred in the code, there was no other way.
 
   # https://github.com/mvdan/gofumpt
   gofumpt:
-    lang-version: '1.18'
+    lang-version: "1.18"
     extra-rules: true
+
+  golint:
+    min-confidence: 0
+
+  gomnd:
+    settings:
+      mnd:
+        # don't include the "operation" and "assign,argument,case,condition"
+        checks: [return]
+
+  govet:
+    check-shadowing: true
+    settings:
+      printf:
+        funcs:
+          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Infof
+          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Warnf
+          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Errorf
+          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Fatalf
+  lll:
+    line-length: 160
+
+  maligned:
+    suggest-new: true
+
+  misspell:
+    locale: US
+
+  nolintlint:
+    allow-leading-space: false # don't require machine-readable nolint directives (i.e. with no leading space)
+    allow-unused: false # report any unused nolint directives
+    require-explanation: false # don't require an explanation for nolint directives
+    require-specific: true # don't require nolint directives to be specific about which linter is being skipped
 
   gosimple:
     go: "1.18"
@@ -72,18 +141,45 @@ linters-settings:
   tagliatelle:
     case:
       rules:
-        json: snake # should also be "goCamel"
+        json: snake # could be "goCamel"
 
   # https://github.com/butuzov/ireturn
   # https://golangci-lint.run/usage/linters/#ireturn
   ireturn:
     allow:
-      - anon    # anonymous interfaces such as: interface{Stop()}
-      - error   # error interface
-      - stdlib  # standard library interfaces
+      - anon # anonymous interfaces such as: interface{Stop()}
+      - error # error interface
+      - stdlib # standard library interfaces
       - github.com/prometheus\/client_golang\/prometheus.Gauge
       - github.com/prometheus\/client_golang\/prometheus.Counter
 
+issues:
+  exclude-rules:
+    # Excluding configuration per-path
+    - path: _test\.go
+      linters:
+        # gomnd
+        - gosec # weak random number generator (math/rand instead of crypto/rand)
+        - scopelint
+        # gocyclo
+        # errcheck
+        # dupl
+        # unparam
+        # staticcheck
+
+    # Excluding configuration per-linter
+    - linters:
+        - gocritic
+      text: "unnecessaryDefer:"
+
+    # Excluding configuration per-text and per-source
+    - text: "exitAfterDefer:"
+      linters:
+        - gocritic
+
 output:
   format: tab
-  sort-results: true  # sorts results by: filepath, line and column
+  print-issued-lines: true # print lines of code with issue, default is true
+  print-linter-name: true # print linter name in the end of issue text, default is true
+  uniq-by-line: true # make issues output unique by line, default is true
+  sort-results: true # sorts results by: filepath, line and column
