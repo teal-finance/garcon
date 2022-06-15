@@ -93,32 +93,32 @@ type parameters struct {
 }
 
 func New(opts ...Option) (*Garcon, error) {
-	var p parameters
+	var params parameters
 
 	for _, opt := range opts {
 		if opt != nil {
-			opt(&p)
+			opt(&params)
 		}
 	}
 
-	pprof.StartServer(p.pprofPort)
+	pprof.StartServer(params.pprofPort)
 
-	if p.urls == nil {
-		p.urls = DevOrigins
-	} else if p.devMode {
-		p.urls = AppendURLs(p.urls, DevOrigins...)
+	if params.urls == nil {
+		params.urls = DevOrigins
+	} else if params.devMode {
+		params.urls = AppendURLs(params.urls, DevOrigins...)
 	}
 
-	if len(p.docURL) > 0 {
+	if len(params.docURL) > 0 {
 		// if docURL is just a path => complet it with the base URL (scheme + host)
-		baseURL := p.urls[0].String()
-		if !strings.HasPrefix(p.docURL, baseURL) &&
-			!strings.Contains(p.docURL, "://") {
-			p.docURL = baseURL + p.docURL
+		baseURL := params.urls[0].String()
+		if !strings.HasPrefix(params.docURL, baseURL) &&
+			!strings.Contains(params.docURL, "://") {
+			params.docURL = baseURL + params.docURL
 		}
 	}
 
-	return p.new()
+	return params.new()
 }
 
 func (s *parameters) new() (*Garcon, error) {
@@ -186,20 +186,20 @@ func (s *parameters) new() (*Garcon, error) {
 type Option func(*parameters)
 
 func WithURLs(urls ...string) Option {
-	return func(p *parameters) {
-		p.urls = ParseURLs(urls)
+	return func(params *parameters) {
+		params.urls = ParseURLs(urls)
 	}
 }
 
 func WithDocURL(pathOrURL string) Option {
-	return func(p *parameters) {
-		p.docURL = pathOrURL
+	return func(params *parameters) {
+		params.docURL = pathOrURL
 	}
 }
 
 func WithServerHeader(nameVersion string) Option {
-	return func(p *parameters) {
-		p.nameVersion = nameVersion
+	return func(params *parameters) {
+		params.nameVersion = nameVersion
 	}
 }
 
@@ -214,9 +214,9 @@ func WithJWT(secretKeyHex string, planPerm ...interface{}) Option {
 		log.Panic("WithJWT: want HMAC-SHA256 key containing 32 bytes, but got ", len(key))
 	}
 
-	return func(p *parameters) {
-		p.secretKey = key
-		p.planPerm = planPerm
+	return func(params *parameters) {
+		params.secretKey = key
+		params.planPerm = planPerm
 	}
 }
 
@@ -232,14 +232,14 @@ func WithIncorruptible(secretKeyHex string, expiry time.Duration, setIP bool) Op
 		log.Panic("WithIncorruptible: want 128-bit AES key containing 16 bytes, but got ", len(key))
 	}
 
-	return func(p *parameters) {
-		p.secretKey = key
+	return func(params *parameters) {
+		params.secretKey = key
 		// ugly trick to store parameters for the "incorruptible" token
 		var ip net.IP
 		if setIP {
 			ip = []byte{}
 		}
-		p.planPerm = []interface{}{dtoken.DToken{
+		params.planPerm = []interface{}{dtoken.DToken{
 			Expiry: expiry.Nanoseconds(),
 			IP:     ip,
 			Values: nil,
@@ -248,8 +248,8 @@ func WithIncorruptible(secretKeyHex string, expiry time.Duration, setIP bool) Op
 }
 
 func WithOPA(opaFilenames ...string) Option {
-	return func(p *parameters) {
-		p.opaFilenames = opaFilenames
+	return func(params *parameters) {
+		params.opaFilenames = opaFilenames
 	}
 }
 
@@ -267,8 +267,8 @@ func WithReqLogs(verbosity ...int) Option {
 		}
 	}
 
-	return func(p *parameters) {
-		p.reqLogs = v
+	return func(params *parameters) {
+		params.reqLogs = v
 	}
 }
 
@@ -289,20 +289,20 @@ func WithLimiter(values ...int) Option {
 		log.Panic("garcon.WithLimiter() must be called with less than three arguments")
 	}
 
-	return func(p *parameters) {
-		p.reqBurst = burst
-		p.reqMinute = perMinute
+	return func(params *parameters) {
+		params.reqBurst = burst
+		params.reqMinute = perMinute
 	}
 }
 
 func WithPProf(port int) Option {
-	return func(p *parameters) {
-		p.pprofPort = port
+	return func(params *parameters) {
+		params.pprofPort = port
 	}
 }
 
 func WithProm(port int, namespace string) Option {
-	return func(p *parameters) {
+	return func(params *parameters) {
 		// If namespace is a path or an URL, keep only the last dirname.
 		// Example: keep "myapp" from "https://example.com/path/myapp/"
 		namespace = strings.Trim(namespace, "/")
@@ -310,8 +310,8 @@ func WithProm(port int, namespace string) Option {
 			namespace = namespace[i+1:]
 		}
 
-		p.expPort = port
-		p.expNamespace = namespace
+		params.expPort = port
+		params.expNamespace = namespace
 	}
 }
 
@@ -325,12 +325,12 @@ func WithDev(enable ...bool) Option {
 		}
 	}
 
-	return func(p *parameters) {
-		p.devMode = devMode
+	return func(params *parameters) {
+		params.devMode = devMode
 	}
 }
 
-// RunServer runs the HTTP server(s) in foreground.
+// Run runs the HTTP server(s) in foreground.
 // Optionally it also starts a metrics server in background (if export port > 0).
 // The metrics server is for use with Prometheus or another compatible monitoring tool.
 func (g *Garcon) Run(h http.Handler, port int) error {
