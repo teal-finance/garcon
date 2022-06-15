@@ -3,6 +3,7 @@
 // an API and website server, under the MIT License.
 // SPDX-License-Identifier: MIT
 
+// Package reserr writes useful JSON message on HTTP error.
 package reserr
 
 import (
@@ -176,7 +177,7 @@ func appendValue(b []byte, a any) []byte {
 	case int32:
 		return strconv.AppendInt(b, int64(v), 10)
 	case int64:
-		return strconv.AppendInt(b, int64(v), 10)
+		return strconv.AppendInt(b, v, 10)
 	case uint:
 		return strconv.AppendUint(b, uint64(v), 10)
 	case uint8:
@@ -186,7 +187,7 @@ func appendValue(b []byte, a any) []byte {
 	case uint32:
 		return strconv.AppendUint(b, uint64(v), 10)
 	case uint64:
-		return strconv.AppendUint(b, uint64(v), 10)
+		return strconv.AppendUint(b, v, 10)
 	case uintptr:
 		return strconv.AppendUint(b, uint64(v), 10)
 	case string:

@@ -3,6 +3,7 @@
 // an API and website server, under the MIT License.
 // SPDX-License-Identifier: MIT
 
+// Package metrics increments HTTP counters and exports them for Prometheus.
 package metrics
 
 import (
@@ -81,7 +82,7 @@ func (s *space) measureDuration(next http.Handler) http.Handler {
 }
 
 // updateHTTPMetrics counts the connections and update web traffic metrics depending on incoming requests and outgoing responses.
-func (s *space) updateHTTPMetrics() (connState func(net.Conn, http.ConnState)) {
+func (s *space) updateHTTPMetrics() func(net.Conn, http.ConnState) {
 	connGauge := s.newGauge("in_flight_connections", "Number of current active connections")
 	iniCounter := s.newCounter("conn_new_total", "Total initiated connections since startup")
 	reqCounter := s.newCounter("conn_req_total", "Total requested connections since startup")

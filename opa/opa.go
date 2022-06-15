@@ -48,19 +48,19 @@ func Load(filenames []string) (*ast.Compiler, error) {
 
 	modules := map[string]string{}
 
-	for _, f := range filenames {
-		log.Printf("OPA: load %q", f)
+	for _, fn := range filenames {
+		log.Printf("OPA: load %q", fn)
 
-		if f == "" {
+		if fn == "" {
 			return nil, ErrEmptyFilename
 		}
 
-		content, err := ioutil.ReadFile(f)
+		content, err := ioutil.ReadFile(fn)
 		if err != nil {
 			return nil, fmt.Errorf("OPA: ReadFile %w", err)
 		}
 
-		modules[path.Base(f)] = string(content)
+		modules[path.Base(fn)] = string(content)
 	}
 
 	return ast.CompileModules(modules)

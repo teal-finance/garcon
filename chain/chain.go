@@ -6,6 +6,8 @@
 //
 // SPDX-License-Identifier: MIT
 
+// Package chain provides a convenient way
+// to chain HTTP middleware functions and the app handler.
 package chain
 
 import (
@@ -49,7 +51,7 @@ func (c Chain) Append(mw ...Middleware) Chain {
 // (assuming every middleware calls the following one).
 //
 // A chain can be safely reused by calling Then() several times.
-//     chain := chain.New(ratelimitHandler, csrfHandler)
+//     chain := chain.New(rateLimitHandler, csrfHandler)
 //     indexPipe = chain.Then(indexHandler)
 //     authPipe  = chain.Then(authHandler)
 //
@@ -59,14 +61,14 @@ func (c Chain) Append(mw ...Middleware) Chain {
 // For proper middleware, this should cause no problems.
 //
 // Then() treats nil as http.DefaultServeMux.
-func (c Chain) Then(h http.Handler) http.Handler {
-	if h == nil {
-		h = http.DefaultServeMux
+func (c Chain) Then(handler http.Handler) http.Handler {
+	if handler == nil {
+		handler = http.DefaultServeMux
 	}
 	for i := range c {
-		h = c[len(c)-1-i](h)
+		handler = c[len(c)-1-i](handler)
 	}
-	return h
+	return handler
 }
 
 // ThenFunc works identically to Then, but takes

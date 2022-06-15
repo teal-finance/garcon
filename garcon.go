@@ -3,6 +3,9 @@
 // an API and website server, under the MIT License.
 // SPDX-License-Identifier: MIT
 
+// Package garcon is a server for API and static website
+// including middlewares to manage rate-limit, Cookies, JWT,
+// CORS, OPA, web traffic, Prometheus export and PProf.
 package garcon
 
 import (

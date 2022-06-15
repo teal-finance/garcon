@@ -29,8 +29,8 @@ import (
 
 const (
 	// authScheme is part of the HTTP "Authorization" header
-	// conveying the "Bearer Token" definitioned by RFC 6750 as
-	// as security token with the property that any party in possession of
+	// conveying the "Bearer Token" defined by RFC 6750 as
+	// a security token with the property that any party in possession of
 	// the token (a "bearer") can use the token in any way that any other
 	// party in possession of it can.  Using a bearer token does not
 	// require a bearer to prove possession of cryptographic key material
@@ -140,7 +140,7 @@ func extractMainDomain(urls []*url.URL) (secure bool, dns, path string) {
 	return secure, u.Hostname(), u.Path
 }
 
-func extractDevURLs(urls []*url.URL) (devURLs []*url.URL) {
+func extractDevURLs(urls []*url.URL) []*url.URL {
 	if len(urls) == 1 {
 		log.Print("JWT required for single domain: ", urls)
 		return nil
@@ -158,7 +158,7 @@ func extractDevURLs(urls []*url.URL) (devURLs []*url.URL) {
 	return nil
 }
 
-func extractDevOrigins(urls []*url.URL) (devOrigins []string) {
+func extractDevOrigins(urls []*url.URL) []string {
 	if len(urls) > 0 && urls[0].Scheme == "http" {
 		host, _, _ := net.SplitHostPort(urls[0].Host)
 		if host == "localhost" {
@@ -172,7 +172,7 @@ func extractDevOrigins(urls []*url.URL) (devOrigins []string) {
 		return nil
 	}
 
-	devOrigins = make([]string, 0, len(urls))
+	devOrigins := make([]string, 0, len(urls))
 
 	for _, u := range urls {
 		o := u.Scheme + "://" + u.Host
@@ -228,7 +228,7 @@ func createCookie(plan string, secure bool, dns, path string, secretKey []byte) 
 }
 
 // Set puts a HttpOnly cookie when no valid cookie is present in the HTTP response header.
-// The permission conveyied by te cookie is also put in the request context.
+// The permission conveyed by te cookie is also put in the request context.
 func (ck *Checker) Set(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		perm, ok := ck.getPerm(r)
@@ -297,10 +297,10 @@ func (ck *Checker) isDevOrigin(r *http.Request) bool {
 	return false
 }
 
-func (ck *Checker) getPerm(r *http.Request) (perm Perm, ok bool) {
+func (ck *Checker) getPerm(r *http.Request) (Perm, bool) {
 	cookie, err := r.Cookie(ck.cookies[0].Name)
 	if err != nil {
-		return perm, false
+		return Perm{}, false
 	}
 
 	for i, c := range ck.cookies {
@@ -313,33 +313,34 @@ func (ck *Checker) getPerm(r *http.Request) (perm Perm, ok bool) {
 	return perm, (a == nil)
 }
 
-func (ck *Checker) permFromBearerOrCookie(r *http.Request) (perm Perm, a []any) {
+func (ck *Checker) permFromBearerOrCookie(r *http.Request) (Perm, []any) {
 	jwt, errBearer := ck.jwtFromBearer(r)
 	if errBearer != nil {
 		var errCookie error
 		jwt, errCookie = ck.jwtFromCookie(r)
 		if errCookie != nil {
-			return perm, []any{
+			return Perm{}, []any{
 				fmt.Errorf("cannot find a valid JWT in either "+
 					"the first 'Authorization' HTTP header or "+
 					"the cookie '%s'",
 					ck.cookies[0].Name),
 				"error_bearer", errBearer,
-				"error_cookie", errCookie}
+				"error_cookie", errCookie,
+			}
 		}
 	}
 	return ck.permFromJWT(jwt)
 }
 
-func (ck *Checker) permFromCookie(r *http.Request) (perm Perm, a []any) {
+func (ck *Checker) permFromCookie(r *http.Request) (Perm, []any) {
 	jwt, err := ck.jwtFromCookie(r)
 	if err != nil {
-		return perm, []any{err}
+		return Perm{}, []any{err}
 	}
 	return ck.permFromJWT(jwt)
 }
 
-func (ck *Checker) jwtFromBearer(r *http.Request) (jwt string, err error) {
+func (ck *Checker) jwtFromBearer(r *http.Request) (string, error) {
 	auth := r.Header.Get("Authorization")
 
 	n := len(authScheme)
@@ -354,7 +355,7 @@ func (ck *Checker) jwtFromBearer(r *http.Request) (jwt string, err error) {
 	return "", ErrInvalidCookie
 }
 
-func (ck *Checker) jwtFromCookie(r *http.Request) (jwt string, err error) {
+func (ck *Checker) jwtFromCookie(r *http.Request) (string, error) {
 	c, err := r.Cookie(ck.cookies[0].Name)
 	if err != nil {
 		return "", errors.New("visit the official " +
@@ -363,19 +364,19 @@ func (ck *Checker) jwtFromCookie(r *http.Request) (jwt string, err error) {
 	return c.Value, nil
 }
 
-func (ck *Checker) permFromJWT(jwt string) (perm Perm, a []any) {
+func (ck *Checker) permFromJWT(jwt string) (Perm, []any) {
 	for i, c := range ck.cookies {
 		if c.Value == jwt {
 			return ck.perms[i], nil
 		}
 	}
 
-	parts, err := ck.partsFromJWT(jwt)
+	parts, err := ck.claimsFromJWT(jwt)
 	if err != nil {
-		return perm, []any{err}
+		return Perm{}, []any{err}
 	}
 
-	perm, err = ck.permFromRefreshBytes(parts)
+	perm, err := ck.permFromRefreshBytes(parts)
 	if err != nil {
 		return perm, []any{ErrExpiredToken}
 	}
@@ -393,26 +394,26 @@ func (ck *Checker) permFromRefreshClaims(claims *tokens.RefreshClaims) Perm {
 	return ck.perms[0]
 }
 
-func (ck *Checker) decomposeJWT(jwt string) (parts []string, err error) {
-	parts = strings.Split(jwt, ".")
+func (ck *Checker) decomposeJWT(jwt string) ([]string, error) {
+	parts := strings.Split(jwt, ".")
 	if len(parts) != 3 {
 		return nil, errors.New("JWT is not composed by three segments (separated by dots)")
 	}
 
-	if err = ck.verifySignature(parts); err != nil {
+	if err := ck.verifySignature(parts); err != nil {
 		return nil, err
 	}
 
 	return parts, nil
 }
 
-func (ck *Checker) partsFromJWT(jwt string) (claimsJSON []byte, err error) {
+func (ck *Checker) claimsFromJWT(jwt string) ([]byte, error) {
 	parts, err := ck.decomposeJWT(jwt)
 	if err != nil {
 		return nil, err
 	}
 
-	claimsJSON, err = ck.b64encoding.DecodeString(parts[1])
+	claimsJSON, err := ck.b64encoding.DecodeString(parts[1])
 	if err != nil {
 		return nil, errors.New("the token claims (second part of the JWT) is not base64-valid")
 	}
@@ -421,7 +422,7 @@ func (ck *Checker) partsFromJWT(jwt string) (claimsJSON []byte, err error) {
 }
 
 // verifySignature of HS256 tokens.
-func (ck *Checker) verifySignature(parts []string) (err error) {
+func (ck *Checker) verifySignature(parts []string) error {
 	signingString := strings.Join(parts[0:2], ".")
 	signedString := ck.sign(signingString)
 
@@ -432,7 +433,7 @@ func (ck *Checker) verifySignature(parts []string) (err error) {
 	return nil
 }
 
-func (ck *Checker) permFromRefreshBytes(claimsJSON []byte) (perm Perm, err error) {
+func (ck *Checker) permFromRefreshBytes(claimsJSON []byte) (Perm, error) {
 	claims := &tokens.RefreshClaims{
 		Namespace: "",
 		UserName:  "",
@@ -448,21 +449,22 @@ func (ck *Checker) permFromRefreshBytes(claimsJSON []byte) (perm Perm, err error
 	}
 
 	if err := json.Unmarshal(claimsJSON, claims); err != nil {
-		return perm, fmt.Errorf("%w while unmarshaling RefreshClaims: "+
+		return Perm{}, fmt.Errorf("%w while unmarshaling RefreshClaims: "+
 			security.Sanitize(string(claimsJSON)), err)
 	}
 
 	if err := claims.Valid(); err != nil {
-		return perm, fmt.Errorf("%w in RefreshClaims: "+
+		return Perm{}, fmt.Errorf("%w in RefreshClaims: "+
 			security.Sanitize(string(claimsJSON)), err)
 	}
 
-	perm = ck.permFromRefreshClaims(claims)
+	perm := ck.permFromRefreshClaims(claims)
 	return perm, nil
 }
 
-// sign allocates the hasher each time to avoid race condition.
-func (ck *Checker) sign(signingString string) (signature string) {
+// sign return the signature of the signingString.
+// It allocates the hasher each time to avoid race condition.
+func (ck *Checker) sign(signingString string) string {
 	hasher := hmac.New(crypto.SHA256.New, ck.secretKey)
 	_, _ = hasher.Write([]byte(signingString))
 	return ck.b64encoding.EncodeToString(hasher.Sum(nil))

@@ -3,6 +3,7 @@
 // an API and website server, under the MIT License.
 // SPDX-License-Identifier: MIT
 
+// Package webserver serves HTML, CSS, JS and image static files.
 package webserver
 
 import (
@@ -228,7 +229,7 @@ func extIndex(urlPath string) int {
 }
 
 // imageContentType determines the Content-Type depending on the file extension.
-func imageContentType(ext string) (contentType string) {
+func imageContentType(ext string) string {
 	// Only the most popular image extensions
 	switch ext {
 	case "png":
