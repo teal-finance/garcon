@@ -16,9 +16,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"path"
 	"strings"
 
@@ -35,9 +35,9 @@ type Policy struct {
 var ErrEmptyFilename = errors.New("OPA: missing filename")
 
 // New creates a new Policy by loading rego files.
-func New(filenames []string, reserr reserr.ResErr) (Policy, error) {
+func New(filenames []string, resErr reserr.ResErr) (Policy, error) {
 	compiler, err := Load(filenames)
-	return Policy{compiler, reserr}, err
+	return Policy{compiler, resErr}, err
 }
 
 // Load check the Rego filenames and loads them to build the OPA compiler.
@@ -55,7 +55,7 @@ func Load(filenames []string) (*ast.Compiler, error) {
 			return nil, ErrEmptyFilename
 		}
 
-		content, err := ioutil.ReadFile(fn)
+		content, err := os.ReadFile(fn)
 		if err != nil {
 			return nil, fmt.Errorf("OPA: ReadFile %w", err)
 		}
