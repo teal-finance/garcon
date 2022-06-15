@@ -10,6 +10,8 @@ import (
 )
 
 func Test_extIndex(t *testing.T) {
+	t.Parallel()
+
 	cases := []struct {
 		name string
 		path string
@@ -29,7 +31,11 @@ func Test_extIndex(t *testing.T) {
 	}
 
 	for _, c := range cases {
+		c := c // parallel test
+
 		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+
 			extPos := extIndex(c.path)
 			max := len(c.path)
 			if extPos < 0 || extPos > max {

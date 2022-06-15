@@ -3,11 +3,17 @@
 // an API and website server, under the MIT License.
 // SPDX-License-Identifier: MIT
 
-package security
+package security_test
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/teal-finance/garcon/security"
+)
 
 func TestPrintableRune(t *testing.T) {
+	t.Parallel()
+
 	cases := []struct {
 		name string
 		r    rune
@@ -16,9 +22,14 @@ func TestPrintableRune(t *testing.T) {
 		{"valid", 't', true},
 		{"invalid", '\t', false},
 	}
+
 	for _, c := range cases {
+		c := c // parallel test
+
 		t.Run(c.name, func(t *testing.T) {
-			if got := PrintableRune(c.r); got != c.want {
+			t.Parallel()
+
+			if got := security.PrintableRune(c.r); got != c.want {
 				t.Errorf("PrintableRune(%v) = %v, want %v", c.r, got, c.want)
 			}
 		})
