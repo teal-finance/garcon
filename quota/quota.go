@@ -12,8 +12,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/teal-finance/garcon/reserr"
 	"golang.org/x/time/rate"
+
+	"github.com/teal-finance/garcon/reserr"
 )
 
 type ReqLimiter struct {

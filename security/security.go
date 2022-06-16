@@ -15,6 +15,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/minio/highwayhash"
+
 	"github.com/teal-finance/garcon/reserr"
 )
 

@@ -18,6 +18,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+
 	"github.com/teal-finance/garcon/chain"
 	"github.com/teal-finance/garcon/security"
 )

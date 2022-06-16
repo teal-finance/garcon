@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt"
+
 	"github.com/teal-finance/garcon/reserr"
 	"github.com/teal-finance/garcon/security"
 	"github.com/teal-finance/quid/quidlib/tokens"
