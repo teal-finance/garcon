@@ -17,9 +17,13 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
+
+	"github.com/go-chi/chi/v5"
 
 	"github.com/teal-finance/garcon/chain"
 	"github.com/teal-finance/garcon/cors"
@@ -31,8 +35,6 @@ import (
 	"github.com/teal-finance/garcon/reqlog"
 	"github.com/teal-finance/garcon/reserr"
 	"github.com/teal-finance/garcon/security"
-
-	"github.com/go-chi/chi/v5"
 	"github.com/teal-finance/incorruptible"
 	"github.com/teal-finance/incorruptible/dtoken"
 )
@@ -40,9 +42,9 @@ import (
 // DevOrigins provides the development origins:
 // - yarn run vite --port 3000
 // - yarn run vite preview --port 5000
-// - localhost:8085 on multidevices: web autoreload using https://github.com/synw/fwr
+// - localhost:8085 on multi devices: web auto-reload using https://github.com/synw/fwr
 // - flutter run --web-port=8080
-// - 192.168.1.x + any port on tablet: mobile app using fast builtin autoreload.
+// - 192.168.1.x + any port on tablet: mobile app using fast builtin auto-reload.
 var DevOrigins = []*url.URL{
 	{Scheme: "http", Host: "localhost:"},
 	{Scheme: "http", Host: "192.168.1."},
@@ -77,7 +79,7 @@ type TokenChecker interface {
 }
 
 type parameters struct {
-	expNamespace string
+	namespace    string
 	docURL       string
 	nameVersion  string
 	secretKey    []byte
@@ -130,7 +132,7 @@ func (s *parameters) new() (*Garcon, error) {
 		Middlewares:    nil,
 	}
 
-	g.Middlewares, g.ConnState = metrics.StartServer(s.expPort, s.expNamespace)
+	g.Middlewares, g.ConnState = metrics.StartServer(s.expPort, s.namespace)
 
 	g.Middlewares.Append(security.RejectInvalidURI)
 
@@ -303,15 +305,24 @@ func WithPProf(port int) Option {
 
 func WithProm(port int, namespace string) Option {
 	return func(params *parameters) {
-		// If namespace is a path or an URL, keep only the last dirname.
+		params.expPort = port
+
+		// If namespace is a path or an URL, keep the last basename.
 		// Example: keep "myapp" from "https://example.com/path/myapp/"
 		namespace = strings.Trim(namespace, "/")
 		if i := strings.LastIndex(namespace, "/"); i >= 0 {
 			namespace = namespace[i+1:]
 		}
 
-		params.expPort = port
-		params.expNamespace = namespace
+		// valid namespace = [a-zA-Z][a-zA-Z0-9_]*
+		// https://prometheus.io/docs/concepts/data_model/#metric-names-and-labels
+		re := regexp.MustCompile(`[^a-zA-Z0-9_]`)
+		namespace = re.ReplaceAllLiteralString(namespace, "")
+		if !unicode.IsLetter(rune(namespace[0])) {
+			namespace = "a" + namespace
+		}
+
+		params.namespace = re.ReplaceAllLiteralString(namespace, "")
 	}
 }
 
