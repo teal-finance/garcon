@@ -11,16 +11,71 @@ file "myapp/index.html" to be freely used without any restriction.
 -->
 
 <html>
-  <head>
-    <title>Garcon example</title>
-  </head>
 
-  <body>
-    <h1>API test</h1>
-    <p>GET <a href="/api/v1/items">/api/v1/items</a> (unauthorized by cookie path)</p>
-    <p>GET <a href="/myapp/api/v1/items">/myapp/api/v1/items</a> (implemented)</p>
-    <p>GET <a href="/myapp/api/v1/ducks">/myapp/api/v1/ducks</a> (not implemented)</p>
-    <p>GET <a href="/myapp/api/v1/atlantis">/myapp/api/v1/atlantis</a> (not found)</p>
-    <img src="/myapp/images/garcon.png">
-  </body>
+<head>
+  <title>Garcon example</title>
+</head>
+
+<body>
+
+  <h1>API test</h1>
+  <p>GET <a href="/path/not/in/cookie">/path/not/in/cookie</a> (unauthorized by cookie path)</p>
+  <p>GET <a href="/myapp/api/v1/items">/myapp/api/v1/items</a> (implemented)</p>
+  <p>GET <a href="/myapp/api/v1/ducks">/myapp/api/v1/ducks</a> (not implemented)</p>
+  <p>GET <a href="/myapp/api/v1/atlantis">/myapp/api/v1/atlantis</a> (not found)</p>
+
+  <h2>Simple contact form</h2>
+  <form action="/myapp" method="post">
+    <input type="email" name="email" placeholder="Email" />
+    <br>
+    <textarea name="message" placeholder="Message..."></textarea>
+    <br>
+    <input type="submit" value="Send" />
+  </form>
+
+  <h2>Advanced contact form</h2>
+  <form name="contact-form" method="POST">
+    <p>
+      <input name="name" type="text" placeholder="Name" aria-label="Fill out your name." title="Fill out your name." minlength="2" maxlength="60">
+    </p>
+    <p>
+      <input type="email" name="email" placeholder="Email" aria-label="Fill out your email address. You can also fill out multiple email addresses separated by commas." title="Fill out your e-mail address. (required)
+        You can also fill out multiple email addresses separated by commas." multiple required minlength="7" maxlength="50">
+    </p>
+    <p>
+      <textarea name="message" placeholder="Message: Partnership opportunity" aria-label="Fill out your message. (required)" title="Fill out your message. (required)" required minlength="60" maxlength="900"></textarea>
+    </p>
+    <p>
+      <select name="company" aria-label="Select your company type." title="Select your company type.">
+        <option value="vc">Venture Capital</option>
+        <option value="ma">M &amp; A</option>
+        <option value="startup">Startup</option>
+        <option value="other">Other</option>
+      </select>
+    </p>
+    <p>
+      <input name="tel" type="tel" placeholder="Phone" aria-label="Fill out your phone number." title="Fill out your phone number." maxlength="30">
+    </p>
+    <p>
+      <label aria-label="Check the box to be called back. (please fill out your phone number)" title="Check the box to be called back.
+(please fill out your phone number)" for="checkbox-call">
+        <input type="checkbox" name="call">
+        Request a callback
+      </label>
+    </p>
+    <p>
+      <label aria-label="Upload a file from your computer (or smartphone)." title="Upload a file from your computer (or smartphone)." for="file-input">
+        Attach a file:
+        <input type="file" name="file" maxlength="999000">
+      </label>
+    </p>
+    <p>
+      <button name="OK" type="submit">Send</button>
+    </p>
+  </form>
+
+  <img src="/myapp/images/garcon.png" />
+
+</body>
+
 </html>

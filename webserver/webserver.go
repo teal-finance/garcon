@@ -13,16 +13,22 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/teal-finance/garcon/reserr"
 	"github.com/teal-finance/garcon/security"
+	"github.com/teal-finance/notifier"
 )
 
 type WebServer struct {
-	Dir    string
-	ResErr reserr.ResErr
+	Dir        string
+	ResErr     reserr.ResErr
+	Redirect   string
+	Notifier   notifier.Notifier
+	FormLimits map[string]FormSettings
+	reduceLF   *regexp.Regexp
 }
 
 // ServeFile handles one specific file (and its specific Content-Type).
@@ -104,7 +110,6 @@ func (ws WebServer) ServeAssets() func(w http.ResponseWriter, r *http.Request) {
 
 		if ext == "css" {
 			w.Header().Set("Content-Type", "text/css; charset=utf-8")
-
 			absPath = path.Join(ws.Dir, r.URL.Path)
 		} else {
 			var contentType string
@@ -123,7 +128,6 @@ func (ws WebServer) openFile(w http.ResponseWriter, r *http.Request, absPath str
 	// => send the *.br file
 	if strings.Contains(r.Header.Get("Accept-Encoding"), "br") {
 		brotli := absPath + ".br"
-
 		file, err := os.Open(brotli)
 		if err == nil {
 			w.Header().Set("Content-Encoding", "br")
