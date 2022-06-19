@@ -90,21 +90,21 @@ func (opa Policy) Auth(next http.Handler) http.Handler {
 
 		rs, err := rg.Eval(context.Background())
 		if err != nil || len(rs) == 0 {
-			resErr.Write(w, r, http.StatusInternalServerError, "Internal Server Error #1")
+			resErr.Write(w, r, http.StatusInternalServerError, "Cannot evaluate autorisation settings")
 			log.Print("ERR OPA Eval: ", err)
 			return
 		}
 
 		allow, ok := rs[0].Expressions[0].Value.(bool)
 		if !ok {
-			resErr.Write(w, r, http.StatusInternalServerError, "Internal Server Error #2")
+			resErr.Write(w, r, http.StatusInternalServerError, "Missing autorisation settings")
 			log.Print("ERR missing OPA data in ", rs)
 			return
 		}
 
 		if !allow {
-			resErr.Write(w, r, http.StatusUnauthorized,
-				"Provide your JWT within the 'Authorization Bearer' HTTP header")
+			resErr.Write(w, r, http.StatusUnauthorized, "No valid JWT",
+				"advice", "Provide your JWT within the 'Authorization Bearer' HTTP header")
 			log.Print("OPA: Missing or invalid Authorization header " + r.RemoteAddr + " " + r.RequestURI)
 			return
 		}

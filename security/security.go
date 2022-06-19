@@ -33,7 +33,7 @@ const (
 // Inspired from:
 // https://wikiless.org/wiki/Replacement_character#Replacement_character
 // https://graphicdesign.stackexchange.com/q/108297
-func Sanitize(s string) string {
+func Sanitize(str string) string {
 	return strings.Map(
 		func(r rune) rune {
 			switch {
@@ -46,7 +46,7 @@ func Sanitize(s string) string {
 			}
 			return r
 		},
-		s,
+		str,
 	)
 }
 
@@ -103,8 +103,10 @@ func RejectInvalidURI(next http.Handler) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			if i := Printable(r.RequestURI); i >= 0 {
-				reserr.Write(w, r, http.StatusBadRequest, "Invalid URI containing an unexpected character at position ", i)
-				log.Print("WRN WebServer: reject URI with <CR> or <LF>:", Sanitize(r.RequestURI))
+				reserr.Write(w, r, http.StatusBadRequest,
+					"Invalid URI with non-printable symbol",
+					"position", i)
+				log.Print("WRN: reject non-printable URI or with <CR> or <LF>:", Sanitize(r.RequestURI))
 				return
 			}
 
@@ -115,8 +117,8 @@ func RejectInvalidURI(next http.Handler) http.Handler {
 // TraversalPath returns true when path contains ".." to prevent path traversal attack.
 func TraversalPath(w http.ResponseWriter, r *http.Request) bool {
 	if strings.Contains(r.URL.Path, "..") {
-		reserr.Write(w, r, http.StatusBadRequest, "Invalid URL Path Containing '..'")
-		log.Print("WRN WebServer: reject path with '..' ", Sanitize(r.URL.Path))
+		reserr.Write(w, r, http.StatusBadRequest, "URL contains '..'")
+		log.Print("WRN: reject path with '..' ", Sanitize(r.URL.Path))
 		return true
 	}
 	return false

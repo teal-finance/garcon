@@ -20,13 +20,6 @@ const (
 
 type ResErr string
 
-type msg struct {
-	Error string
-	Doc   string
-	Path  string
-	Query string
-}
-
 // New creates a ResErr structure.
 func New(docURL string) ResErr {
 	return ResErr(docURL)
@@ -52,12 +45,22 @@ func Write(w http.ResponseWriter, r *http.Request, statusCode int, a ...any) {
 	ResErr("").Write(w, r, statusCode, a)
 }
 
+// msg is only used by SafeWrite to generate a fast JSON marshaler.
+type msg struct {
+	Error string
+	Doc   string
+	Path  string
+	Query string
+}
+
+// SafeWrite is a safe alternative to Write, may be slower despite the easyjson generated code.
+// SafeWrite concatenates all messages in "error" field.
 func (resErr ResErr) SafeWrite(w http.ResponseWriter, r *http.Request, statusCode int, messages ...any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.WriteHeader(statusCode)
 
-	m := msg{
+	msg := msg{
 		Error: fmt.Sprint(messages...),
 		Doc:   string(resErr),
 		Path:  "",
@@ -65,133 +68,136 @@ func (resErr ResErr) SafeWrite(w http.ResponseWriter, r *http.Request, statusCod
 	}
 
 	if r != nil {
-		m.Path = r.URL.Path
+		msg.Path = r.URL.Path
 		if r.URL.RawQuery != "" {
-			m.Query = r.URL.RawQuery
+			msg.Query = r.URL.RawQuery
 		}
 	}
 
-	b, err := m.MarshalJSON()
+	b, err := msg.MarshalJSON()
 	if err == nil {
 		_, _ = w.Write(b)
 	}
 }
 
-// Write is a fast and pretty JSON marshaler.
+// Write is a fast pretty-JSON marshaler dedicated to the HTTP error response.
+// Write extends the JSON content when more than two messages are provided.
 func (resErr ResErr) Write(w http.ResponseWriter, r *http.Request, statusCode int, messages ...any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.WriteHeader(statusCode)
 
-	b := make([]byte, 0, 1024)
-	b = append(b, '{')
+	buf := make([]byte, 0, 1024)
+	buf = append(buf, '{')
 
-	comma := false
-	if len(messages) > 0 {
-		b = appendMessages(b, messages)
-		comma = true
-	}
+	buf, comma := appendMessages(buf, messages)
 
 	if r != nil {
 		if comma {
-			b = append(b, ',', '\n')
+			buf = append(buf, ',', '\n')
 		}
-		b = appendURL(b, r.URL)
+		buf = appendURL(buf, r.URL)
 		comma = true
 	}
 
 	if string(resErr) != "" {
 		if comma {
-			b = append(b, ',', '\n')
+			buf = append(buf, ',', '\n')
 		}
-		b = resErr.appendDoc(b)
+		buf = resErr.appendDoc(buf)
 	}
 
-	b = append(b, '}')
-	_, _ = w.Write(b)
+	buf = append(buf, '}')
+	_, _ = w.Write(buf)
 }
 
-func appendMessages(b []byte, messages []any) []byte {
-	b = append(b, []byte(`"error":`)...)
-	b = appendKey(b, messages[0])
+func appendMessages(buf []byte, messages []any) ([]byte, bool) {
+	if len(messages) == 0 {
+		return buf, false
+	}
 
+	buf = append(buf, []byte(`"error":`)...)
+
+	if len(messages) == 2 {
+		s := fmt.Sprintf("%v%v", messages[0], messages[1])
+		buf = strconv.AppendQuoteToGraphic(buf, s)
+		return buf, true
+	}
+
+	buf = appendQuote(buf, messages[0])
 	for i := 1; i < len(messages); i += 2 {
-		b = append(b, ',', '\n')
-		b = appendKey(b, messages[i])
-		b = append(b, ':')
+		buf = append(buf, ',', '\n')
+		buf = appendQuote(buf, messages[i])
+		buf = append(buf, ':')
 		if i+1 < len(messages) {
-			b = appendValue(b, messages[i+1])
+			buf = appendValue(buf, messages[i+1])
 		} else {
-			b = append(b, '0')
+			buf = append(buf, '0')
 		}
 	}
 
-	return b
+	return buf, true
 }
 
-func appendURL(b []byte, u *url.URL) []byte {
-	b = append(b, []byte(`"path":`)...)
-	b = strconv.AppendQuote(b, u.Path)
-	if u.RawQuery != "" {
-		b = append(b, []byte(",\n"+`"query":`)...)
-		b = strconv.AppendQuote(b, u.RawQuery)
-	}
-	return b
-}
-
-func (resErr ResErr) appendDoc(b []byte) []byte {
-	b = append(b, '"', 'd', 'o', 'c', '"', ':', '"')
-	b = append(b, []byte(string(resErr))...)
-	b = append(b, '"')
-	return b
-}
-
-func appendKey(b []byte, a any) []byte {
-	switch v := a.(type) {
-	case string:
-		return strconv.AppendQuote(b, v)
-	case []byte:
-		return strconv.AppendQuote(b, string(v))
-	default:
-		return strconv.AppendQuote(b, fmt.Sprint(v))
-	}
-}
-
-func appendValue(b []byte, a any) []byte {
-	switch v := a.(type) {
+func appendValue(buf []byte, a any) []byte {
+	switch val := a.(type) {
 	case bool:
-		return strconv.AppendBool(b, v)
+		return strconv.AppendBool(buf, val)
 	case float32:
-		return strconv.AppendFloat(b, float64(v), 'f', 9, 32)
+		return strconv.AppendFloat(buf, float64(val), 'f', 9, 32)
 	case float64:
-		return strconv.AppendFloat(b, v, 'f', 9, 64)
+		return strconv.AppendFloat(buf, val, 'f', 9, 64)
 	case int:
-		return strconv.AppendInt(b, int64(v), 10)
+		return strconv.AppendInt(buf, int64(val), 10)
 	case int8:
-		return strconv.AppendInt(b, int64(v), 10)
+		return strconv.AppendInt(buf, int64(val), 10)
 	case int16:
-		return strconv.AppendInt(b, int64(v), 10)
+		return strconv.AppendInt(buf, int64(val), 10)
 	case int32:
-		return strconv.AppendInt(b, int64(v), 10)
+		return strconv.AppendInt(buf, int64(val), 10)
 	case int64:
-		return strconv.AppendInt(b, v, 10)
+		return strconv.AppendInt(buf, val, 10)
 	case uint:
-		return strconv.AppendUint(b, uint64(v), 10)
+		return strconv.AppendUint(buf, uint64(val), 10)
 	case uint8:
-		return strconv.AppendUint(b, uint64(v), 10)
+		return strconv.AppendUint(buf, uint64(val), 10)
 	case uint16:
-		return strconv.AppendUint(b, uint64(v), 10)
+		return strconv.AppendUint(buf, uint64(val), 10)
 	case uint32:
-		return strconv.AppendUint(b, uint64(v), 10)
+		return strconv.AppendUint(buf, uint64(val), 10)
 	case uint64:
-		return strconv.AppendUint(b, v, 10)
+		return strconv.AppendUint(buf, val, 10)
 	case uintptr:
-		return strconv.AppendUint(b, uint64(v), 10)
-	case string:
-		return strconv.AppendQuote(b, v)
-	case []byte:
-		return strconv.AppendQuote(b, string(v))
-	default: // complex64 complex128
-		return strconv.AppendQuote(b, fmt.Sprint(v))
+		return strconv.AppendUint(buf, uint64(val), 10)
+	default: // string []byte complex64 complex128
+		return appendQuote(buf, val)
 	}
+}
+
+func appendQuote(buf []byte, a any) []byte {
+	switch val := a.(type) {
+	case string:
+		return strconv.AppendQuoteToGraphic(buf, val)
+	case []byte:
+		return strconv.AppendQuoteToGraphic(buf, string(val))
+	default:
+		return strconv.AppendQuoteToGraphic(buf, fmt.Sprint(val))
+	}
+}
+
+func appendURL(buf []byte, u *url.URL) []byte {
+	buf = append(buf, []byte(`"path":`)...)
+	buf = strconv.AppendQuote(buf, u.Path)
+	if u.RawQuery != "" {
+		buf = append(buf, []byte(",\n"+`"query":`)...)
+		buf = strconv.AppendQuote(buf, u.RawQuery)
+	}
+	return buf
+}
+
+func (resErr ResErr) appendDoc(buf []byte) []byte {
+	buf = append(buf, '"', 'd', 'o', 'c', '"', ':', '"')
+	buf = append(buf, []byte(string(resErr))...)
+	buf = append(buf, '"')
+	return buf
 }
