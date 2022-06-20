@@ -82,7 +82,6 @@ func main() {
 
 // handler creates the mapping between the endpoints and the handler functions.
 func handler(g *garcon.Garcon, addr string) http.Handler {
-
 	ws := webserver.WebServer{
 		Dir:        "examples/www",
 		ResErr:     g.ResErr,

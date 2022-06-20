@@ -55,23 +55,19 @@ func (ws *WebServer) WebForm() func(w http.ResponseWriter, r *http.Request) {
 		ws.FormLimits = fallback
 	}
 
-	_, ok := ws.FormLimits["total"]
-	if !ok {
+	if _, ok := ws.FormLimits["total"]; !ok {
 		ws.FormLimits["total"] = fallback["total"]
 		log.Print("Middleware WebForm: Missing 'total' => Set total.Max=", fallback["total"].Max)
 	}
 
-	re, err := regexp.Compile("\n\n+")
-	if err != nil {
-		log.Panic(err)
-	}
+	re := regexp.MustCompile("\n\n+")
 	ws.reduceLF = re
 
 	return ws.webForm
 }
 
 // webForm sends the filled form to a notifier in markdown format.
-func (ws WebServer) webForm(w http.ResponseWriter, r *http.Request) {
+func (ws *WebServer) webForm(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	if err != nil {
 		log.Print("WRN WebForm ParseForm:", err)

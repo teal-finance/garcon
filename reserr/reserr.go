@@ -60,7 +60,7 @@ func (resErr ResErr) SafeWrite(w http.ResponseWriter, r *http.Request, statusCod
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.WriteHeader(statusCode)
 
-	msg := msg{
+	m := msg{
 		Error: fmt.Sprint(messages...),
 		Doc:   string(resErr),
 		Path:  "",
@@ -68,13 +68,13 @@ func (resErr ResErr) SafeWrite(w http.ResponseWriter, r *http.Request, statusCod
 	}
 
 	if r != nil {
-		msg.Path = r.URL.Path
+		m.Path = r.URL.Path
 		if r.URL.RawQuery != "" {
-			msg.Query = r.URL.RawQuery
+			m.Query = r.URL.RawQuery
 		}
 	}
 
-	b, err := msg.MarshalJSON()
+	b, err := m.MarshalJSON()
 	if err == nil {
 		_, _ = w.Write(b)
 	}
