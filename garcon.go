@@ -59,6 +59,9 @@ type Garcon struct {
 }
 
 type TokenChecker interface {
+	// Cookie returns the internal cookie (for test purpose).
+	Cookie(i int) *http.Cookie
+
 	// Set sets a cookie in the response when the request has no valid token.
 	// Set searches the token in a cookie and in the first "Authorization" header.
 	// Finally, Set stores the token attributes in the request context.
@@ -187,15 +190,15 @@ func (s *parameters) new() (*Garcon, error) {
 
 type Option func(*parameters)
 
-func WithURLs(urls ...string) Option {
+func WithURLs(addresses ...string) Option {
 	return func(params *parameters) {
-		params.urls = ParseURLs(urls)
+		params.urls = ParseURLs(addresses)
 	}
 }
 
-func WithDocURL(pathOrURL string) Option {
+func WithDocURL(docURL string) Option {
 	return func(params *parameters) {
-		params.docURL = pathOrURL
+		params.docURL = docURL
 	}
 }
 
@@ -210,7 +213,7 @@ func WithServerHeader(nameVersion string) Option {
 func WithJWT(secretKeyHex string, planPerm ...interface{}) Option {
 	key, err := hex.DecodeString(secretKeyHex)
 	if err != nil {
-		log.Panic("WithJWT: cannot decode the HMAC-SHA256 key, please provide hexadecimal format (64 characters)")
+		log.Panic("WithJWT: cannot decode the HMAC-SHA256 key, please provide hexadecimal format (64 characters) ", err)
 	}
 	if len(key) != 32 {
 		log.Panic("WithJWT: want HMAC-SHA256 key containing 32 bytes, but got ", len(key))

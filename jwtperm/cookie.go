@@ -228,6 +228,14 @@ func createCookie(plan string, secure bool, dns, path string, secretKey []byte) 
 	}
 }
 
+// Cookie returns the internal cookie (for test purpose).
+func (ck *Checker) Cookie(i int) *http.Cookie {
+	if (i < 0) || (i >= len(ck.cookies)) {
+		return nil
+	}
+	return ck.cookies[i]
+}
+
 // Set puts a HttpOnly cookie when no valid cookie is present in the HTTP response header.
 // The permission conveyed by te cookie is also put in the request context.
 func (ck *Checker) Set(next http.Handler) http.Handler {
