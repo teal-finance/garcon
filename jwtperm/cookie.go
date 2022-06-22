@@ -66,7 +66,7 @@ type Checker struct {
 	devOrigins  []string
 }
 
-func New(urls []*url.URL, resErr reserr.ResErr, secretKey []byte, permissions ...interface{}) *Checker {
+func New(urls []*url.URL, resErr reserr.ResErr, secretKey []byte, permissions ...any) *Checker {
 	n := len(permissions) / 2
 	if n == 0 {
 		n = 1

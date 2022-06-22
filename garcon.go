@@ -86,7 +86,7 @@ type parameters struct {
 	docURL       string
 	nameVersion  string
 	secretKey    []byte
-	planPerm     []interface{}
+	planPerm     []any
 	opaFilenames []string
 	urls         []*url.URL
 	pprofPort    int
@@ -210,7 +210,7 @@ func WithServerHeader(nameVersion string) Option {
 
 // WithJWT requires WithURLs() to set the Cookie name, secure, domain and path.
 // WithJWT is not compatible with WithTkn: use only one of them.
-func WithJWT(secretKeyHex string, planPerm ...interface{}) Option {
+func WithJWT(secretKeyHex string, planPerm ...any) Option {
 	key, err := hex.DecodeString(secretKeyHex)
 	if err != nil {
 		log.Panic("WithJWT: cannot decode the HMAC-SHA256 key, please provide hexadecimal format (64 characters) ", err)
@@ -244,7 +244,7 @@ func WithIncorruptible(secretKeyHex string, expiry time.Duration, setIP bool) Op
 		if setIP {
 			ip = []byte{}
 		}
-		params.planPerm = []interface{}{dtoken.DToken{
+		params.planPerm = []any{dtoken.DToken{
 			Expiry: expiry.Nanoseconds(),
 			IP:     ip,
 			Values: nil,
@@ -380,7 +380,7 @@ func (g *Garcon) NewSessionToken(urls []*url.URL, secretKey []byte, expiry time.
 	return incorruptible.New(urls, secretKey, expiry, setIP, g.ResErr.Write)
 }
 
-func (g *Garcon) NewJWTChecker(urls []*url.URL, secretKey []byte, planPerm ...interface{}) *jwtperm.Checker {
+func (g *Garcon) NewJWTChecker(urls []*url.URL, secretKey []byte, planPerm ...any) *jwtperm.Checker {
 	return jwtperm.New(urls, g.ResErr, secretKey, planPerm...)
 }
 

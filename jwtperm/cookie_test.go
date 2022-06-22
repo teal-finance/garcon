@@ -31,14 +31,14 @@ func TestNew(t *testing.T) {
 		addresses   []string
 		resErr      reserr.ResErr
 		secretHex   string
-		permissions []interface{}
+		permissions []any
 		// want     *Checker
 	}{{
 		name:        "TAPI",
 		addresses:   []string{"http://my-dns.co"},
 		resErr:      reserr.New("http://my-dns.co/doc"),
 		secretHex:   "0a02123112dfb13d58a1bc0c8ce55b154878085035ae4d2e13383a79a3e3de1b",
-		permissions: []interface{}{"Anonymous", 6, "Personal", 48, "Enterprise", 0},
+		permissions: []any{"Anonymous", 6, "Personal", 48, "Enterprise", 0},
 	}}
 
 	for _, c := range cases {

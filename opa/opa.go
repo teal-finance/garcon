@@ -75,7 +75,7 @@ func (opa Policy) Auth(next http.Handler) http.Handler {
 	resErr := opa.resErr
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		input := map[string]interface{}{
+		input := map[string]any{
 			"method": r.Method,
 			"path":   strings.Split(strings.Trim(r.URL.Path, "/"), "/"),
 			"token":  r.Header.Get("Authorization"),
