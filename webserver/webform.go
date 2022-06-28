@@ -14,7 +14,7 @@ import (
 	"strings"
 
 	"github.com/teal-finance/garcon/security"
-	"github.com/teal-finance/notifier/dummy"
+	"github.com/teal-finance/notifier/logger"
 )
 
 type FormSettings struct {
@@ -47,7 +47,7 @@ func DefaultFormLimits() map[string]FormSettings {
 func (ws *WebServer) WebForm() func(w http.ResponseWriter, r *http.Request) {
 	if ws.Notifier == nil {
 		log.Print("Middleware WebForm: no Notifier => Set dummy Notifier")
-		ws.Notifier = dummy.NewNotifier("dummy-notifier-url")
+		ws.Notifier = logger.NewNotifier("dummy-notifier-url")
 	}
 
 	if len(ws.FormLimits) == 0 {

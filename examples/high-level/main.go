@@ -19,7 +19,7 @@ import (
 
 	"github.com/teal-finance/garcon"
 	"github.com/teal-finance/garcon/webserver"
-	"github.com/teal-finance/notifier/dummy"
+	"github.com/teal-finance/notifier/logger"
 )
 
 // Garcon settings
@@ -85,7 +85,7 @@ func handler(g *garcon.Garcon, addr string) http.Handler {
 	ws := webserver.WebServer{
 		Dir:        "examples/www",
 		ResErr:     g.ResErr,
-		Notifier:   dummy.NewNotifier("dummy-notifier-url"),
+		Notifier:   logger.NewNotifier("dummy-notifier-url"),
 		Redirect:   addr,
 		FormLimits: nil,
 	}
