@@ -9,6 +9,7 @@ package timex
 
 import (
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -144,18 +145,28 @@ func TestParseDurationErrors(t *testing.T) {
 	}
 }
 
-func TestParseDurationRoundTrip(t *testing.T) { //nolint:paralleltest
+func TestParseDurationRoundTrip(t *testing.T) {
+	t.Parallel()
+
 	const maxLoops = 100
 	for i := 0; i < maxLoops; i++ {
-		// DStr() rounds to days when duration is more than or equal to one week
-		// DStr() rounds to seconds when duration is more than or equal to one minute
-		// Resolutions finer than milliseconds will result in  imprecise round-trips.
-		d0 := time.Duration(rand.Intn(WeekNs) % MillisecondNs)
-		s := DStr(d0)
-		d1, err := ParseDuration(s)
-		if err != nil || d0 != d1 {
-			t.Errorf("round-trip failed: %d => %v => %d, %v", d0, s, d1, err)
-		}
+		// Resolutions finer than milliseconds will result in imprecise round-trips.
+		ns := rand.Intn(WeekNs) % MillisecondNs
+		name := strconv.Itoa(ns) + "ns"
+
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// DStr() rounds to days when duration is more than or equal to one week
+			// DStr() rounds to seconds when duration is more than or equal to one minute
+			d0 := time.Duration(ns)
+			s := DStr(d0)
+			d1, err := ParseDuration(s)
+
+			if err != nil || d0 != d1 {
+				t.Errorf("round-trip failed: %d => %v => %d, %v", d0, s, d1, err)
+			}
+		})
 	}
 }
 
