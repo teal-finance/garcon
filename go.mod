@@ -3,6 +3,8 @@ module github.com/teal-finance/garcon
 go 1.18
 
 require (
+	github.com/carlmjohnson/flagx v0.22.2
+	github.com/carlmjohnson/versioninfo v0.22.4
 	github.com/go-chi/chi/v5 v5.0.7
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/golangci/golangci-lint v1.46.2
@@ -14,6 +16,7 @@ require (
 	github.com/rs/cors v1.8.2
 	github.com/teal-finance/incorruptible v0.0.0-20220620234923-57a369cf0477
 	github.com/teal-finance/quid v0.0.0-20220614042305-0190e96a7c05
+	github.com/zhangyunhao116/fastrand v0.3.0
 	golang.org/x/time v0.0.0-20220609170525-579cf78fd858
 	mvdan.cc/gofumpt v0.3.1
 )
@@ -172,7 +175,6 @@ require (
 	github.com/yagipy/maintidx v1.0.0 // indirect
 	github.com/yashtewari/glob-intersection v0.1.0 // indirect
 	github.com/yeya24/promlinter v0.2.0 // indirect
-	github.com/zhangyunhao116/fastrand v0.3.0 // indirect
 	gitlab.com/bosi/decorder v0.2.1 // indirect
 	golang.org/x/exp/typeparams v0.0.0-20220218215828-6cf2b201936e // indirect
 	golang.org/x/mod v0.6.0-dev.0.20220106191415-9b9b3d81d5e3 // indirect
