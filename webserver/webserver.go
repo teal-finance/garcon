@@ -7,7 +7,6 @@
 package webserver
 
 import (
-	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -16,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/teal-finance/garcon/iec"
 	"github.com/teal-finance/garcon/reserr"
 	"github.com/teal-finance/garcon/security"
 )
@@ -162,26 +162,8 @@ func (ws WebServer) send(w http.ResponseWriter, r *http.Request, absPath string)
 	if n, err := io.Copy(w, file); err != nil {
 		log.Print("WRN WebServer: Copy(", absPath, ") ", err)
 	} else {
-		log.Print("WebServer sent ", absPath, " ", IEC64(n))
+		log.Print("WebServer sent ", absPath, " ", iec.Convert64(n))
 	}
-}
-
-// IEC64 converts bytes into KiB (1024 bytes), MiB, GiB…
-// as defined within the International System of Quantities (ISQ)
-// standardized by the ISO/IEC 80000 and published in 2008.
-func IEC64(bytes int64) string {
-	const unit = 1024
-	if bytes < unit {
-		return fmt.Sprintf("%d B", bytes)
-	}
-
-	div, exp := int64(unit), 0
-	for n := bytes / unit; n >= unit; n /= unit {
-		div *= unit
-		exp++
-	}
-
-	return fmt.Sprintf("%.1f %ciB", float64(bytes)/float64(div), "KMGTPE"[exp])
 }
 
 // imagePathAndType returns the path/filename and the Content-Type of the image.
