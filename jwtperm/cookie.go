@@ -98,7 +98,7 @@ func New(urls []*url.URL, resErr reserr.ResErr, secretKey []byte, permissions ..
 
 	for i, v := range values {
 		perms[i] = Perm{Value: v}
-		cookies[i] = createCookie(names[i], secure, dns, path, secretKey)
+		cookies[i] = newCookie(names[i], secure, dns, path, secretKey)
 	}
 
 	return &Checker{
@@ -184,7 +184,7 @@ func extractDevOrigins(urls []*url.URL) []string {
 	return devOrigins
 }
 
-func createCookie(plan string, secure bool, dns, path string, secretKey []byte) *http.Cookie {
+func newCookie(plan string, secure bool, dns, path string, secretKey []byte) *http.Cookie {
 	if len(secretKey) != 32 {
 		log.Panic("Want HMAC-SHA256 key containing 32 bytes, but got ", len(secretKey))
 	}
@@ -210,7 +210,15 @@ func createCookie(plan string, secure bool, dns, path string, secretKey []byte) 
 		}
 	}
 
-	log.Print("Create cookie plan=", plan, " domain=", dns, " secure=", secure, " ", name, "=", JWT)
+	if path == "" {
+		path = "/"
+	}
+
+	log.Print("newCookie plan=", plan,
+		" domain=", dns,
+		" path=", path,
+		" secure=", secure, " ",
+		name, "=", JWT)
 
 	return &http.Cookie{
 		Name:       name,
