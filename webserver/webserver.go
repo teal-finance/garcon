@@ -13,22 +13,16 @@ import (
 	"net/http"
 	"os"
 	"path"
-	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/teal-finance/garcon/reserr"
 	"github.com/teal-finance/garcon/security"
-	"github.com/teal-finance/notifier"
 )
 
 type WebServer struct {
-	Dir        string
-	ResErr     reserr.ResErr
-	Redirect   string
-	Notifier   notifier.Notifier
-	FormLimits map[string]FormSettings
-	reduceLF   *regexp.Regexp
+	Dir    string
+	ResErr reserr.ResErr
 }
 
 // ServeFile handles one specific file (and its specific Content-Type).
@@ -199,7 +193,7 @@ func (ws *WebServer) imagePathAndType(r *http.Request) (absPath, contentType str
 	scheme := r.Header.Get("Accept")
 
 	// We perform a stupid search to be fast,
-	// but we hope there is no Content-Type such as "image/avifuck"
+	// but we hope there is no Content-Type such as "image/avifauna"
 	const avifContentType = "image/avif"
 	if strings.Contains(scheme, avifContentType) {
 		avifPath := r.URL.Path[:extPos] + "avif"
