@@ -1,7 +1,7 @@
 # Teal.Finance/Garcon
 
-![logo](examples/www/myapp/images/garcon.png) | Opinionated boilerplate all-in-one HTTP server with rate-limiter, Cookies, JWT, CORS, OPA, web traffic, Prometheus export, PProf… for API and static website.<br><br><br>[![Go Reference](examples/www/myapp/images/go-ref.svg "Go documentation for Garcon")](https://pkg.go.dev/github.com/teal-finance/garcon) [![Go Report Card](https://goreportcard.com/badge/github.com/teal-finance/garcon)](https://goreportcard.com/report/github.com/teal-finance/garcon)
--|-
+| ![logo](examples/www/myapp/images/garcon.png) | Opinionated boilerplate all-in-one HTTP server with rate-limiter, Cookies, JWT, CORS, OPA, web traffic, Prometheus export, PProf… for API and static website.<br><br><br>[![Go Reference](examples/www/myapp/images/go-ref.svg "Go documentation for Garcon")](https://pkg.go.dev/github.com/teal-finance/garcon) [![Go Report Card](https://goreportcard.com/badge/github.com/teal-finance/garcon)](https://goreportcard.com/report/github.com/teal-finance/garcon) |
+| --------------------------------------------- | --------- |
 
 This library is used by
 [Rainbow](https://github.com/teal-finance/rainbow)
@@ -13,21 +13,21 @@ Please propose a [Pull Request](https://github.com/teal-finance/garcon/pulls) to
 
 Garcon includes the following middleware pieces:
 
-* Logging of incoming requests ;
-* Rate-limiter to prevent requests flooding ;
-* JWT management using HttpOnly cookie or Authorization header ;
-* Cross-Origin Resource Sharing (CORS) ;
-* Authentication rules based on Datalog/Rego files using [Open Policy Agent](https://www.openpolicyagent.org) ;
-* Web traffic metrics.
+- Logging of incoming requests ;
+- Rate-limiter to prevent requests flooding ;
+- JWT management using HttpOnly cookie or Authorization header ;
+- Cross-Origin Resource Sharing (CORS) ;
+- Authentication rules based on Datalog/Rego files using [Open Policy Agent](https://www.openpolicyagent.org) ;
+- Web traffic metrics.
 
 Garcon also provides the following features:
 
-* HTTP/REST server for API endpoints (compatible with any Go-standard HTTP handlers) ;
-* File server intended for static web files supporting Brotli and AVIF data ;
-* Metrics server exporting data to Prometheus (or other compatible monitoring tool) ;
-* PProf server for debugging purpose ;
-* Error response in JSON format ;
-* Chained middleware (fork of [justinas/alice](https://github.com/justinas/alice)).
+- HTTP/REST server for API endpoints (compatible with any Go-standard HTTP handlers) ;
+- File server intended for static web files supporting Brotli and AVIF data ;
+- Metrics server exporting data to Prometheus (or other compatible monitoring tool) ;
+- PProf server for debugging purpose ;
+- Error response in JSON format ;
+- Chained middleware (fork of [justinas/alice](https://github.com/justinas/alice)).
 
 ## CPU profiling
 
@@ -113,15 +113,15 @@ go build -race ./examples/high-level && ./high-level
 
 Visit the PProf server at <http://localhost:8093/debug/pprof> providing the following endpoints:
 
-* <http://localhost:8093/debug/pprof/cmdline> - Command line arguments
-* <http://localhost:8093/debug/pprof/profile> - CPU profile
-* <http://localhost:8093/debug/pprof/allocs> - Memory allocations from start
-* <http://localhost:8093/debug/pprof/heap> - Current memory allocations
-* <http://localhost:8093/debug/pprof/trace> - Current program trace
-* <http://localhost:8093/debug/pprof/goroutine> - Traces of all current threads (goroutines)
-* <http://localhost:8093/debug/pprof/block> - Traces of blocking threads
-* <http://localhost:8093/debug/pprof/mutex> - Traces of threads with contended mutex
-* <http://localhost:8093/debug/pprof/threadcreate> - Traces of threads creating a new thread
+- <http://localhost:8093/debug/pprof/cmdline> - Command line arguments
+- <http://localhost:8093/debug/pprof/profile> - CPU profile
+- <http://localhost:8093/debug/pprof/allocs> - Memory allocations from start
+- <http://localhost:8093/debug/pprof/heap> - Current memory allocations
+- <http://localhost:8093/debug/pprof/trace> - Current program trace
+- <http://localhost:8093/debug/pprof/goroutine> - Traces of all current threads (goroutines)
+- <http://localhost:8093/debug/pprof/block> - Traces of blocking threads
+- <http://localhost:8093/debug/pprof/mutex> - Traces of threads with contended mutex
+- <http://localhost:8093/debug/pprof/threadcreate> - Traces of threads creating a new thread
 
 PProf is easy to use with `curl` or `wget`:
 
@@ -295,20 +295,12 @@ import (
 
     "github.com/go-chi/chi/v5"
     "github.com/teal-finance/garcon"
-    "github.com/teal-finance/garcon/chain"
-    "github.com/teal-finance/garcon/cors"
-    "github.com/teal-finance/garcon/metrics"
-    "github.com/teal-finance/garcon/opa"
-    "github.com/teal-finance/garcon/pprof"
-    "github.com/teal-finance/garcon/quota"
-    "github.com/teal-finance/garcon"
-    "github.com/teal-finance/garcon/webserver"
 )
 
 // Garcon settings
 const apiDoc = "https://my-dns.co/doc"
 const allowedProdOrigin = "https://my-dns.co"
-const allowedDevOrigins = "http://localhost:  http://192.168.1."
+const allowedDevOrigins = "http://localhost: http://192.168.1."
 const serverHeader = "MyBackendName-1.2.0"
 const authCfg = "examples/sample-auth.rego"
 const pprofPort = 8093
@@ -319,13 +311,13 @@ const devMode = true
 func main() {
     if devMode {
         // the following line collects the CPU-profile and writes it in the file "cpu.pprof"
-        defer pprof.ProbeCPU().Stop()
+        defer garcon.ProbeCPU().Stop()
     }
 
-    pprof.StartServer(pprofPort)
+    garcon.StartPProfServer(pprofPort)
 
     // Uniformize error responses with API doc
-    errWriter := garcon.New(apiDoc)
+    errWriter := garcon.NewErrWriter(apiDoc)
 
     chain, connState := setMiddlewares(errWriter)
 
@@ -336,14 +328,14 @@ func main() {
     runServer(h, connState)
 }
 
-func setMiddlewares(errWriter garcon.ErrWriter) (chain chain.Chain, connState func(net.Conn, http.ConnState)) {
+func setMiddlewares(errWriter garcon.ErrWriter) (chain garcon.Chain, connState func(net.Conn, http.ConnState)) {
     // Start a metrics server in background if export port > 0.
     // The metrics server is for use with Prometheus or another compatible monitoring tool.
-    metrics := metrics.Metrics{}
-    chain, connState = metrics.StartServer(expPort, devMode)
+    metrics := garcon.Metrics{}
+    chain, connState = garcon.StartMetricsServer(expPort, devMode)
 
     // Limit the input request rate per IP
-    reqLimiter := quota.New(burst, reqMinute, devMode, errWriter)
+    reqLimiter := garcon.NewReqLimiter(burst, reqMinute, devMode, errWriter)
 
     corsConfig := allowedProdOrigin
     if devMode {
@@ -360,7 +352,7 @@ func setMiddlewares(errWriter garcon.ErrWriter) (chain chain.Chain, connState fu
 
     // Endpoint authentication rules (Open Policy Agent)
     files := garcon.SplitClean(authCfg)
-    policy, err := opa.New(files, errWriter)
+    policy, err := garcon.NewPolicy(files, errWriter)
     if err != nil {
         log.Fatal(err)
     }
@@ -401,8 +393,8 @@ func runServer(h http.Handler, connState func(net.Conn, http.ConnState)) {
 func handler(errWriter garcon.ErrWriter) http.Handler {
     r := chi.NewRouter()
 
-    // Static website files
-    ws := webserver.WebServer{Dir: "examples/www", ErrWriter: errWriter}
+    // Website with static files
+    ws := garcon.NewStaticWebServer("examples/www", errWriter)
     r.Get("/", ws.ServeFile("index.html", "text/html; charset=utf-8"))
     r.Get("/js/*", ws.ServeDir("text/javascript; charset=utf-8"))
     r.Get("/css/*", ws.ServeDir("text/css; charset=utf-8"))
@@ -474,6 +466,6 @@ or <https://opensource.org/licenses/MIT>.
 
 ## See also
 
-* <https://github.com/kambahr/go-webstandard>
-* <https://github.com/go-aah/aah>
-* <https://github.com/xyproto/algernon>
+- <https://github.com/kambahr/go-webstandard>
+- <https://github.com/go-aah/aah>
+- <https://github.com/xyproto/algernon>
