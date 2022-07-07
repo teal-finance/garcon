@@ -24,7 +24,6 @@ import (
 	"github.com/teal-finance/garcon/jwtperm"
 	"github.com/teal-finance/garcon/metrics"
 	"github.com/teal-finance/garcon/pprof"
-	"github.com/teal-finance/garcon/quota"
 	"github.com/teal-finance/garcon/reserr"
 )
 
@@ -70,7 +69,7 @@ func setMiddlewares(resErr reserr.ResErr) (mw chain.Chain, connState func(net.Co
 	mw, connState = metrics.StartServer(expPort, "LowLevel")
 
 	// Limit the input request rate per IP
-	reqLimiter := quota.New(burst, reqMinute, *dev, resErr)
+	reqLimiter := garcon.NewReqLimiter(burst, reqMinute, *dev, resErr)
 
 	corsConfig := allowedProdOrigin
 	if *dev {
@@ -81,7 +80,7 @@ func setMiddlewares(resErr reserr.ResErr) (mw chain.Chain, connState func(net.Co
 	urls = garcon.ParseURLs(allowedOrigins)
 
 	mw = mw.Append(
-		reqLimiter.Limit,
+		reqLimiter.LimitRate,
 		garcon.ServerHeader(serverHeader),
 		cors.Handler(allowedOrigins, *dev),
 	)

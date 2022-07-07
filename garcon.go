@@ -30,7 +30,6 @@ import (
 	"github.com/teal-finance/garcon/jwtperm"
 	"github.com/teal-finance/garcon/metrics"
 	"github.com/teal-finance/garcon/pprof"
-	"github.com/teal-finance/garcon/quota"
 	"github.com/teal-finance/garcon/reserr"
 	"github.com/teal-finance/garcon/security"
 	"github.com/teal-finance/incorruptible"
@@ -147,8 +146,8 @@ func (s *parameters) new() (*Garcon, error) {
 	}
 
 	if s.reqMinute > 0 {
-		reqLimiter := quota.New(s.reqBurst, s.reqMinute, s.devMode, g.ResErr)
-		g.Middlewares = g.Middlewares.Append(reqLimiter.Limit)
+		reqLimiter := NewReqLimiter(s.reqBurst, s.reqMinute, s.devMode, g.ResErr)
+		g.Middlewares = g.Middlewares.Append(reqLimiter.LimitRate)
 	}
 
 	g.Middlewares = g.Middlewares.Append(

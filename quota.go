@@ -3,7 +3,7 @@
 // an API and website server, under the MIT License.
 // SPDX-License-Identifier: MIT
 
-package quota
+package garcon
 
 import (
 	"log"
@@ -29,7 +29,7 @@ type visitor struct {
 	limiter  *rate.Limiter
 }
 
-func New(maxReqBurst, maxReqPerMinute int, devMode bool, resErr reserr.ResErr) ReqLimiter {
+func NewReqLimiter(maxReqBurst, maxReqPerMinute int, devMode bool, resErr reserr.ResErr) ReqLimiter {
 	if devMode {
 		maxReqBurst *= 10
 		maxReqPerMinute *= 10
@@ -45,7 +45,7 @@ func New(maxReqBurst, maxReqPerMinute int, devMode bool, resErr reserr.ResErr) R
 	}
 }
 
-func (rl *ReqLimiter) Limit(next http.Handler) http.Handler {
+func (rl *ReqLimiter) LimitRate(next http.Handler) http.Handler {
 	log.Printf("Middleware RateLimiter: burst=%v rate=%v/s",
 		rl.initLimiter.Burst(), rl.initLimiter.Limit())
 
