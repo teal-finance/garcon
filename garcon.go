@@ -115,7 +115,7 @@ func New(opts ...Option) (*Garcon, error) {
 	}
 
 	if len(params.docURL) > 0 {
-		// if docURL is just a path => complet it with the base URL (scheme + host)
+		// if docURL is just a path => complete it with the base URL (scheme + host)
 		baseURL := params.urls[0].String()
 		if !strings.HasPrefix(params.docURL, baseURL) &&
 			!strings.Contains(params.docURL, "://") {
