@@ -5,7 +5,9 @@
 package tools
 
 import (
-	_ "github.com/golangci/golangci-lint/cmd/golangci-lint"
+	// disable golangci-lint because fails when upgrading indirect dependencies
+	// _ "github.com/golangci/golangci-lint/cmd/golangci-lint"
+
 	_ "mvdan.cc/gofumpt"
 )
 
