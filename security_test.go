@@ -3,12 +3,12 @@
 // an API and website server, under the MIT License.
 // SPDX-License-Identifier: MIT
 
-package security_test
+package garcon_test
 
 import (
 	"testing"
 
-	"github.com/teal-finance/garcon/security"
+	"github.com/teal-finance/garcon"
 )
 
 func TestPrintableRune(t *testing.T) {
@@ -29,7 +29,7 @@ func TestPrintableRune(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
 
-			if got := security.PrintableRune(c.r); got != c.want {
+			if got := garcon.PrintableRune(c.r); got != c.want {
 				t.Errorf("PrintableRune(%v) = %v, want %v", c.r, got, c.want)
 			}
 		})

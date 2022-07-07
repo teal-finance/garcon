@@ -3,8 +3,7 @@
 // an API and website server, under the MIT License.
 // SPDX-License-Identifier: MIT
 
-// Package jwtperm delivers and checks the JWT permissions
-package jwtperm_test
+package garcon_test
 
 import (
 	"context"
@@ -15,7 +14,6 @@ import (
 	"testing"
 
 	"github.com/teal-finance/garcon"
-	"github.com/teal-finance/garcon/jwtperm"
 	"github.com/teal-finance/garcon/reserr"
 )
 
@@ -53,7 +51,7 @@ func TestNew(t *testing.T) {
 				log.Panic(err)
 			}
 
-			checker := jwtperm.New(urls, c.resErr, secretKey, c.permissions...)
+			checker := garcon.NewChecker(urls, c.resErr, secretKey, c.permissions...)
 			cookie := checker.Cookie(0)
 
 			req, _ := http.NewRequestWithContext(context.Background(), "GET", c.addresses[0], http.NoBody)

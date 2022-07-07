@@ -16,7 +16,6 @@ import (
 
 	"github.com/teal-finance/garcon/iec"
 	"github.com/teal-finance/garcon/reserr"
-	"github.com/teal-finance/garcon/security"
 )
 
 // StaticWebServer is a webserver serving static files
@@ -55,7 +54,7 @@ func (ws *StaticWebServer) ServeFile(urlPath, contentType string) func(w http.Re
 // ServeDir handles the static files using the same Content-Type.
 func (ws *StaticWebServer) ServeDir(contentType string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if security.TraversalPath(w, r) {
+		if TraversalPath(w, r) {
 			return
 		}
 
@@ -76,7 +75,7 @@ func (ws *StaticWebServer) ServeDir(contentType string) func(w http.ResponseWrit
 // ServeImages detects the Content-Type depending on the image extension.
 func (ws *StaticWebServer) ServeImages() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if security.TraversalPath(w, r) {
+		if TraversalPath(w, r) {
 			return
 		}
 
@@ -96,7 +95,7 @@ func (ws *StaticWebServer) ServeImages() func(w http.ResponseWriter, r *http.Req
 // ServeAssets detects the Content-Type depending on the asset extension.
 func (ws *StaticWebServer) ServeAssets() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if security.TraversalPath(w, r) {
+		if TraversalPath(w, r) {
 			return
 		}
 
@@ -125,7 +124,7 @@ func (ws *StaticWebServer) ServeAssets() func(w http.ResponseWriter, r *http.Req
 func (ws *StaticWebServer) openFile(w http.ResponseWriter, r *http.Request, absPath string) (*os.File, string) {
 	// if client (browser) supports Brotli and the *.br file is present
 	// => send the *.br file
-	if strings.Contains(security.Header(r, "Accept-Encoding"), "br") {
+	if strings.Contains(SafeHeader(r, "Accept-Encoding"), "br") {
 		brotli := absPath + ".br"
 		file, err := os.Open(brotli)
 		if err == nil {
@@ -177,7 +176,7 @@ func (ws *StaticWebServer) imagePathAndType(r *http.Request) (absPath, contentTy
 	// We only check the first Header "Accept":
 	// We do not care to miss an "image/avif" within the second Header "Accept",
 	// because we do not break anything: we send the image requested by the client.
-	scheme := security.Header(r, "Accept")
+	scheme := SafeHeader(r, "Accept")
 
 	// We perform a stupid search to be fast,
 	// but we hope there is no Content-Type such as "image/avifauna"

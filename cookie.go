@@ -3,8 +3,7 @@
 // an API and website server, under the MIT License.
 // SPDX-License-Identifier: MIT
 
-// Package jwtperm delivers and checks the JWT permissions
-package jwtperm
+package garcon
 
 import (
 	"context"
@@ -24,7 +23,6 @@ import (
 	"github.com/golang-jwt/jwt"
 
 	"github.com/teal-finance/garcon/reserr"
-	"github.com/teal-finance/garcon/security"
 	"github.com/teal-finance/quid/quidlib/tokens"
 )
 
@@ -66,7 +64,7 @@ type Checker struct {
 	devOrigins  []string
 }
 
-func New(urls []*url.URL, resErr reserr.ResErr, secretKey []byte, permissions ...any) *Checker {
+func NewChecker(urls []*url.URL, resErr reserr.ResErr, secretKey []byte, permissions ...any) *Checker {
 	n := len(permissions) / 2
 	if n == 0 {
 		n = 1
@@ -466,12 +464,12 @@ func (ck *Checker) permFromRefreshBytes(claimsJSON []byte) (Perm, error) {
 
 	if err := json.Unmarshal(claimsJSON, claims); err != nil {
 		return Perm{}, fmt.Errorf("%w while unmarshaling RefreshClaims: "+
-			security.Sanitize(string(claimsJSON)), err)
+			Sanitize(string(claimsJSON)), err)
 	}
 
 	if err := claims.Valid(); err != nil {
 		return Perm{}, fmt.Errorf("%w in RefreshClaims: "+
-			security.Sanitize(string(claimsJSON)), err)
+			Sanitize(string(claimsJSON)), err)
 	}
 
 	perm := ck.permFromRefreshClaims(claims)

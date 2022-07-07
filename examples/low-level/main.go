@@ -21,7 +21,6 @@ import (
 	"github.com/teal-finance/garcon"
 	"github.com/teal-finance/garcon/chain"
 	"github.com/teal-finance/garcon/cors"
-	"github.com/teal-finance/garcon/jwtperm"
 	"github.com/teal-finance/garcon/reserr"
 )
 
@@ -51,7 +50,7 @@ func main() {
 	mw, connState, urls := setMiddlewares(resErr)
 
 	// Handles both REST API and static web files
-	h := handler(resErr, jwtperm.New(urls, resErr, []byte(hmacSHA256)))
+	h := handler(resErr, garcon.NewChecker(urls, resErr, []byte(hmacSHA256)))
 	h = mw.Then(h)
 
 	runServer(h, connState)
@@ -122,22 +121,22 @@ func runServer(h http.Handler, connState func(net.Conn, http.ConnState)) {
 }
 
 // handler creates the mapping between the endpoints and the handler functions.
-func handler(resErr reserr.ResErr, jc *jwtperm.Checker) http.Handler {
+func handler(resErr reserr.ResErr, c *garcon.Checker) http.Handler {
 	r := chi.NewRouter()
 
 	// Static website files
 	ws := garcon.StaticWebServer{Dir: "examples/www", ResErr: resErr}
 	r.Get("/favicon.ico", ws.ServeFile("favicon.ico", "image/x-icon"))
-	r.With(jc.Set).Get("/myapp", ws.ServeFile("myapp/index.html", "text/html; charset=utf-8"))
-	r.With(jc.Set).Get("/myapp/", ws.ServeFile("myapp/index.html", "text/html; charset=utf-8"))
-	r.With(jc.Chk).Get("/myapp/js/*", ws.ServeDir("text/javascript; charset=utf-8"))
-	r.With(jc.Chk).Get("/myapp/css/*", ws.ServeDir("text/css; charset=utf-8"))
-	r.With(jc.Chk).Get("/myapp/images/*", ws.ServeImages())
+	r.With(c.Set).Get("/myapp", ws.ServeFile("myapp/index.html", "text/html; charset=utf-8"))
+	r.With(c.Set).Get("/myapp/", ws.ServeFile("myapp/index.html", "text/html; charset=utf-8"))
+	r.With(c.Chk).Get("/myapp/js/*", ws.ServeDir("text/javascript; charset=utf-8"))
+	r.With(c.Chk).Get("/myapp/css/*", ws.ServeDir("text/css; charset=utf-8"))
+	r.With(c.Chk).Get("/myapp/images/*", ws.ServeImages())
 
 	// API
-	r.With(jc.Vet).Get("/path/not/in/cookie", items)
-	r.With(jc.Vet).Get("/myapp/api/v1/items", items)
-	r.With(jc.Vet).Get("/myapp/api/v1/ducks", resErr.NotImplemented)
+	r.With(c.Vet).Get("/path/not/in/cookie", items)
+	r.With(c.Vet).Get("/myapp/api/v1/items", items)
+	r.With(c.Vet).Get("/myapp/api/v1/ducks", resErr.NotImplemented)
 
 	// Other endpoints
 	r.NotFound(resErr.InvalidPath)

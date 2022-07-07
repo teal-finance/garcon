@@ -27,9 +27,7 @@ import (
 
 	"github.com/teal-finance/garcon/chain"
 	"github.com/teal-finance/garcon/cors"
-	"github.com/teal-finance/garcon/jwtperm"
 	"github.com/teal-finance/garcon/reserr"
-	"github.com/teal-finance/garcon/security"
 	"github.com/teal-finance/incorruptible"
 	"github.com/teal-finance/incorruptible/dtoken"
 )
@@ -132,7 +130,7 @@ func (s *parameters) new() (*Garcon, error) {
 
 	g.Middlewares, g.ConnState = StartMetricsServer(s.expPort, s.namespace)
 
-	g.Middlewares.Append(security.RejectInvalidURI)
+	g.Middlewares.Append(RejectInvalidURI)
 
 	switch s.reqLogs {
 	case 0:
@@ -375,8 +373,8 @@ func (g *Garcon) NewSessionToken(urls []*url.URL, secretKey []byte, expiry time.
 	return incorruptible.New(urls, secretKey, expiry, setIP, g.ResErr.Write)
 }
 
-func (g *Garcon) NewJWTChecker(urls []*url.URL, secretKey []byte, planPerm ...any) *jwtperm.Checker {
-	return jwtperm.New(urls, g.ResErr, secretKey, planPerm...)
+func (g *Garcon) NewJWTChecker(urls []*url.URL, secretKey []byte, planPerm ...any) *Checker {
+	return NewChecker(urls, g.ResErr, secretKey, planPerm...)
 }
 
 // ServerHeader sets the Server HTTP header in the response.
@@ -526,7 +524,7 @@ func Value(r *http.Request, key, header string) (string, error) {
 		v = r.Header.Get(header)
 	}
 
-	if i := security.Printable(v); i >= 0 {
+	if i := Printable(v); i >= 0 {
 		return v, fmt.Errorf("%s %w at %d", key, ErrNonPrintable, i)
 	}
 
@@ -536,7 +534,7 @@ func Value(r *http.Request, key, header string) (string, error) {
 func Values(r *http.Request, key string) ([]string, error) {
 	form := r.Form[key]
 
-	if i := security.Printables(form); i >= 0 {
+	if i := Printables(form); i >= 0 {
 		return form, fmt.Errorf("%s %w at %d", key, ErrNonPrintable, i)
 	}
 

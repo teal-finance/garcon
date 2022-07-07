@@ -9,8 +9,6 @@ package garcon
 import (
 	"log"
 	"net/http"
-
-	"github.com/teal-finance/garcon/security"
 )
 
 // LogRequest is the middleware to log incoming HTTP request.
@@ -52,27 +50,27 @@ func fingerprint(r *http.Request) string {
 		r.Method + " " +
 		r.RequestURI + " " +
 		// 1. Accept-Language, the language preferred by the user.
-		security.Header(r, "Accept-Language") + " " +
+		SafeHeader(r, "Accept-Language") + " " +
 		// 2. User-Agent, name and version of the browser and OS.
-		security.Header(r, "User-Agent")
+		SafeHeader(r, "User-Agent")
 
 	// 3. R=Referer, the website from which the request originated.
-	if referer := security.Header(r, "Referer"); referer != "" {
+	if referer := SafeHeader(r, "Referer"); referer != "" {
 		line += " R=" + referer
 	}
 
 	// 4. A=Accept, the content types the browser prefers.
-	if a := security.Header(r, "Accept"); a != "" {
+	if a := SafeHeader(r, "Accept"); a != "" {
 		line += " A=" + a
 	}
 
 	// 5. E=Accept-Encoding, the compression formats the browser supports.
-	if ae := security.Header(r, "Accept-Encoding"); ae != "" {
+	if ae := SafeHeader(r, "Accept-Encoding"); ae != "" {
 		line += " E=" + ae
 	}
 
 	// 6. Connection, can be empty, "keep-alive" or "close".
-	if c := security.Header(r, "Connection"); c != "" {
+	if c := SafeHeader(r, "Connection"); c != "" {
 		line += " " + c
 	}
 
@@ -82,14 +80,14 @@ func fingerprint(r *http.Request) string {
 	}
 
 	// 8. Cache-Control, how the browser is caching data.
-	if cc := security.Header(r, "Cache-Control"); cc != "" {
+	if cc := SafeHeader(r, "Cache-Control"); cc != "" {
 		line += " " + cc
 	}
 
 	// 9. Authorization and/or Cookie content.
 
-	if a := security.Header(r, "Authorization"); a != "" {
-		checksum, err := security.Obfuscate(a)
+	if a := SafeHeader(r, "Authorization"); a != "" {
+		checksum, err := Obfuscate(a)
 		if err == nil {
 			line += " " + checksum
 		} else {
@@ -97,11 +95,11 @@ func fingerprint(r *http.Request) string {
 		}
 	}
 
-	if c := security.Header(r, "Cookie"); c != "" {
+	if c := SafeHeader(r, "Cookie"); c != "" {
 		line += " " + c
 	}
 
-	return security.Sanitize(line)
+	return Sanitize(line)
 }
 
 // FingerprintMD provide the browser fingerprint in markdown format.
@@ -121,7 +119,7 @@ func FingerprintMD(r *http.Request) string {
 }
 
 func headerMD(r *http.Request, header string) string {
-	str := security.Header(r, header)
+	str := SafeHeader(r, header)
 	if str != "" {
 		str = "\n" + "* " + header + ": " + str
 	}

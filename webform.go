@@ -14,7 +14,6 @@ import (
 	"strings"
 
 	"github.com/teal-finance/garcon/reserr"
-	"github.com/teal-finance/garcon/security"
 	"github.com/teal-finance/notifier"
 	"github.com/teal-finance/notifier/logger"
 	"github.com/teal-finance/notifier/mattermost"
@@ -196,7 +195,7 @@ func (form *WebForm) messageMD(r *http.Request) string {
 
 func (form *WebForm) valid(name string) bool {
 	if nLen := len(name); nLen > form.maxFieldNameLength {
-		name = security.Sanitize(name)
+		name = Sanitize(name)
 		if len(name) > 100 {
 			name = name[:90] + " (cut)"
 		}
@@ -205,17 +204,17 @@ func (form *WebForm) valid(name string) bool {
 		return false
 	}
 
-	if p := security.Printable(name); p >= 0 {
+	if p := Printable(name); p >= 0 {
 		log.Printf("WRN WebForm: reject name=%s because "+
 			"contains a bad character at position %d",
-			security.Sanitize(name), p)
+			Sanitize(name), p)
 		return false
 	}
 
-	if p := security.Printable(name); p >= 0 {
+	if p := Printable(name); p >= 0 {
 		log.Printf("WRN WebForm: reject name=%s because "+
 			"contains a bad character at position %d",
-			security.Sanitize(name), p)
+			Sanitize(name), p)
 		return false
 	}
 
@@ -230,7 +229,7 @@ func (form *WebForm) valid(name string) bool {
 
 func (form *WebForm) valueMD(v string, maxBreaks int) string {
 	if !strings.ContainsAny(v, "\n\r") {
-		return security.Sanitize(v)
+		return Sanitize(v)
 	}
 
 	v = strings.ReplaceAll(v, "\r", "")
@@ -246,7 +245,7 @@ func (form *WebForm) valueMD(v string, maxBreaks int) string {
 			break
 		}
 		v += "\n" + "  " + // leading spaces = bullet indent
-			security.Sanitize(line) +
+			Sanitize(line) +
 			"  " // trailing double space = line break
 	}
 

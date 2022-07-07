@@ -3,7 +3,7 @@
 // an API and website server, under the MIT License.
 // SPDX-License-Identifier: MIT
 
-package security
+package garcon
 
 import (
 	"crypto/rand"
@@ -51,8 +51,8 @@ func Sanitize(str string) string {
 	)
 }
 
-// Header return a stringifies a safe list of HTTP headers.
-func Header(r *http.Request, header string) string {
+// SafeHeader return a stringifies a safe list of HTTP headers.
+func SafeHeader(r *http.Request, header string) string {
 	values := r.Header.Values(header)
 
 	if len(values) == 0 {
@@ -161,14 +161,6 @@ func NewHash() (hash.Hash, error) {
 	h, err := highwayhash.New(key)
 	return h, err
 }
-
-// // Obfuscate hashes the input string to prevent logging sensitive information.
-// // HighwayHash is a hashing algorithm enabling high speed (especially on AMD64).
-// func (h Hash) Obfuscate(s string) (string, error) {
-// 	h.h.Reset()
-// 	checksum := h.h.Sum([]byte(s))
-// 	return base64.StdEncoding.EncodeToString(checksum), nil
-// }
 
 // Obfuscate hashes the input string to prevent logging sensitive information.
 func Obfuscate(str string) (string, error) {

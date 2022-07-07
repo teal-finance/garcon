@@ -19,7 +19,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/teal-finance/garcon/chain"
-	"github.com/teal-finance/garcon/security"
 )
 
 // space holds the Prometheus namespace.
@@ -78,7 +77,7 @@ func (s *space) measureDuration(next http.Handler) http.Handler {
 		summary.WithLabelValues(record.Status, r.RequestURI).
 			Observe(duration.Seconds())
 
-		uri := security.Sanitize(r.RequestURI)
+		uri := Sanitize(r.RequestURI)
 		log.Print("out ", r.RemoteAddr, " ", r.Method, " ", uri, " ", duration)
 	})
 }
