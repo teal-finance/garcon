@@ -3,8 +3,7 @@
 // an API and website server, under the MIT License.
 // SPDX-License-Identifier: MIT
 
-// Package webserver serves HTML, CSS, JS and image static files.
-package webserver
+package garcon
 
 import (
 	"io"
@@ -20,6 +19,8 @@ import (
 	"github.com/teal-finance/garcon/security"
 )
 
+// StaticWebServer is a webserver serving static files
+// among HTML, CSS, JS and popular image formats.
 type StaticWebServer struct {
 	Dir    string
 	ResErr reserr.ResErr

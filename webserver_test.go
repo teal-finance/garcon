@@ -3,7 +3,7 @@
 // an API and website server, under the MIT License.
 // SPDX-License-Identifier: MIT
 
-package webserver
+package garcon
 
 import (
 	"testing"

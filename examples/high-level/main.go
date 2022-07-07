@@ -18,8 +18,6 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/teal-finance/garcon"
-	"github.com/teal-finance/garcon/webform"
-	"github.com/teal-finance/garcon/webserver"
 	"github.com/teal-finance/notifier/logger"
 )
 
@@ -105,7 +103,7 @@ func staticWebsite(g *garcon.Garcon, r *chi.Mux) {
 	tc := g.Checker
 
 	// Static website files
-	ws := webserver.StaticWebServer{
+	ws := garcon.StaticWebServer{
 		Dir:    "examples/www",
 		ResErr: g.ResErr,
 	}
@@ -121,7 +119,7 @@ func staticWebsite(g *garcon.Garcon, r *chi.Mux) {
 func contactForm(g *garcon.Garcon, r *chi.Mux, addr string) {
 	tc := g.Checker
 
-	wf := webform.WebForm{
+	wf := garcon.WebForm{
 		ResErr:     g.ResErr,
 		Notifier:   logger.NewNotifier(),
 		Redirect:   addr,

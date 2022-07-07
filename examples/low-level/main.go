@@ -27,7 +27,6 @@ import (
 	"github.com/teal-finance/garcon/pprof"
 	"github.com/teal-finance/garcon/quota"
 	"github.com/teal-finance/garcon/reserr"
-	"github.com/teal-finance/garcon/webserver"
 )
 
 // Garcon settings
@@ -131,7 +130,7 @@ func handler(resErr reserr.ResErr, jc *jwtperm.Checker) http.Handler {
 	r := chi.NewRouter()
 
 	// Static website files
-	ws := webserver.StaticWebServer{Dir: "examples/www", ResErr: resErr}
+	ws := garcon.StaticWebServer{Dir: "examples/www", ResErr: resErr}
 	r.Get("/favicon.ico", ws.ServeFile("favicon.ico", "image/x-icon"))
 	r.With(jc.Set).Get("/myapp", ws.ServeFile("myapp/index.html", "text/html; charset=utf-8"))
 	r.With(jc.Set).Get("/myapp/", ws.ServeFile("myapp/index.html", "text/html; charset=utf-8"))
