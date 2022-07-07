@@ -20,7 +20,6 @@ import (
 
 	"github.com/teal-finance/garcon"
 	"github.com/teal-finance/garcon/chain"
-	"github.com/teal-finance/garcon/cors"
 	"github.com/teal-finance/garcon/reserr"
 )
 
@@ -79,7 +78,7 @@ func setMiddlewares(resErr reserr.ResErr) (mw chain.Chain, connState func(net.Co
 	mw = mw.Append(
 		reqLimiter.LimitRate,
 		garcon.ServerHeader(serverHeader),
-		cors.Handler(allowedOrigins, *dev),
+		garcon.CORSHandler(allowedOrigins, *dev),
 	)
 
 	// Endpoint authentication rules (Open Policy Agent)

@@ -3,7 +3,7 @@
 // an API and website server, under the MIT License.
 // SPDX-License-Identifier: MIT
 
-package cors
+package garcon
 
 import (
 	"log"
@@ -13,8 +13,8 @@ import (
 	"github.com/rs/cors"
 )
 
-// Handler uses restrictive CORS values.
-func Handler(origins []string, debug bool) func(next http.Handler) http.Handler {
+// CORSHandler uses restrictive CORS values.
+func CORSHandler(origins []string, debug bool) func(next http.Handler) http.Handler {
 	options := cors.Options{
 		AllowedOrigins:         nil,
 		AllowOriginFunc:        nil,

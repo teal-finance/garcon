@@ -26,7 +26,6 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/teal-finance/garcon/chain"
-	"github.com/teal-finance/garcon/cors"
 	"github.com/teal-finance/garcon/reserr"
 	"github.com/teal-finance/incorruptible"
 	"github.com/teal-finance/incorruptible/dtoken"
@@ -148,7 +147,7 @@ func (s *parameters) new() (*Garcon, error) {
 
 	g.Middlewares = g.Middlewares.Append(
 		ServerHeader(s.nameVersion),
-		cors.Handler(g.AllowedOrigins, s.devMode),
+		CORSHandler(g.AllowedOrigins, s.devMode),
 	)
 
 	if len(s.secretKey) > 0 {
