@@ -3,8 +3,7 @@
 // an API and website server, under the MIT License.
 // SPDX-License-Identifier: MIT
 
-// Package pprof serves the /debug/pprof endpoint
-package pprof
+package garcon
 
 import (
 	"log"
@@ -28,12 +27,17 @@ import (
 //    go get -u github.com/google/pprof
 //    cd -
 //    pprof -http=: cpu.pprof
+//
+// or using one single command line:
+//
+//    go run github.com/google/pprof@latest -http=: cpu.pprof
+//
 func ProbeCPU() interface{ Stop() } {
 	log.Print("Probing CPU. To visualize the profile: pprof -http=: cpu.pprof")
 	return profile.Start(profile.ProfilePath("."))
 }
 
-// StartServer starts a PProf server in background.
+// StartPProfServer starts a PProf server in background.
 // Endpoints usage example:
 //
 //     curl http://localhost:6063/debug/pprof/allocs > allocs.pprof
@@ -47,32 +51,30 @@ func ProbeCPU() interface{ Stop() } {
 //
 //     wget http://localhost:31415/debug/pprof/trace
 //     pprof -http=: trace
-func StartServer(port int) {
+func StartPProfServer(port int) {
 	if port == 0 {
 		return // Disable PProf endpoints /debug/pprof/*
 	}
 
 	addr := "localhost:" + strconv.Itoa(port)
-	h := handler()
+	h := pProfHandler()
 
-	go runServer(addr, h)
+	go runPProfServer(addr, h)
 }
 
-func handler() http.Handler {
+// pProfHandler serves the /debug/pprof/* endpoints.
+func pProfHandler() http.Handler {
 	r := chi.NewRouter()
-
 	r.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
 	r.HandleFunc("/debug/pprof/profile", pprof.Profile)
 	r.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
 	r.HandleFunc("/debug/pprof/trace", pprof.Trace)
-	r.NotFound(pprof.Index) // also serves /debug/pprof/{heap,goroutine,block…}
-
+	r.NotFound(pprof.Index) // also serves /debug/pprof/{heap,goroutine,block...}
 	return r
 }
 
-func runServer(addr string, handler http.Handler) {
+func runPProfServer(addr string, handler http.Handler) {
 	log.Print("Enable PProf endpoints: http://" + addr + "/debug/pprof")
-
 	err := http.ListenAndServe(addr, handler)
-	log.Fatal(err)
+	log.Panic(err)
 }

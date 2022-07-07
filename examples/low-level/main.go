@@ -22,7 +22,6 @@ import (
 	"github.com/teal-finance/garcon/chain"
 	"github.com/teal-finance/garcon/cors"
 	"github.com/teal-finance/garcon/jwtperm"
-	"github.com/teal-finance/garcon/pprof"
 	"github.com/teal-finance/garcon/reserr"
 )
 
@@ -42,9 +41,9 @@ const (
 
 func main() {
 	// the following line collects the CPU-profile and writes it in the file "cpu.pprof"
-	defer pprof.ProbeCPU().Stop()
+	defer garcon.ProbeCPU().Stop()
 
-	pprof.StartServer(pprofPort)
+	garcon.StartPProfServer(pprofPort)
 
 	// Uniformize error responses with API doc
 	resErr := reserr.New(apiDoc)

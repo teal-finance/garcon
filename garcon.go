@@ -28,7 +28,6 @@ import (
 	"github.com/teal-finance/garcon/chain"
 	"github.com/teal-finance/garcon/cors"
 	"github.com/teal-finance/garcon/jwtperm"
-	"github.com/teal-finance/garcon/pprof"
 	"github.com/teal-finance/garcon/reserr"
 	"github.com/teal-finance/garcon/security"
 	"github.com/teal-finance/incorruptible"
@@ -102,7 +101,7 @@ func New(opts ...Option) (*Garcon, error) {
 		}
 	}
 
-	pprof.StartServer(params.pprofPort)
+	StartPProfServer(params.pprofPort)
 
 	if params.urls == nil {
 		params.urls = DevOrigins
