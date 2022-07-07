@@ -3,9 +3,7 @@
 // an API and website server, under the MIT License.
 // SPDX-License-Identifier: MIT
 
-// Package version provides helper functions to compute the version text
-// and to configure the version flag.
-package version
+package garcon
 
 import (
 	"flag"
@@ -43,8 +41,8 @@ func Version(program, vvv string) string {
 	return program + vvv
 }
 
-// PrintVersion prints the output for the version flag.
-//nolint:forbidigo // prints on stdout
+// PrintVersion computes and prints the version and (Git) commit information.
+//nolint:forbidigo // must print on stdout
 func PrintVersion(v string) {
 	if v == "" {
 		v = Version("", "")
