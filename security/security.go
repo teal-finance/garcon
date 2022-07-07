@@ -14,12 +14,13 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	// HighwayHash mixes inputs with AVX2 multiply and permute instructions
+	// to be 5x faster than SipHash, but it has a weak collision resistance.
+	// It can be used to prevent hash-flooding attacks or authenticate short-lived messages.
 	"github.com/minio/highwayhash"
 
 	"github.com/teal-finance/garcon/reserr"
 )
-
-const hashKey32bytes = "0123456789ABCDEF0123456789ABCDEF"
 
 // Code points in the surrogate range are not valid for UTF-8.
 const (
@@ -33,7 +34,7 @@ const (
 // Inspired from:
 // https://wikiless.org/wiki/Replacement_character#Replacement_character
 // https://graphicdesign.stackexchange.com/q/108297
-func Sanitize(s string) string {
+func Sanitize(str string) string {
 	return strings.Map(
 		func(r rune) rune {
 			switch {
@@ -46,7 +47,7 @@ func Sanitize(s string) string {
 			}
 			return r
 		},
-		s,
+		str,
 	)
 }
 
@@ -84,7 +85,8 @@ func Printable(s string) int {
 	return -1
 }
 
-// Printables returns -1 when all the strings are printable.
+// Printables returns -1 when all the strings are printable
+// else returns the position of the rejected character.
 func Printables(array []string) int {
 	for _, s := range array {
 		if i := Printable(s); i >= 0 {
@@ -103,8 +105,10 @@ func RejectInvalidURI(next http.Handler) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			if i := Printable(r.RequestURI); i >= 0 {
-				reserr.Write(w, r, http.StatusBadRequest, "Invalid URI containing an unexpected character at position ", i)
-				log.Print("WRN WebServer: reject URI with <CR> or <LF>:", Sanitize(r.RequestURI))
+				reserr.Write(w, r, http.StatusBadRequest,
+					"Invalid URI with non-printable symbol",
+					"position", i)
+				log.Print("WRN: reject non-printable URI or with <CR> or <LF>:", Sanitize(r.RequestURI))
 				return
 			}
 
@@ -115,40 +119,36 @@ func RejectInvalidURI(next http.Handler) http.Handler {
 // TraversalPath returns true when path contains ".." to prevent path traversal attack.
 func TraversalPath(w http.ResponseWriter, r *http.Request) bool {
 	if strings.Contains(r.URL.Path, "..") {
-		reserr.Write(w, r, http.StatusBadRequest, "Invalid URL Path Containing '..'")
-		log.Print("WRN WebServer: reject path with '..' ", Sanitize(r.URL.Path))
+		reserr.Write(w, r, http.StatusBadRequest, "URL contains '..'")
+		log.Print("WRN: reject path with '..' ", Sanitize(r.URL.Path))
 		return true
 	}
 	return false
 }
 
-type Hash struct {
-	h hash.Hash
-}
-
-func NewHash() (Hash, error) {
+// NewHash uses HighwayHash is a hashing algorithm enabling high speed (especially on AMD64).
+func NewHash() (hash.Hash, error) {
 	key := make([]byte, 32)
 
 	if _, err := rand.Read(key); err != nil {
-		return Hash{nil}, err
+		return nil, err
 	}
 
 	h, err := highwayhash.New(key)
-	return Hash{h}, err
+	return h, err
 }
 
-// Obfuscate hashes the input string to prevent logging sensitive information.
-// HighwayHash is a hashing algorithm enabling high speed (especially on AMD64).
-func (h Hash) Obfuscate(s string) (string, error) {
-	h.h.Reset()
-	checksum := h.h.Sum([]byte(s))
-	return base64.StdEncoding.EncodeToString(checksum), nil
-}
+// // Obfuscate hashes the input string to prevent logging sensitive information.
+// // HighwayHash is a hashing algorithm enabling high speed (especially on AMD64).
+// func (h Hash) Obfuscate(s string) (string, error) {
+// 	h.h.Reset()
+// 	checksum := h.h.Sum([]byte(s))
+// 	return base64.StdEncoding.EncodeToString(checksum), nil
+// }
 
 // Obfuscate hashes the input string to prevent logging sensitive information.
-// HighwayHash is a hashing algorithm enabling high speed (especially on AMD64).
 func Obfuscate(str string) (string, error) {
-	h, err := highwayhash.New([]byte(hashKey32bytes))
+	h, err := NewHash()
 	if err != nil {
 		return str, err
 	}

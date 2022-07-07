@@ -26,7 +26,7 @@ type WebServer struct {
 }
 
 // ServeFile handles one specific file (and its specific Content-Type).
-func (ws WebServer) ServeFile(urlPath, contentType string) func(w http.ResponseWriter, r *http.Request) {
+func (ws *WebServer) ServeFile(urlPath, contentType string) func(w http.ResponseWriter, r *http.Request) {
 	absPath := path.Join(ws.Dir, urlPath)
 
 	if strings.HasPrefix(contentType, "text/html") {
@@ -48,7 +48,7 @@ func (ws WebServer) ServeFile(urlPath, contentType string) func(w http.ResponseW
 }
 
 // ServeDir handles the static files using the same Content-Type.
-func (ws WebServer) ServeDir(contentType string) func(w http.ResponseWriter, r *http.Request) {
+func (ws *WebServer) ServeDir(contentType string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if security.TraversalPath(w, r) {
 			return
@@ -69,7 +69,7 @@ func (ws WebServer) ServeDir(contentType string) func(w http.ResponseWriter, r *
 }
 
 // ServeImages detects the Content-Type depending on the image extension.
-func (ws WebServer) ServeImages() func(w http.ResponseWriter, r *http.Request) {
+func (ws *WebServer) ServeImages() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if security.TraversalPath(w, r) {
 			return
@@ -89,7 +89,7 @@ func (ws WebServer) ServeImages() func(w http.ResponseWriter, r *http.Request) {
 }
 
 // ServeAssets detects the Content-Type depending on the asset extension.
-func (ws WebServer) ServeAssets() func(w http.ResponseWriter, r *http.Request) {
+func (ws *WebServer) ServeAssets() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if security.TraversalPath(w, r) {
 			return
@@ -104,7 +104,6 @@ func (ws WebServer) ServeAssets() func(w http.ResponseWriter, r *http.Request) {
 
 		if ext == "css" {
 			w.Header().Set("Content-Type", "text/css; charset=utf-8")
-
 			absPath = path.Join(ws.Dir, r.URL.Path)
 		} else {
 			var contentType string
@@ -118,12 +117,11 @@ func (ws WebServer) ServeAssets() func(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (ws WebServer) openFile(w http.ResponseWriter, r *http.Request, absPath string) (*os.File, string) {
+func (ws *WebServer) openFile(w http.ResponseWriter, r *http.Request, absPath string) (*os.File, string) {
 	// if client (browser) supports Brotli and the *.br file is present
 	// => send the *.br file
 	if strings.Contains(r.Header.Get("Accept-Encoding"), "br") {
 		brotli := absPath + ".br"
-
 		file, err := os.Open(brotli)
 		if err == nil {
 			w.Header().Set("Content-Encoding", "br")
@@ -141,7 +139,7 @@ func (ws WebServer) openFile(w http.ResponseWriter, r *http.Request, absPath str
 	return file, absPath
 }
 
-func (ws WebServer) send(w http.ResponseWriter, r *http.Request, absPath string) {
+func (ws *WebServer) send(w http.ResponseWriter, r *http.Request, absPath string) {
 	file, absPath := ws.openFile(w, r, absPath)
 
 	defer func() {
@@ -168,7 +166,7 @@ func (ws WebServer) send(w http.ResponseWriter, r *http.Request, absPath string)
 
 // imagePathAndType returns the path/filename and the Content-Type of the image.
 // If the client (browser) supports AVIF, imagePathAndType replaces the requested image by the AVIF one.
-func (ws WebServer) imagePathAndType(r *http.Request) (absPath, contentType string) {
+func (ws *WebServer) imagePathAndType(r *http.Request) (absPath, contentType string) {
 	extPos := extIndex(r.URL.Path)
 
 	// We only check the first Header "Accept":
@@ -177,7 +175,7 @@ func (ws WebServer) imagePathAndType(r *http.Request) (absPath, contentType stri
 	scheme := r.Header.Get("Accept")
 
 	// We perform a stupid search to be fast,
-	// but we hope there is no Content-Type such as "image/avifuck"
+	// but we hope there is no Content-Type such as "image/avifauna"
 	const avifContentType = "image/avif"
 	if strings.Contains(scheme, avifContentType) {
 		avifPath := r.URL.Path[:extPos] + "avif"

@@ -140,7 +140,7 @@ func handler(resErr reserr.ResErr, jc *jwtperm.Checker) http.Handler {
 	r.With(jc.Chk).Get("/myapp/images/*", ws.ServeImages())
 
 	// API
-	r.With(jc.Vet).Get("/api/v1/items", items)
+	r.With(jc.Vet).Get("/path/not/in/cookie", items)
 	r.With(jc.Vet).Get("/myapp/api/v1/items", items)
 	r.With(jc.Vet).Get("/myapp/api/v1/ducks", resErr.NotImplemented)
 

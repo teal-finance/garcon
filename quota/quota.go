@@ -54,7 +54,8 @@ func (rl *ReqLimiter) Limit(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ip, _, err := net.SplitHostPort(r.RemoteAddr)
 		if err != nil {
-			rl.resErr.Write(w, r, http.StatusInternalServerError, "Internal Server Error #3")
+			rl.resErr.Write(w, r, http.StatusInternalServerError,
+				"Cannot split addr=host:port", "addr", r.RemoteAddr)
 			log.Print("in  ", r.RemoteAddr, " ", r.Method, " ", r.RequestURI, " ERR SplitHostPort ", err)
 			return
 		}
@@ -63,7 +64,8 @@ func (rl *ReqLimiter) Limit(next http.Handler) http.Handler {
 
 		if err := limiter.Wait(r.Context()); err != nil {
 			if r.Context().Err() == nil {
-				rl.resErr.Write(w, r, http.StatusTooManyRequests, "Too Many Requests")
+				rl.resErr.Write(w, r, http.StatusTooManyRequests, "Too Many Requests",
+					"advice", "Please contact the team support is this is annoying")
 				log.Print("WRN ", r.RemoteAddr, " ", r.Method, " ", r.RequestURI, "TooManyRequests ", err)
 			} else {
 				log.Print("WRM ", r.RemoteAddr, " ", r.Method, " ", r.RequestURI, " ", err)
