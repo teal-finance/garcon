@@ -1,7 +1,6 @@
 // inspired from https://github.com/StevenACoffman/teamboard/main/pkg/tools
 
 //go:build generate
-// +build generate
 
 package generate
 
@@ -9,7 +8,7 @@ import (
 	_ "github.com/mailru/easyjson"
 )
 
-//go:generate go run github.com/mailru/easyjson/... -all -omit_empty -snake_case ../reserr.go
+//go:generate go run github.com/mailru/easyjson/... -all -omit_empty -snake_case ../err-writer.go
 
 // There is nothing here intentionally
 

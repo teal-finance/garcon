@@ -22,23 +22,21 @@ import (
 
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/rego"
-
-	"github.com/teal-finance/garcon/reserr"
 )
 
 // Policy manages the Open Policy Agent (OPA).
 // see https://www.openpolicyagent.org/docs/edge/integration/#integrating-with-the-go-api
 type Policy struct {
-	compiler *ast.Compiler
-	resErr   reserr.ResErr
+	compiler  *ast.Compiler
+	errWriter ErrWriter
 }
 
 var ErrEmptyOPAFilename = errors.New("OPA: missing filename")
 
 // NewPolicy creates a new Policy by loading rego files.
-func NewPolicy(filenames []string, resErr reserr.ResErr) (Policy, error) {
+func NewPolicy(filenames []string, errWriter ErrWriter) (Policy, error) {
 	compiler, err := LoadPolicy(filenames)
-	return Policy{compiler, resErr}, err
+	return Policy{compiler, errWriter}, err
 }
 
 // LoadPolicy checks the Rego filenames and loads them to build the OPA compiler.
@@ -72,7 +70,7 @@ func (opa Policy) AuthOPA(next http.Handler) http.Handler {
 	log.Print("Middleware OPA: ", opa.compiler.Modules)
 
 	compiler := opa.compiler
-	resErr := opa.resErr
+	errWriter := opa.errWriter
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		input := map[string]any{
@@ -90,20 +88,20 @@ func (opa Policy) AuthOPA(next http.Handler) http.Handler {
 
 		rs, err := rg.Eval(context.Background())
 		if err != nil || len(rs) == 0 {
-			resErr.Write(w, r, http.StatusInternalServerError, "Cannot evaluate autorisation settings")
+			errWriter.Write(w, r, http.StatusInternalServerError, "Cannot evaluate autorisation settings")
 			log.Print("ERR OPA Eval: ", err)
 			return
 		}
 
 		allow, ok := rs[0].Expressions[0].Value.(bool)
 		if !ok {
-			resErr.Write(w, r, http.StatusInternalServerError, "Missing autorisation settings")
+			errWriter.Write(w, r, http.StatusInternalServerError, "Missing autorisation settings")
 			log.Print("ERR missing OPA data in ", rs)
 			return
 		}
 
 		if !allow {
-			resErr.Write(w, r, http.StatusUnauthorized, "No valid JWT",
+			errWriter.Write(w, r, http.StatusUnauthorized, "No valid JWT",
 				"advice", "Provide your JWT within the 'Authorization Bearer' HTTP header")
 			log.Print("OPA: Missing or invalid Authorization header " + r.RemoteAddr + " " + r.RequestURI)
 			return

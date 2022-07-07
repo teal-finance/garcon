@@ -14,7 +14,6 @@ import (
 	"testing"
 
 	"github.com/teal-finance/garcon"
-	"github.com/teal-finance/garcon/reserr"
 )
 
 type next struct{ called bool }
@@ -27,14 +26,14 @@ func TestNew(t *testing.T) {
 	cases := []struct {
 		name        string
 		addresses   []string
-		resErr      reserr.ResErr
+		errWriter   garcon.ErrWriter
 		secretHex   string
 		permissions []any
 		// want     *Checker
 	}{{
 		name:        "TAPI",
 		addresses:   []string{"http://my-dns.co"},
-		resErr:      reserr.New("http://my-dns.co/doc"),
+		errWriter:   garcon.NewErrWriter("http://my-dns.co/doc"),
 		secretHex:   "0a02123112dfb13d58a1bc0c8ce55b154878085035ae4d2e13383a79a3e3de1b",
 		permissions: []any{"Anonymous", 6, "Personal", 48, "Enterprise", 0},
 	}}
@@ -51,7 +50,7 @@ func TestNew(t *testing.T) {
 				log.Panic(err)
 			}
 
-			checker := garcon.NewChecker(urls, c.resErr, secretKey, c.permissions...)
+			checker := garcon.NewChecker(urls, c.errWriter, secretKey, c.permissions...)
 			cookie := checker.Cookie(0)
 
 			req, _ := http.NewRequestWithContext(context.Background(), "GET", c.addresses[0], http.NoBody)

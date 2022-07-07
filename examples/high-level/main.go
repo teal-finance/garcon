@@ -91,10 +91,10 @@ func handler(g *garcon.Garcon, addr string) http.Handler {
 	tc := g.Checker
 	r.With(tc.Vet).Get("/path/not/in/cookie", items)
 	r.With(tc.Vet).Get("/myapp/api/v1/items", items)
-	r.With(tc.Vet).Get("/myapp/api/v1/ducks", g.ResErr.NotImplemented)
+	r.With(tc.Vet).Get("/myapp/api/v1/ducks", g.ErrWriter.NotImplemented)
 
 	// Other endpoints
-	r.NotFound(g.ResErr.InvalidPath)
+	r.NotFound(g.ErrWriter.InvalidPath)
 
 	return r
 }
@@ -105,7 +105,7 @@ func staticWebsite(g *garcon.Garcon, r *chi.Mux) {
 	// Static website files
 	ws := garcon.StaticWebServer{
 		Dir:    "examples/www",
-		ResErr: g.ResErr,
+		ErrWriter: g.ErrWriter,
 	}
 
 	r.Get("/favicon.ico", ws.ServeFile("favicon.ico", "image/x-icon"))
@@ -120,7 +120,7 @@ func contactForm(g *garcon.Garcon, r *chi.Mux, addr string) {
 	tc := g.Checker
 
 	wf := garcon.WebForm{
-		ResErr:     g.ResErr,
+		ErrWriter:     g.ErrWriter,
 		Notifier:   logger.NewNotifier(),
 		Redirect:   addr,
 		TextLimits: nil,

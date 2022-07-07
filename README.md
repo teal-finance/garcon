@@ -83,7 +83,7 @@ func main() {
         garcon.WithDev(),
     )
 
-    h := handler(g.ResErr, g.Checker)
+    h := handler(g.ErrWriter, g.Checker)
 
     g.Run(h, 8080)
 }
@@ -154,11 +154,11 @@ The resources and API endpoints are protected with a HttpOnly cookie.
 The [high-level example](examples/high-level/main.go) sets the cookie to browsers visiting the `index.html`.
 
 ```go
-func handler(resErr reserr.ResErr, jc *jwtperm.Checker) http.Handler {
+func handler(errWriter garcon.ErrWriter, jc *jwtperm.Checker) http.Handler {
     r := chi.NewRouter()
 
     // Static website files
-    ws := webserver.WebServer{Dir: "examples/www", ResErr: resErr}
+    ws := webserver.WebServer{Dir: "examples/www", ErrWriter: errWriter}
     r.With(jc.SetCookie).Get("/", ws.ServeFile("index.html", "text/html; charset=utf-8"))
     r.With(jc.SetCookie).Get("/favicon.ico", ws.ServeFile("favicon.ico", "image/x-icon"))
     r.With(jc.ChkCookie).Get("/js/*", ws.ServeDir("text/javascript; charset=utf-8"))
@@ -167,10 +167,10 @@ func handler(resErr reserr.ResErr, jc *jwtperm.Checker) http.Handler {
 
     // API
     r.With(jc.ChkJWT).Get("/api/v1/items", items)
-    r.With(jc.ChkJWT).Get("/api/v1/ducks", resErr.NotImplemented)
+    r.With(jc.ChkJWT).Get("/api/v1/ducks", errWriter.NotImplemented)
 
     // Other endpoints
-    r.NotFound(resErr.InvalidPath)
+    r.NotFound(errWriter.InvalidPath)
 
     return r
 }
@@ -301,7 +301,7 @@ import (
     "github.com/teal-finance/garcon/opa"
     "github.com/teal-finance/garcon/pprof"
     "github.com/teal-finance/garcon/quota"
-    "github.com/teal-finance/garcon/reserr"
+    "github.com/teal-finance/garcon"
     "github.com/teal-finance/garcon/webserver"
 )
 
@@ -325,25 +325,25 @@ func main() {
     pprof.StartServer(pprofPort)
 
     // Uniformize error responses with API doc
-    resErr := reserr.New(apiDoc)
+    errWriter := garcon.New(apiDoc)
 
-    mw, connState := setMiddlewares(resErr)
+    chain, connState := setMiddlewares(errWriter)
 
     // Handles both REST API and static web files
-    h := handler(resErr)
-    h = mw.Then(h)
+    h := handler(errWriter)
+    h = chain.Then(h)
 
     runServer(h, connState)
 }
 
-func setMiddlewares(resErr reserr.ResErr) (mw chain.Chain, connState func(net.Conn, http.ConnState)) {
+func setMiddlewares(errWriter garcon.ErrWriter) (chain chain.Chain, connState func(net.Conn, http.ConnState)) {
     // Start a metrics server in background if export port > 0.
     // The metrics server is for use with Prometheus or another compatible monitoring tool.
     metrics := metrics.Metrics{}
-    mw, connState = metrics.StartServer(expPort, devMode)
+    chain, connState = metrics.StartServer(expPort, devMode)
 
     // Limit the input request rate per IP
-    reqLimiter := quota.New(burst, reqMinute, devMode, resErr)
+    reqLimiter := quota.New(burst, reqMinute, devMode, errWriter)
 
     corsConfig := allowedProdOrigin
     if devMode {
@@ -352,7 +352,7 @@ func setMiddlewares(resErr reserr.ResErr) (mw chain.Chain, connState func(net.Co
 
     allowedOrigins := garcon.SplitClean(corsConfig)
 
-    mw = mw.Append(
+    chain = chain.Append(
         reqLimiter.Limit,
         garcon.ServerHeader(serverHeader),
         cors.Handler(allowedOrigins, devMode),
@@ -360,16 +360,16 @@ func setMiddlewares(resErr reserr.ResErr) (mw chain.Chain, connState func(net.Co
 
     // Endpoint authentication rules (Open Policy Agent)
     files := garcon.SplitClean(authCfg)
-    policy, err := opa.New(files, resErr)
+    policy, err := opa.New(files, errWriter)
     if err != nil {
         log.Fatal(err)
     }
 
     if policy.Ready() {
-        mw = mw.Append(policy.Auth)
+        chain = chain.Append(policy.Auth)
     }
 
-    return mw, connState
+    return chain, connState
 }
 
 // runServer runs in foreground the main server.
@@ -398,11 +398,11 @@ func runServer(h http.Handler, connState func(net.Conn, http.ConnState)) {
 }
 
 // handler creates the mapping between the endpoints and the handler functions.
-func handler(resErr reserr.ResErr) http.Handler {
+func handler(errWriter garcon.ErrWriter) http.Handler {
     r := chi.NewRouter()
 
     // Static website files
-    ws := webserver.WebServer{Dir: "examples/www", ResErr: resErr}
+    ws := webserver.WebServer{Dir: "examples/www", ErrWriter: errWriter}
     r.Get("/", ws.ServeFile("index.html", "text/html; charset=utf-8"))
     r.Get("/js/*", ws.ServeDir("text/javascript; charset=utf-8"))
     r.Get("/css/*", ws.ServeDir("text/css; charset=utf-8"))
@@ -410,10 +410,10 @@ func handler(resErr reserr.ResErr) http.Handler {
 
     // API
     r.Get("/api/v1/items", items)
-    r.Get("/api/v1/ducks", resErr.NotImplemented)
+    r.Get("/api/v1/ducks", errWriter.NotImplemented)
 
     // Other endpoints
-    r.NotFound(resErr.InvalidPath)
+    r.NotFound(errWriter.InvalidPath)
 
     return r
 }

@@ -25,7 +25,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/teal-finance/garcon/reserr"
 	"github.com/teal-finance/incorruptible"
 	"github.com/teal-finance/incorruptible/dtoken"
 )
@@ -44,7 +43,7 @@ var DevOrigins = []*url.URL{
 type Garcon struct {
 	ConnState      func(net.Conn, http.ConnState)
 	Checker        TokenChecker
-	ResErr         reserr.ResErr
+	ErrWriter      ErrWriter
 	AllowedOrigins []string
 	Middlewares    Chain
 }
@@ -121,7 +120,7 @@ func (s *parameters) new() (*Garcon, error) {
 	g := Garcon{
 		ConnState:      nil,
 		Checker:        nil,
-		ResErr:         reserr.New(s.docURL),
+		ErrWriter:      NewErrWriter(s.docURL),
 		AllowedOrigins: OriginsFromURLs(s.urls),
 		Middlewares:    nil,
 	}
@@ -140,7 +139,7 @@ func (s *parameters) new() (*Garcon, error) {
 	}
 
 	if s.reqMinute > 0 {
-		reqLimiter := NewReqLimiter(s.reqBurst, s.reqMinute, s.devMode, g.ResErr)
+		reqLimiter := NewReqLimiter(s.reqBurst, s.reqMinute, s.devMode, g.ErrWriter)
 		g.Middlewares = g.Middlewares.Append(reqLimiter.LimitRate)
 	}
 
@@ -169,7 +168,7 @@ func (s *parameters) new() (*Garcon, error) {
 
 	// Authentication rules (Open Policy Agent)
 	if len(s.opaFilenames) > 0 {
-		policy, err := NewPolicy(s.opaFilenames, g.ResErr)
+		policy, err := NewPolicy(s.opaFilenames, g.ErrWriter)
 		if err != nil {
 			return &g, err
 		}
@@ -368,11 +367,11 @@ func (g *Garcon) Run(h http.Handler, port int) error {
 }
 
 func (g *Garcon) NewSessionToken(urls []*url.URL, secretKey []byte, expiry time.Duration, setIP bool) *incorruptible.Incorruptible {
-	return incorruptible.New(urls, secretKey, expiry, setIP, g.ResErr.Write)
+	return incorruptible.New(urls, secretKey, expiry, setIP, g.ErrWriter.Write)
 }
 
 func (g *Garcon) NewJWTChecker(urls []*url.URL, secretKey []byte, planPerm ...any) *Checker {
-	return NewChecker(urls, g.ResErr, secretKey, planPerm...)
+	return NewChecker(urls, g.ErrWriter, secretKey, planPerm...)
 }
 
 // ServerHeader sets the Server HTTP header in the response.

@@ -19,7 +19,6 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/teal-finance/garcon"
-	"github.com/teal-finance/garcon/reserr"
 )
 
 // Garcon settings
@@ -43,28 +42,28 @@ func main() {
 	garcon.StartPProfServer(pprofPort)
 
 	// Uniformize error responses with API doc
-	resErr := reserr.New(apiDoc)
+	errWriter := garcon.NewErrWriter(apiDoc)
 
-	mw, connState, urls := setMiddlewares(resErr)
+	chain, connState, urls := setMiddlewares(errWriter)
 
 	// Handles both REST API and static web files
-	h := handler(resErr, garcon.NewChecker(urls, resErr, []byte(hmacSHA256)))
-	h = mw.Then(h)
+	h := handler(errWriter, garcon.NewChecker(urls, errWriter, []byte(hmacSHA256)))
+	h = chain.Then(h)
 
 	runServer(h, connState)
 }
 
-func setMiddlewares(resErr reserr.ResErr) (mw garcon.Chain, connState func(net.Conn, http.ConnState), urls []*url.URL) {
+func setMiddlewares(errWriter garcon.ErrWriter) (chain garcon.Chain, connState func(net.Conn, http.ConnState), urls []*url.URL) {
 	auth := flag.Bool("auth", false, "Enable OPA authorization specified in file "+authCfg)
 	dev := flag.Bool("dev", true, "Use development or production settings")
 	flag.Parse()
 
 	// Start a metrics server in background if export port > 0.
 	// The metrics server is for use with Prometheus or another compatible monitoring tool.
-	mw, connState = garcon.StartMetricsServer(expPort, "LowLevel")
+	chain, connState = garcon.StartMetricsServer(expPort, "LowLevel")
 
 	// Limit the input request rate per IP
-	reqLimiter := garcon.NewReqLimiter(burst, reqMinute, *dev, resErr)
+	reqLimiter := garcon.NewReqLimiter(burst, reqMinute, *dev, errWriter)
 
 	corsConfig := allowedProdOrigin
 	if *dev {
@@ -74,7 +73,7 @@ func setMiddlewares(resErr reserr.ResErr) (mw garcon.Chain, connState func(net.C
 	allowedOrigins := garcon.SplitClean(corsConfig)
 	urls = garcon.ParseURLs(allowedOrigins)
 
-	mw = mw.Append(
+	chain = chain.Append(
 		reqLimiter.LimitRate,
 		garcon.ServerHeader(serverHeader),
 		garcon.CORSHandler(allowedOrigins, *dev),
@@ -83,14 +82,14 @@ func setMiddlewares(resErr reserr.ResErr) (mw garcon.Chain, connState func(net.C
 	// Endpoint authentication rules (Open Policy Agent)
 	if *auth {
 		files := garcon.SplitClean(authCfg)
-		policy, err := garcon.NewPolicy(files, resErr)
+		policy, err := garcon.NewPolicy(files, errWriter)
 		if err != nil {
 			log.Fatal(err)
 		}
-		mw = mw.Append(policy.AuthOPA)
+		chain = chain.Append(policy.AuthOPA)
 	}
 
-	return mw, connState, urls
+	return chain, connState, urls
 }
 
 // runServer runs in foreground the main server.
@@ -119,11 +118,11 @@ func runServer(h http.Handler, connState func(net.Conn, http.ConnState)) {
 }
 
 // handler creates the mapping between the endpoints and the handler functions.
-func handler(resErr reserr.ResErr, c *garcon.Checker) http.Handler {
+func handler(errWriter garcon.ErrWriter, c *garcon.Checker) http.Handler {
 	r := chi.NewRouter()
 
 	// Static website files
-	ws := garcon.StaticWebServer{Dir: "examples/www", ResErr: resErr}
+	ws := garcon.StaticWebServer{Dir: "examples/www", ErrWriter: errWriter}
 	r.Get("/favicon.ico", ws.ServeFile("favicon.ico", "image/x-icon"))
 	r.With(c.Set).Get("/myapp", ws.ServeFile("myapp/index.html", "text/html; charset=utf-8"))
 	r.With(c.Set).Get("/myapp/", ws.ServeFile("myapp/index.html", "text/html; charset=utf-8"))
@@ -134,10 +133,10 @@ func handler(resErr reserr.ResErr, c *garcon.Checker) http.Handler {
 	// API
 	r.With(c.Vet).Get("/path/not/in/cookie", items)
 	r.With(c.Vet).Get("/myapp/api/v1/items", items)
-	r.With(c.Vet).Get("/myapp/api/v1/ducks", resErr.NotImplemented)
+	r.With(c.Vet).Get("/myapp/api/v1/ducks", errWriter.NotImplemented)
 
 	// Other endpoints
-	r.NotFound(resErr.InvalidPath)
+	r.NotFound(errWriter.InvalidPath)
 
 	return r
 }

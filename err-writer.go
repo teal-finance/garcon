@@ -3,8 +3,7 @@
 // an API and website server, under the MIT License.
 // SPDX-License-Identifier: MIT
 
-// Package reserr writes useful JSON message on HTTP error.
-package reserr
+package garcon
 
 import (
 	"fmt"
@@ -18,31 +17,32 @@ const (
 	pathInvalid  = "Path is not valid. Please refer to the documentation."
 )
 
-type ResErr string
+// ErrWriter enables writing useful JSON error message in the HTTP response body.
+type ErrWriter string
 
-// New creates a ResErr structure.
-func New(docURL string) ResErr {
-	return ResErr(docURL)
+// NewErrWriter creates a ErrWriter structure.
+func NewErrWriter(docURL string) ErrWriter {
+	return ErrWriter(docURL)
 }
 
 func NotImplemented(w http.ResponseWriter, r *http.Request) {
-	ResErr("").NotImplemented(w, r)
+	ErrWriter("").NotImplemented(w, r)
 }
 
 func InvalidPath(w http.ResponseWriter, r *http.Request) {
-	ResErr("").InvalidPath(w, r)
+	ErrWriter("").InvalidPath(w, r)
 }
 
-func (resErr ResErr) NotImplemented(w http.ResponseWriter, r *http.Request) {
-	resErr.Write(w, r, http.StatusNotImplemented, pathReserved)
+func (errWriter ErrWriter) NotImplemented(w http.ResponseWriter, r *http.Request) {
+	errWriter.Write(w, r, http.StatusNotImplemented, pathReserved)
 }
 
-func (resErr ResErr) InvalidPath(w http.ResponseWriter, r *http.Request) {
-	resErr.Write(w, r, http.StatusBadRequest, pathInvalid)
+func (errWriter ErrWriter) InvalidPath(w http.ResponseWriter, r *http.Request) {
+	errWriter.Write(w, r, http.StatusBadRequest, pathInvalid)
 }
 
-func Write(w http.ResponseWriter, r *http.Request, statusCode int, a ...any) {
-	ResErr("").Write(w, r, statusCode, a)
+func WriteJSONErr(w http.ResponseWriter, r *http.Request, statusCode int, a ...any) {
+	ErrWriter("").Write(w, r, statusCode, a)
 }
 
 // msg is only used by SafeWrite to generate a fast JSON marshaler.
@@ -53,16 +53,16 @@ type msg struct {
 	Query string
 }
 
-// SafeWrite is a safe alternative to Write, may be slower despite the easyjson generated code.
-// SafeWrite concatenates all messages in "error" field.
-func (resErr ResErr) SafeWrite(w http.ResponseWriter, r *http.Request, statusCode int, messages ...any) {
+// WriteSafeJSONErr is a safe alternative to Write, may be slower despite the easyjson generated code.
+// WriteSafeJSONErr concatenates all messages in "error" field.
+func (errWriter ErrWriter) WriteSafeJSONErr(w http.ResponseWriter, r *http.Request, statusCode int, messages ...any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.WriteHeader(statusCode)
 
 	m := msg{
 		Error: fmt.Sprint(messages...),
-		Doc:   string(resErr),
+		Doc:   string(errWriter),
 		Path:  "",
 		Query: "",
 	}
@@ -82,7 +82,7 @@ func (resErr ResErr) SafeWrite(w http.ResponseWriter, r *http.Request, statusCod
 
 // Write is a fast pretty-JSON marshaler dedicated to the HTTP error response.
 // Write extends the JSON content when more than two messages are provided.
-func (resErr ResErr) Write(w http.ResponseWriter, r *http.Request, statusCode int, messages ...any) {
+func (errWriter ErrWriter) Write(w http.ResponseWriter, r *http.Request, statusCode int, messages ...any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.WriteHeader(statusCode)
@@ -100,11 +100,11 @@ func (resErr ResErr) Write(w http.ResponseWriter, r *http.Request, statusCode in
 		comma = true
 	}
 
-	if string(resErr) != "" {
+	if string(errWriter) != "" {
 		if comma {
 			buf = append(buf, ',', '\n')
 		}
-		buf = resErr.appendDoc(buf)
+		buf = errWriter.appendDoc(buf)
 	}
 
 	buf = append(buf, '}')
@@ -195,9 +195,9 @@ func appendURL(buf []byte, u *url.URL) []byte {
 	return buf
 }
 
-func (resErr ResErr) appendDoc(buf []byte) []byte {
+func (errWriter ErrWriter) appendDoc(buf []byte) []byte {
 	buf = append(buf, '"', 'd', 'o', 'c', '"', ':', '"')
-	buf = append(buf, []byte(string(resErr))...)
+	buf = append(buf, []byte(string(errWriter))...)
 	buf = append(buf, '"')
 	return buf
 }

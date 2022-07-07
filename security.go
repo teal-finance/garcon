@@ -18,8 +18,6 @@ import (
 	// to be 5x faster than SipHash, but it has a weak collision resistance.
 	// It can be used to prevent hash-flooding attacks or authenticate short-lived messages.
 	"github.com/minio/highwayhash"
-
-	"github.com/teal-finance/garcon/reserr"
 )
 
 // Code points in the surrogate range are not valid for UTF-8.
@@ -129,7 +127,7 @@ func RejectInvalidURI(next http.Handler) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			if i := Printable(r.RequestURI); i >= 0 {
-				reserr.Write(w, r, http.StatusBadRequest,
+				WriteJSONErr(w, r, http.StatusBadRequest,
 					"Invalid URI with non-printable symbol",
 					"position", i)
 				log.Print("WRN: reject non-printable URI or with <CR> or <LF>:", Sanitize(r.RequestURI))
@@ -143,7 +141,7 @@ func RejectInvalidURI(next http.Handler) http.Handler {
 // TraversalPath returns true when path contains ".." to prevent path traversal attack.
 func TraversalPath(w http.ResponseWriter, r *http.Request) bool {
 	if strings.Contains(r.URL.Path, "..") {
-		reserr.Write(w, r, http.StatusBadRequest, "URL contains '..'")
+		WriteJSONErr(w, r, http.StatusBadRequest, "URL contains '..'")
 		log.Print("WRN: reject path with '..' ", Sanitize(r.URL.Path))
 		return true
 	}

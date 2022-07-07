@@ -13,19 +13,17 @@ import (
 	"path"
 	"strconv"
 	"strings"
-
-	"github.com/teal-finance/garcon/reserr"
 )
 
 // StaticWebServer is a webserver serving static files
 // among HTML, CSS, JS and popular image formats.
 type StaticWebServer struct {
-	Dir    string
-	ResErr reserr.ResErr
+	Dir       string
+	ErrWriter ErrWriter
 }
 
-func NewStaticWebServer(dir string, resErr reserr.ResErr) StaticWebServer {
-	return StaticWebServer{dir, resErr}
+func NewStaticWebServer(dir string, errWriter ErrWriter) StaticWebServer {
+	return StaticWebServer{dir, errWriter}
 }
 
 // ServeFile handles one specific file (and its specific Content-Type).
@@ -135,7 +133,7 @@ func (ws *StaticWebServer) openFile(w http.ResponseWriter, r *http.Request, absP
 	file, err := os.Open(absPath)
 	if err != nil {
 		log.Print("WRN WebServer: ", err)
-		ws.ResErr.Write(w, r, http.StatusNotFound, "Page not found")
+		ws.ErrWriter.Write(w, r, http.StatusNotFound, "Page not found")
 		return nil, ""
 	}
 

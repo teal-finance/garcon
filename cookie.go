@@ -22,7 +22,6 @@ import (
 
 	"github.com/golang-jwt/jwt"
 
-	"github.com/teal-finance/garcon/reserr"
 	"github.com/teal-finance/quid/quidlib/tokens"
 )
 
@@ -55,7 +54,7 @@ type Perm struct {
 }
 
 type Checker struct {
-	resErr      reserr.ResErr
+	errWriter   ErrWriter
 	b64encoding *base64.Encoding
 	secretKey   []byte
 	perms       []Perm
@@ -64,7 +63,7 @@ type Checker struct {
 	devOrigins  []string
 }
 
-func NewChecker(urls []*url.URL, resErr reserr.ResErr, secretKey []byte, permissions ...any) *Checker {
+func NewChecker(urls []*url.URL, errWriter ErrWriter, secretKey []byte, permissions ...any) *Checker {
 	n := len(permissions) / 2
 	if n == 0 {
 		n = 1
@@ -100,7 +99,7 @@ func NewChecker(urls []*url.URL, resErr reserr.ResErr, secretKey []byte, permiss
 	}
 
 	return &Checker{
-		resErr:      resErr,
+		errWriter:   errWriter,
 		b64encoding: base64.RawURLEncoding,
 		secretKey:   secretKey,
 		plans:       names,
@@ -265,7 +264,7 @@ func (ck *Checker) Chk(next http.Handler) http.Handler {
 			if ck.isDevOrigin(r) {
 				perm = ck.perms[0]
 			} else {
-				ck.resErr.Write(w, r, http.StatusUnauthorized, err...)
+				ck.errWriter.Write(w, r, http.StatusUnauthorized, err...)
 				return
 			}
 		}
@@ -283,7 +282,7 @@ func (ck *Checker) Vet(next http.Handler) http.Handler {
 			if ck.isDevOrigin(r) {
 				perm = ck.perms[0]
 			} else {
-				ck.resErr.Write(w, r, http.StatusUnauthorized, err...)
+				ck.errWriter.Write(w, r, http.StatusUnauthorized, err...)
 				return
 			}
 		}

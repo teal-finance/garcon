@@ -13,16 +13,15 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/teal-finance/garcon/reserr"
 	"github.com/teal-finance/notifier"
 	"github.com/teal-finance/notifier/logger"
 	"github.com/teal-finance/notifier/mattermost"
 )
 
 type WebForm struct {
-	ResErr   reserr.ResErr
-	Notifier notifier.Notifier
-	Redirect string
+	ErrWriter ErrWriter
+	Notifier  notifier.Notifier
+	Redirect  string
 
 	// TextLimits are used as security limits
 	// to avoid being flooded by large web forms
@@ -50,9 +49,9 @@ type WebForm struct {
 	blankLines *regexp.Regexp
 }
 
-func NewContactForm(redirectURL, notifierURL string, resErr reserr.ResErr) WebForm {
+func NewContactForm(redirectURL, notifierURL string, errWriter ErrWriter) WebForm {
 	form := WebForm{
-		ResErr:     resErr,
+		ErrWriter:  errWriter,
 		Redirect:   redirectURL,
 		Notifier:   nil,
 		TextLimits: DefaultContactSettings,
@@ -128,7 +127,7 @@ func (form *WebForm) notify(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	if err != nil {
 		log.Print("WRN WebForm ParseForm:", err)
-		form.ResErr.Write(w, r, http.StatusInternalServerError, "Cannot parse the webform")
+		form.ErrWriter.Write(w, r, http.StatusInternalServerError, "Cannot parse the webform")
 		return
 	}
 
@@ -143,7 +142,7 @@ func (form *WebForm) notify(w http.ResponseWriter, r *http.Request) {
 	err = form.Notifier.Notify(md)
 	if err != nil {
 		log.Print("WRN WebForm Notify: ", err)
-		form.ResErr.Write(w, r, http.StatusInternalServerError, "Cannot store webform data")
+		form.ErrWriter.Write(w, r, http.StatusInternalServerError, "Cannot store webform data")
 		return
 	}
 
