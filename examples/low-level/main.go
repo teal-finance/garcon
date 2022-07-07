@@ -23,7 +23,6 @@ import (
 	"github.com/teal-finance/garcon/cors"
 	"github.com/teal-finance/garcon/jwtperm"
 	"github.com/teal-finance/garcon/metrics"
-	"github.com/teal-finance/garcon/opa"
 	"github.com/teal-finance/garcon/pprof"
 	"github.com/teal-finance/garcon/quota"
 	"github.com/teal-finance/garcon/reserr"
@@ -90,11 +89,11 @@ func setMiddlewares(resErr reserr.ResErr) (mw chain.Chain, connState func(net.Co
 	// Endpoint authentication rules (Open Policy Agent)
 	if *auth {
 		files := garcon.SplitClean(authCfg)
-		policy, err := opa.New(files, resErr)
+		policy, err := garcon.NewPolicy(files, resErr)
 		if err != nil {
 			log.Fatal(err)
 		}
-		mw = mw.Append(policy.Auth)
+		mw = mw.Append(policy.AuthOPA)
 	}
 
 	return mw, connState, urls

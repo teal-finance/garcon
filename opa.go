@@ -8,9 +8,7 @@
 // Teal.Finance/Garcon is distributed WITHOUT ANY WARRANTY.
 // See the LICENSE and COPYING.LESSER files alongside the source files.
 
-// package opa manages the Open Policy Agent.
-// see https://www.openpolicyagent.org/docs/edge/integration/#integrating-with-the-go-api
-package opa
+package garcon
 
 import (
 	"context"
@@ -26,26 +24,27 @@ import (
 	"github.com/open-policy-agent/opa/rego"
 
 	"github.com/teal-finance/garcon/reserr"
-	"github.com/teal-finance/garcon/security"
 )
 
+// Policy manages the Open Policy Agent (OPA).
+// see https://www.openpolicyagent.org/docs/edge/integration/#integrating-with-the-go-api
 type Policy struct {
 	compiler *ast.Compiler
 	resErr   reserr.ResErr
 }
 
-var ErrEmptyFilename = errors.New("OPA: missing filename")
+var ErrEmptyOPAFilename = errors.New("OPA: missing filename")
 
-// New creates a new Policy by loading rego files.
-func New(filenames []string, resErr reserr.ResErr) (Policy, error) {
-	compiler, err := Load(filenames)
+// NewPolicy creates a new Policy by loading rego files.
+func NewPolicy(filenames []string, resErr reserr.ResErr) (Policy, error) {
+	compiler, err := LoadPolicy(filenames)
 	return Policy{compiler, resErr}, err
 }
 
-// Load check the Rego filenames and loads them to build the OPA compiler.
-func Load(filenames []string) (*ast.Compiler, error) {
+// LoadPolicy checks the Rego filenames and loads them to build the OPA compiler.
+func LoadPolicy(filenames []string) (*ast.Compiler, error) {
 	if len(filenames) == 0 {
-		return nil, ErrEmptyFilename
+		return nil, ErrEmptyOPAFilename
 	}
 
 	modules := map[string]string{}
@@ -54,7 +53,7 @@ func Load(filenames []string) (*ast.Compiler, error) {
 		log.Printf("OPA: load %q", fn)
 
 		if fn == "" {
-			return nil, ErrEmptyFilename
+			return nil, ErrEmptyOPAFilename
 		}
 
 		content, err := os.ReadFile(fn)
@@ -68,8 +67,8 @@ func Load(filenames []string) (*ast.Compiler, error) {
 	return ast.CompileModules(modules)
 }
 
-// Auth is the HTTP middleware to check endpoint authorization.
-func (opa Policy) Auth(next http.Handler) http.Handler {
+// AuthOPA is the HTTP middleware to check endpoint authorization.
+func (opa Policy) AuthOPA(next http.Handler) http.Handler {
 	log.Print("Middleware OPA: ", opa.compiler.Modules)
 
 	compiler := opa.compiler

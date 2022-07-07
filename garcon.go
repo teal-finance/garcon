@@ -29,7 +29,6 @@ import (
 	"github.com/teal-finance/garcon/cors"
 	"github.com/teal-finance/garcon/jwtperm"
 	"github.com/teal-finance/garcon/metrics"
-	"github.com/teal-finance/garcon/opa"
 	"github.com/teal-finance/garcon/pprof"
 	"github.com/teal-finance/garcon/quota"
 	"github.com/teal-finance/garcon/reserr"
@@ -177,11 +176,11 @@ func (s *parameters) new() (*Garcon, error) {
 
 	// Authentication rules (Open Policy Agent)
 	if len(s.opaFilenames) > 0 {
-		policy, err := opa.New(s.opaFilenames, g.ResErr)
+		policy, err := NewPolicy(s.opaFilenames, g.ResErr)
 		if err != nil {
 			return &g, err
 		}
-		g.Middlewares = g.Middlewares.Append(policy.Auth)
+		g.Middlewares = g.Middlewares.Append(policy.AuthOPA)
 	}
 
 	return &g, nil
