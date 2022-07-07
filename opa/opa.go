@@ -26,6 +26,7 @@ import (
 	"github.com/open-policy-agent/opa/rego"
 
 	"github.com/teal-finance/garcon/reserr"
+	"github.com/teal-finance/garcon/security"
 )
 
 type Policy struct {

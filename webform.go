@@ -42,13 +42,17 @@ type WebForm struct {
 	// Use -1 to disable any limit.
 	FileLimits map[string][2]int
 
-	maxNameLength int
+	// MaxTotalMarkdownLength includes the
+	// form fields and browser fingerprints.
+	MaxTotalMarkdownLength int
+
+	maxFieldNameLength int
 
 	blankLines *regexp.Regexp
 }
 
 func NewContactForm(redirectURL, notifierURL string, resErr reserr.ResErr) WebForm {
-	cf := WebForm{
+	form := WebForm{
 		ResErr:     resErr,
 		Redirect:   redirectURL,
 		Notifier:   nil,
@@ -57,12 +61,14 @@ func NewContactForm(redirectURL, notifierURL string, resErr reserr.ResErr) WebFo
 	}
 
 	if notifierURL == "" {
-		cf.Notifier = logger.NewNotifier()
+		form.Notifier = logger.NewNotifier()
 	} else {
-		cf.Notifier = mattermost.NewNotifier(notifierURL)
+		form.Notifier = mattermost.NewNotifier(notifierURL)
 	}
 
-	return cf
+	form.MaxTotalMarkdownLength = 2000
+
+	return form
 }
 
 // DefaultContactSettings is compliant with standard names for web form input fields:
@@ -81,56 +87,75 @@ var DefaultFileSettings = map[string][2]int{
 	"file": {1_000_000, 1}, // max: 1 file weighting 1 MB
 }
 
-// WebForm registers a web-form middleware
+// NotifyWebForm registers a web-form middleware
 // that structures the filled form into markdown format
 // and sends it to the Notifier.
-func (wf *WebForm) WebForm() func(w http.ResponseWriter, r *http.Request) {
-	if wf.Notifier == nil {
+func (form *WebForm) NotifyWebForm() func(w http.ResponseWriter, r *http.Request) {
+	if form.Notifier == nil {
 		log.Print("Middleware WebForm: no Notifier => use the logger Notifier")
-		wf.Notifier = logger.NewNotifier()
+		form.Notifier = logger.NewNotifier()
 	}
 
-	if wf.TextLimits == nil {
-		wf.TextLimits = DefaultContactSettings
-		log.Print("Middleware WebForm: empty TextLimits => use ", wf.TextLimits)
+	if form.TextLimits == nil {
+		form.TextLimits = DefaultContactSettings
+		log.Print("Middleware WebForm: empty TextLimits => use ", form.TextLimits)
 	}
 
-	if wf.FileLimits == nil {
-		wf.FileLimits = DefaultFileSettings
-		log.Print("Middleware WebForm: empty FileLimits => use ", wf.FileLimits)
+	if form.FileLimits == nil {
+		form.FileLimits = DefaultFileSettings
+		log.Print("Middleware WebForm: empty FileLimits => use ", form.FileLimits)
 	}
 
-	wf.maxNameLength = -1
-	for name := range wf.TextLimits {
-		if wf.maxNameLength < len(name) {
-			wf.maxNameLength = len(name)
+	form.maxFieldNameLength = -1
+	for name := range form.TextLimits {
+		if form.maxFieldNameLength < len(name) {
+			form.maxFieldNameLength = len(name)
 		}
 	}
-	for name := range wf.FileLimits {
-		if wf.maxNameLength < len(name) {
-			wf.maxNameLength = len(name)
+	for name := range form.FileLimits {
+		if form.maxFieldNameLength < len(name) {
+			form.maxFieldNameLength = len(name)
 		}
 	}
 
-	wf.blankLines = regexp.MustCompile("\n\n+")
+	form.blankLines = regexp.MustCompile("\n\n+")
 
-	log.Print("Middleware WebForm: empty FileLimits => use ", wf.FileLimits)
-	return wf.webFormMD
+	log.Print("Middleware WebForm: empty FileLimits => use ", form.FileLimits)
+	return form.notify
 }
 
-// webForm structures the filled form into markdown format and sends it to the registered Notifier.
-func (wf *WebForm) webFormMD(w http.ResponseWriter, r *http.Request) {
+// notify converts the filled form into markdown format and sends it to the registered Notifier.
+func (form *WebForm) notify(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	if err != nil {
 		log.Print("WRN WebForm ParseForm:", err)
-		wf.ResErr.Write(w, r, http.StatusInternalServerError, "Cannot parse the webform")
+		form.ResErr.Write(w, r, http.StatusInternalServerError, "Cannot parse the webform")
 		return
 	}
 
-	msg := ""
+	md := form.messageMD(r) + FingerprintMD(r)
+
+	if len(md) > form.MaxTotalMarkdownLength {
+		md = md[:form.MaxTotalMarkdownLength] +
+			"\n\n(cut len=" + strconv.Itoa(len(md)) +
+			" > max=" + strconv.Itoa(form.MaxTotalMarkdownLength) + ")"
+	}
+
+	err = form.Notifier.Notify(md)
+	if err != nil {
+		log.Print("WRN WebForm Notify: ", err)
+		form.ResErr.Write(w, r, http.StatusInternalServerError, "Cannot store webform data")
+		return
+	}
+
+	http.Redirect(w, r, form.Redirect, http.StatusFound)
+}
+
+func (form *WebForm) messageMD(r *http.Request) string {
+	md := ""
 
 	for name, values := range r.Form {
-		if !wf.valid(name) {
+		if !form.valid(name) {
 			continue
 		}
 
@@ -141,7 +166,7 @@ func (wf *WebForm) webFormMD(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		max, ok := wf.TextLimits[name]
+		max, ok := form.TextLimits[name]
 		if !ok {
 			log.Printf("WRN WebForm: reject name=%s because "+
 				"not an accepted name", name)
@@ -159,28 +184,24 @@ func (wf *WebForm) webFormMD(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		msg += "* " + name + ":  " + // use double space because may be a line break
-			wf.markdown(values[0], maxBreaks) + "\n"
+		if len(md) > 1 {
+			md += "\n"
+		}
+
+		md += "* " + name + ": " + form.valueMD(values[0], maxBreaks)
 	}
 
-	err = wf.Notifier.Notify(msg)
-	if err != nil {
-		log.Print("WRN WebForm Notify: ", err)
-		wf.ResErr.Write(w, r, http.StatusInternalServerError, "Cannot store webform data")
-		return
-	}
-
-	http.Redirect(w, r, wf.Redirect, http.StatusFound)
+	return md
 }
 
-func (wf *WebForm) valid(name string) bool {
-	if nLen := len(name); nLen > wf.maxNameLength {
+func (form *WebForm) valid(name string) bool {
+	if nLen := len(name); nLen > form.maxFieldNameLength {
 		name = security.Sanitize(name)
 		if len(name) > 100 {
 			name = name[:90] + " (cut)"
 		}
 		log.Printf("WRN WebForm: reject name=%s because len=%d > max=%d",
-			name, nLen, wf.maxNameLength)
+			name, nLen, form.maxFieldNameLength)
 		return false
 	}
 
@@ -198,7 +219,7 @@ func (wf *WebForm) valid(name string) bool {
 		return false
 	}
 
-	if _, ok := wf.FileLimits[name]; ok {
+	if _, ok := form.FileLimits[name]; ok {
 		log.Printf("WRN WebForm: skip name=%s because "+
 			"file not yet supported", name)
 		return false
@@ -207,7 +228,7 @@ func (wf *WebForm) valid(name string) bool {
 	return true
 }
 
-func (wf *WebForm) markdown(v string, maxBreaks int) string {
+func (form *WebForm) valueMD(v string, maxBreaks int) string {
 	if !strings.ContainsAny(v, "\n\r") {
 		return security.Sanitize(v)
 	}
@@ -215,7 +236,7 @@ func (wf *WebForm) markdown(v string, maxBreaks int) string {
 	v = strings.ReplaceAll(v, "\r", "")
 
 	// avoid successive blank lines
-	v = wf.blankLines.ReplaceAllString(v, "\n\n")
+	v = form.blankLines.ReplaceAllString(v, "\n\n")
 
 	txt := strings.Split(v, "\n")
 	v = v[:0]

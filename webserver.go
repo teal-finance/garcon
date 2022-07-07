@@ -125,7 +125,7 @@ func (ws *StaticWebServer) ServeAssets() func(w http.ResponseWriter, r *http.Req
 func (ws *StaticWebServer) openFile(w http.ResponseWriter, r *http.Request, absPath string) (*os.File, string) {
 	// if client (browser) supports Brotli and the *.br file is present
 	// => send the *.br file
-	if strings.Contains(r.Header.Get("Accept-Encoding"), "br") {
+	if strings.Contains(security.Header(r, "Accept-Encoding"), "br") {
 		brotli := absPath + ".br"
 		file, err := os.Open(brotli)
 		if err == nil {
@@ -177,7 +177,7 @@ func (ws *StaticWebServer) imagePathAndType(r *http.Request) (absPath, contentTy
 	// We only check the first Header "Accept":
 	// We do not care to miss an "image/avif" within the second Header "Accept",
 	// because we do not break anything: we send the image requested by the client.
-	scheme := r.Header.Get("Accept")
+	scheme := security.Header(r, "Accept")
 
 	// We perform a stupid search to be fast,
 	// but we hope there is no Content-Type such as "image/avifauna"

@@ -51,6 +51,30 @@ func Sanitize(str string) string {
 	)
 }
 
+// Header return a stringifies a safe list of HTTP headers.
+func Header(r *http.Request, header string) string {
+	values := r.Header.Values(header)
+
+	if len(values) == 0 {
+		return ""
+	}
+
+	if len(values) == 1 {
+		return Sanitize(values[0])
+	}
+
+	str := "["
+	for i := range values {
+		if i > 0 {
+			str += " "
+		}
+		str += Sanitize(values[i])
+	}
+	str += "]"
+
+	return str
+}
+
 // PrintableRune returns false if rune is
 // a Carriage Return "\r", or a Line Feed "\n",
 // or another ASCII control code (except space),

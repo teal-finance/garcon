@@ -32,7 +32,6 @@ import (
 	"github.com/teal-finance/garcon/opa"
 	"github.com/teal-finance/garcon/pprof"
 	"github.com/teal-finance/garcon/quota"
-	"github.com/teal-finance/garcon/reqlog"
 	"github.com/teal-finance/garcon/reserr"
 	"github.com/teal-finance/garcon/security"
 	"github.com/teal-finance/incorruptible"
@@ -143,9 +142,9 @@ func (s *parameters) new() (*Garcon, error) {
 	case 0:
 		break // do not log incoming HTTP requests
 	case 1:
-		g.Middlewares = g.Middlewares.Append(reqlog.LogRequests)
+		g.Middlewares = g.Middlewares.Append(LogRequest)
 	case 2:
-		g.Middlewares = g.Middlewares.Append(reqlog.LogVerbose)
+		g.Middlewares = g.Middlewares.Append(LogRequestFingerprint)
 	}
 
 	if s.reqMinute > 0 {

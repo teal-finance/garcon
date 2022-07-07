@@ -3,8 +3,8 @@
 // an API and website server, under the MIT License.
 // SPDX-License-Identifier: MIT
 
-// Package reqlog logs incoming request URL and browser fingerprints.
-package reqlog
+// Package reqlog logs incoming request URL and browser fingerprint.
+package garcon
 
 import (
 	"log"
@@ -13,65 +13,66 @@ import (
 	"github.com/teal-finance/garcon/security"
 )
 
-// LogRequests is the middleware to log the incoming HTTP requests.
-func LogRequests(next http.Handler) http.Handler {
+// LogRequest is the middleware to log incoming HTTP request.
+func LogRequest(next http.Handler) http.Handler {
 	log.Print("Middleware logger: requester IP and requested URL")
 
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			LogIPMethodURL(r)
+			logIPMethodURL(r)
 			next.ServeHTTP(w, r)
 		})
 }
 
-// LogVerbose is the middleware to log the incoming HTTP requests and verbose browser fingerprints.
-func LogVerbose(next http.Handler) http.Handler {
+// LogRequestFingerprint is the middleware to log
+// incoming HTTP request and browser fingerprint.
+func LogRequestFingerprint(next http.Handler) http.Handler {
 	log.Print("Middleware logger: requested URL, remote IP and also: " + FingerprintExplanation)
 
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			log.Print(IPMethodURLFingerprint(r))
+			log.Print(fingerprint(r))
 			next.ServeHTTP(w, r)
 		})
 }
 
-// LogIPMethodURL logs the requester IP and the requested URL.
-func LogIPMethodURL(r *http.Request) {
+// logIPMethodURL logs the requester IP and requested URL.
+func logIPMethodURL(r *http.Request) {
 	log.Print("in  ", r.RemoteAddr, " ", r.Method, " ", r.RequestURI)
 }
 
-// IPMethodURLFingerprint extends LogReqIPAndURL by logging browser fingerprints.
-// Attention! When fingerprinting is used to identify users, it is part of the personal data
-// and must comply with GDPR. In that case, the website must have a legitimate reason to do so.
+// fingerprint logs like logIPMethodURL and also logs the browser fingerprint.
+// Attention! fingerprint provides personal data that may identify users.
+// To comply with GDPR, the website data owner must have a legitimate reason to do so.
 // Before enabling the fingerprinting, the user must understand it
 // and give their freely-given informed consent such as the settings change from “no” to “yes”.
-func IPMethodURLFingerprint(r *http.Request) string {
+func fingerprint(r *http.Request) string {
 	line := "in  " +
 		r.RemoteAddr + " " +
 		r.Method + " " +
 		r.RequestURI + " " +
 		// 1. Accept-Language, the language preferred by the user.
-		r.Header.Get("Accept-Language") + " " +
+		security.Header(r, "Accept-Language") + " " +
 		// 2. User-Agent, name and version of the browser and OS.
-		r.Header.Get("User-Agent")
+		security.Header(r, "User-Agent")
 
 	// 3. R=Referer, the website from which the request originated.
-	if referer := r.Header.Get("Referer"); referer != "" {
+	if referer := security.Header(r, "Referer"); referer != "" {
 		line += " R=" + referer
 	}
 
 	// 4. A=Accept, the content types the browser prefers.
-	if a := r.Header.Get("Accept"); a != "" {
+	if a := security.Header(r, "Accept"); a != "" {
 		line += " A=" + a
 	}
 
 	// 5. E=Accept-Encoding, the compression formats the browser supports.
-	if ae := r.Header.Get("Accept-Encoding"); ae != "" {
+	if ae := security.Header(r, "Accept-Encoding"); ae != "" {
 		line += " E=" + ae
 	}
 
 	// 6. Connection, can be empty, "keep-alive" or "close".
-	if c := r.Header.Get("Connection"); c != "" {
+	if c := security.Header(r, "Connection"); c != "" {
 		line += " " + c
 	}
 
@@ -81,26 +82,50 @@ func IPMethodURLFingerprint(r *http.Request) string {
 	}
 
 	// 8. Cache-Control, how the browser is caching data.
-	if cc := r.Header.Get("Cache-Control"); cc != "" {
+	if cc := security.Header(r, "Cache-Control"); cc != "" {
 		line += " " + cc
 	}
 
 	// 9. Authorization and/or Cookie content.
 
-	if a := r.Header.Get("Authorization"); a != "" {
+	if a := security.Header(r, "Authorization"); a != "" {
 		checksum, err := security.Obfuscate(a)
 		if err == nil {
 			line += " " + checksum
 		} else {
-			log.Print("WAR Cannot create HighwayHash ", err)
+			log.Print("WRN Cannot create HighwayHash ", err)
 		}
 	}
 
-	if c := r.Header.Get("Cookie"); c != "" {
+	if c := security.Header(r, "Cookie"); c != "" {
 		line += " " + c
 	}
 
 	return security.Sanitize(line)
+}
+
+// FingerprintMD provide the browser fingerprint in markdown format.
+// Attention: read the .
+func FingerprintMD(r *http.Request) string {
+	return "" +
+		headerMD(r, "Accept-Language") + // language preferred by the user
+		headerMD(r, "User-Agent") + // name and version of browser and OS
+		headerMD(r, "Referer") + // URL from which the request originated
+		headerMD(r, "Accept") + // content types the browser prefers
+		headerMD(r, "Accept-Encoding") + // compression formats the browser supports
+		headerMD(r, "Connection") + // can be: empty, "keep-alive" or "close"
+		headerMD(r, "DNT") + // "Do Not Track" is being dropped by web standards and browsers
+		headerMD(r, "Cache-Control") + // how the browser is caching data
+		headerMD(r, "Authorization") + // Attention: may contain confidential data
+		headerMD(r, "Cookie") // Attention: may contain confidential data
+}
+
+func headerMD(r *http.Request, header string) string {
+	str := security.Header(r, header)
+	if str != "" {
+		str = "\n" + "* " + header + ": " + str
+	}
+	return str
 }
 
 // FingerprintExplanation provides a description of the logged HTTP headers.

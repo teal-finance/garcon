@@ -127,7 +127,7 @@ func contactForm(g *garcon.Garcon, r *chi.Mux, addr string) {
 		FileLimits: nil,
 	}
 
-	r.With(tc.Set).Post("/myapp", wf.WebForm())
+	r.With(tc.Set).Post("/myapp", wf.NotifyWebForm())
 }
 
 func items(w http.ResponseWriter, _ *http.Request) {
