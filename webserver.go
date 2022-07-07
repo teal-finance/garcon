@@ -14,7 +14,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/teal-finance/garcon/iec"
 	"github.com/teal-finance/garcon/reserr"
 )
 
@@ -164,7 +163,7 @@ func (ws *StaticWebServer) send(w http.ResponseWriter, r *http.Request, absPath 
 	if n, err := io.Copy(w, file); err != nil {
 		log.Print("WRN WebServer: Copy(", absPath, ") ", err)
 	} else {
-		log.Print("WebServer sent ", absPath, " ", iec.Convert64(n))
+		log.Print("WebServer sent ", absPath, " ", ConvertSize64(n))
 	}
 }
 
