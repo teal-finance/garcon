@@ -17,8 +17,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-
-	"github.com/teal-finance/garcon/chain"
 )
 
 // space holds the Prometheus namespace.
@@ -27,7 +25,7 @@ type space struct {
 }
 
 // StartMetricsServer creates and starts the Prometheus export server.
-func StartMetricsServer(port int, namespace string) (chain.Chain, func(net.Conn, http.ConnState)) {
+func StartMetricsServer(port int, namespace string) (Chain, func(net.Conn, http.ConnState)) {
 	if port <= 0 {
 		log.Print("Disable Prometheus, export port=", port)
 		return nil, nil
@@ -47,7 +45,7 @@ func StartMetricsServer(port int, namespace string) (chain.Chain, func(net.Conn,
 
 	s := space{namespace: namespace}
 
-	return chain.New(s.measureDuration), s.updateHTTPMetrics()
+	return NewChain(s.measureDuration), s.updateHTTPMetrics()
 }
 
 // metricsHandler exports the metrics by processing

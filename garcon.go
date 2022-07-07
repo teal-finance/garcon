@@ -25,7 +25,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/teal-finance/garcon/chain"
 	"github.com/teal-finance/garcon/reserr"
 	"github.com/teal-finance/incorruptible"
 	"github.com/teal-finance/incorruptible/dtoken"
@@ -47,7 +46,7 @@ type Garcon struct {
 	Checker        TokenChecker
 	ResErr         reserr.ResErr
 	AllowedOrigins []string
-	Middlewares    chain.Chain
+	Middlewares    Chain
 }
 
 type TokenChecker interface {

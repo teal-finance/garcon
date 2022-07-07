@@ -19,7 +19,6 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/teal-finance/garcon"
-	"github.com/teal-finance/garcon/chain"
 	"github.com/teal-finance/garcon/reserr"
 )
 
@@ -55,7 +54,7 @@ func main() {
 	runServer(h, connState)
 }
 
-func setMiddlewares(resErr reserr.ResErr) (mw chain.Chain, connState func(net.Conn, http.ConnState), urls []*url.URL) {
+func setMiddlewares(resErr reserr.ResErr) (mw garcon.Chain, connState func(net.Conn, http.ConnState), urls []*url.URL) {
 	auth := flag.Bool("auth", false, "Enable OPA authorization specified in file "+authCfg)
 	dev := flag.Bool("dev", true, "Use development or production settings")
 	flag.Parse()

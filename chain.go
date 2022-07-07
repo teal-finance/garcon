@@ -6,9 +6,7 @@
 //
 // SPDX-License-Identifier: MIT
 
-// Package chain provides a convenient way
-// to chain HTTP middleware functions and the app handler.
-package chain
+package garcon
 
 import (
 	"net/http"
@@ -23,12 +21,12 @@ type Middleware func(http.Handler) http.Handler
 // the same set of middleware in the same order.
 type Chain []Middleware
 
-// New creates a new chain,
+// NewChain creates a new chain,
 // memorizing the given list of middleware.
-// New serves no other function,
+// NewChain serves no other function,
 // middleware is only constructed upon a call to Then().
-func New(mw ...Middleware) Chain {
-	return mw
+func NewChain(chain ...Middleware) Chain {
+	return chain
 }
 
 // Append extends a chain, adding the specified middleware
@@ -37,13 +35,16 @@ func New(mw ...Middleware) Chain {
 //     chain := chain.New(m1, m2)
 //     chain = chain.Append(m3, m4)
 //     // requests in chain go m1 -> m2 -> m3 -> m4
-func (c Chain) Append(mw ...Middleware) Chain {
-	return append(c, mw...)
+func (c Chain) Append(chain ...Middleware) Chain {
+	return append(c, chain...)
 }
 
 // Then chains the middleware and returns the final http.Handler.
+//
 //     chain.New(m1, m2, m3).Then(h)
+//
 // is equivalent to:
+//
 //     m1(m2(m3(h)))
 //
 // When the request comes in, it will be passed to m1, then m2, then m3
@@ -51,14 +52,15 @@ func (c Chain) Append(mw ...Middleware) Chain {
 // (assuming every middleware calls the following one).
 //
 // A chain can be safely reused by calling Then() several times.
+//
 //     chain := chain.New(rateLimitHandler, csrfHandler)
 //     indexPipe = chain.Then(indexHandler)
 //     authPipe  = chain.Then(authHandler)
 //
-// Note that middleware pieces are called on every call to Then()
-// and thus several instances of the same middleware will be created
+// Note: every call to Then() calls all middleware pieces.
+// Thus several instances of the same middleware will be created
 // when a chain is reused in this previous example.
-// For proper middleware, this should cause no problems.
+// For proper middleware, this should cause no problem.
 //
 // Then() treats nil as http.DefaultServeMux.
 func (c Chain) Then(handler http.Handler) http.Handler {
@@ -75,6 +77,7 @@ func (c Chain) Then(handler http.Handler) http.Handler {
 // a HandlerFunc instead of a Handler.
 //
 // The following two statements are equivalent:
+//
 //     c.Then(http.HandlerFunc(fn))
 //     c.ThenFunc(fn)
 //
