@@ -62,7 +62,7 @@ func handler(g *garcon.Garcon) http.Handler {
 	r := chi.NewRouter()
 
 	// Static website files
-	ws := webserver.WebServer{Dir: "examples/www", ResErr: g.ResErr}
+	ws := webserver.StaticWebServer{Dir: "examples/www", ResErr: g.ResErr}
 	r.Get("/", ws.ServeFile("keystore/index.html", "text/html; charset=utf-8"))
 	r.Get("/favicon.ico", ws.ServeFile("keystore/favicon.ico", "image/x-icon"))
 

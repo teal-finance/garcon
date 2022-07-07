@@ -105,7 +105,7 @@ func staticWebsite(g *garcon.Garcon, r *chi.Mux) {
 	tc := g.Checker
 
 	// Static website files
-	ws := webserver.WebServer{
+	ws := webserver.StaticWebServer{
 		Dir:    "examples/www",
 		ResErr: g.ResErr,
 	}

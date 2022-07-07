@@ -17,6 +17,7 @@ import (
 	"github.com/teal-finance/garcon/security"
 	"github.com/teal-finance/notifier"
 	"github.com/teal-finance/notifier/logger"
+	"github.com/teal-finance/notifier/mattermost"
 )
 
 type WebForm struct {
@@ -46,9 +47,27 @@ type WebForm struct {
 	blankLines *regexp.Regexp
 }
 
-// DefaultTextLimits pis compliant with standard names for web form input fields:
+func NewContactForm(redirectURL, notifierURL string, resErr reserr.ResErr) WebForm {
+	cf := WebForm{
+		ResErr:     resErr,
+		Redirect:   redirectURL,
+		Notifier:   nil,
+		TextLimits: DefaultContactSettings,
+		FileLimits: DefaultFileSettings,
+	}
+
+	if notifierURL == "" {
+		cf.Notifier = logger.NewNotifier()
+	} else {
+		cf.Notifier = mattermost.NewNotifier(notifierURL)
+	}
+
+	return cf
+}
+
+// DefaultContactSettings is compliant with standard names for web form input fields:
 // https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#inappropriate-for-the-control
-var DefaultTextLimits = map[string][2]int{
+var DefaultContactSettings = map[string][2]int{
 	"name":      {60, 1},
 	"email":     {60, 1},
 	"text":      {900, 20},
@@ -57,8 +76,8 @@ var DefaultTextLimits = map[string][2]int{
 	"want-call": {10, 1},
 }
 
-// DefaultFileLimits.
-var DefaultFileLimits = map[string][2]int{
+// DefaultFileSettings.
+var DefaultFileSettings = map[string][2]int{
 	"file": {1_000_000, 1}, // max: 1 file weighting 1 MB
 }
 
@@ -72,12 +91,12 @@ func (wf *WebForm) WebForm() func(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if wf.TextLimits == nil {
-		wf.TextLimits = DefaultTextLimits
+		wf.TextLimits = DefaultContactSettings
 		log.Print("Middleware WebForm: empty TextLimits => use ", wf.TextLimits)
 	}
 
 	if wf.FileLimits == nil {
-		wf.FileLimits = DefaultFileLimits
+		wf.FileLimits = DefaultFileSettings
 		log.Print("Middleware WebForm: empty FileLimits => use ", wf.FileLimits)
 	}
 
@@ -95,6 +114,7 @@ func (wf *WebForm) WebForm() func(w http.ResponseWriter, r *http.Request) {
 
 	wf.blankLines = regexp.MustCompile("\n\n+")
 
+	log.Print("Middleware WebForm: empty FileLimits => use ", wf.FileLimits)
 	return wf.webFormMD
 }
 
