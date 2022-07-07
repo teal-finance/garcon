@@ -22,7 +22,6 @@ import (
 	"github.com/teal-finance/garcon/chain"
 	"github.com/teal-finance/garcon/cors"
 	"github.com/teal-finance/garcon/jwtperm"
-	"github.com/teal-finance/garcon/metrics"
 	"github.com/teal-finance/garcon/pprof"
 	"github.com/teal-finance/garcon/reserr"
 )
@@ -66,7 +65,7 @@ func setMiddlewares(resErr reserr.ResErr) (mw chain.Chain, connState func(net.Co
 
 	// Start a metrics server in background if export port > 0.
 	// The metrics server is for use with Prometheus or another compatible monitoring tool.
-	mw, connState = metrics.StartServer(expPort, "LowLevel")
+	mw, connState = garcon.StartMetricsServer(expPort, "LowLevel")
 
 	// Limit the input request rate per IP
 	reqLimiter := garcon.NewReqLimiter(burst, reqMinute, *dev, resErr)

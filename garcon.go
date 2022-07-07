@@ -28,7 +28,6 @@ import (
 	"github.com/teal-finance/garcon/chain"
 	"github.com/teal-finance/garcon/cors"
 	"github.com/teal-finance/garcon/jwtperm"
-	"github.com/teal-finance/garcon/metrics"
 	"github.com/teal-finance/garcon/pprof"
 	"github.com/teal-finance/garcon/reserr"
 	"github.com/teal-finance/garcon/security"
@@ -132,7 +131,7 @@ func (s *parameters) new() (*Garcon, error) {
 		Middlewares:    nil,
 	}
 
-	g.Middlewares, g.ConnState = metrics.StartServer(s.expPort, s.namespace)
+	g.Middlewares, g.ConnState = StartMetricsServer(s.expPort, s.namespace)
 
 	g.Middlewares.Append(security.RejectInvalidURI)
 

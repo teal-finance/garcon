@@ -3,8 +3,7 @@
 // an API and website server, under the MIT License.
 // SPDX-License-Identifier: MIT
 
-// Package metrics increments HTTP counters and exports them for Prometheus.
-package metrics
+package garcon
 
 import (
 	"log"
@@ -23,12 +22,13 @@ import (
 	"github.com/teal-finance/garcon/security"
 )
 
+// space holds the Prometheus namespace.
 type space struct {
 	namespace string
 }
 
-// MetricsServer creates and starts the Prometheus export server.
-func StartServer(port int, namespace string) (chain.Chain, func(net.Conn, http.ConnState)) {
+// StartMetricsServer creates and starts the Prometheus export server.
+func StartMetricsServer(port int, namespace string) (chain.Chain, func(net.Conn, http.ConnState)) {
 	if port <= 0 {
 		log.Print("Disable Prometheus, export port=", port)
 		return nil, nil
@@ -37,7 +37,7 @@ func StartServer(port int, namespace string) (chain.Chain, func(net.Conn, http.C
 	addr := ":" + strconv.Itoa(port)
 
 	go func() {
-		err := http.ListenAndServe(addr, handler())
+		err := http.ListenAndServe(addr, metricsHandler())
 		log.Fatal(err)
 	}()
 
@@ -51,8 +51,9 @@ func StartServer(port int, namespace string) (chain.Chain, func(net.Conn, http.C
 	return chain.New(s.measureDuration), s.updateHTTPMetrics()
 }
 
-// handler returns the endpoint "/metrics".
-func handler() http.Handler {
+// metricsHandler exports the metrics by processing
+// the Prometheus requests on the "/metrics" endpoint.
+func metricsHandler() http.Handler {
 	handler := chi.NewRouter()
 	handler.Handle("/metrics", promhttp.Handler())
 	return handler
@@ -82,7 +83,8 @@ func (s *space) measureDuration(next http.Handler) http.Handler {
 	})
 }
 
-// updateHTTPMetrics counts the connections and update web traffic metrics depending on incoming requests and outgoing responses.
+// updateHTTPMetrics counts the connections and update web traffic metrics
+// depending on incoming requests and outgoing responses.
 func (s *space) updateHTTPMetrics() func(net.Conn, http.ConnState) {
 	connGauge := s.newGauge("in_flight_connections", "Number of current active connections")
 	iniCounter := s.newCounter("conn_new_total", "Total initiated connections since startup")
