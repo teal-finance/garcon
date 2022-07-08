@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"regexp"
 	"strconv"
 	"strings"
 
@@ -29,7 +28,7 @@ type WebForm struct {
 	// The map key is the input field name.
 	// The map value is a pair of integers:
 	// the max length and the max line breaks.
-	// Use -1 to disable any limit.
+	// Use 0 to disable any limit.
 	TextLimits map[string][2]int
 
 	// FileLimits is similar to TextLimits
@@ -37,16 +36,14 @@ type WebForm struct {
 	// The map value is a pair of integers:
 	// the max size in runes of one file
 	// and the max occurrences having same field name.
-	// Use -1 to disable any limit.
+	// Use 0 to disable any limit.
 	FileLimits map[string][2]int
 
-	// MaxTotalMarkdownLength includes the
+	// MaxTotalLength includes the
 	// form fields and browser fingerprints.
-	MaxTotalMarkdownLength int
+	MaxTotalLength int
 
 	maxFieldNameLength int
-
-	blankLines *regexp.Regexp
 }
 
 func NewContactForm(redirectURL, notifierURL string, errWriter ErrWriter) WebForm {
@@ -64,7 +61,7 @@ func NewContactForm(redirectURL, notifierURL string, errWriter ErrWriter) WebFor
 		form.Notifier = mattermost.NewNotifier(notifierURL)
 	}
 
-	form.MaxTotalMarkdownLength = 2000
+	form.MaxTotalLength = 2000
 
 	return form
 }
@@ -104,7 +101,7 @@ func (form *WebForm) NotifyWebForm() func(w http.ResponseWriter, r *http.Request
 		log.Print("Middleware WebForm: empty FileLimits => use ", form.FileLimits)
 	}
 
-	form.maxFieldNameLength = -1
+	form.maxFieldNameLength = 0
 	for name := range form.TextLimits {
 		if form.maxFieldNameLength < len(name) {
 			form.maxFieldNameLength = len(name)
@@ -116,13 +113,13 @@ func (form *WebForm) NotifyWebForm() func(w http.ResponseWriter, r *http.Request
 		}
 	}
 
-	form.blankLines = regexp.MustCompile("\n\n+")
+	log.Printf("Middleware WebForm redirect=%s", form.Redirect)
 
-	log.Print("Middleware WebForm: empty FileLimits => use ", form.FileLimits)
 	return form.notify
 }
 
-// notify converts the filled form into markdown format and sends it to the registered Notifier.
+// notify converts the received web-form into markdown format
+// and sends it to the registered Notifier.
 func (form *WebForm) notify(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	if err != nil {
@@ -133,10 +130,10 @@ func (form *WebForm) notify(w http.ResponseWriter, r *http.Request) {
 
 	md := form.messageMD(r) + FingerprintMD(r)
 
-	if len(md) > form.MaxTotalMarkdownLength {
-		md = md[:form.MaxTotalMarkdownLength] +
-			"\n\n(cut len=" + strconv.Itoa(len(md)) +
-			" > max=" + strconv.Itoa(form.MaxTotalMarkdownLength) + ")"
+	if len(md) > form.MaxTotalLength && form.MaxTotalLength > 0 {
+		md = md[:form.MaxTotalLength] +
+			"\n\n(cut because len=" + strconv.Itoa(len(md)) +
+			" > max=" + strconv.Itoa(form.MaxTotalLength) + ")"
 	}
 
 	err = form.Notifier.Notify(md)
@@ -150,17 +147,22 @@ func (form *WebForm) notify(w http.ResponseWriter, r *http.Request) {
 }
 
 func (form *WebForm) messageMD(r *http.Request) string {
+	log.Printf("WebForm with %d input fields", len(r.Form))
+
 	md := ""
 
 	for name, values := range r.Form {
+		if len(values) == 1 && values[0] == "" {
+			continue // skip empty values
+		}
+
 		if !form.valid(name) {
 			continue
 		}
 
 		if len(values) != 1 {
 			log.Printf("WRN WebForm: reject name=%s because "+
-				"received %d input field(s) while expected only one",
-				name, len(values))
+				"received %d input field(s) while expected only one", name, len(values))
 			continue
 		}
 
@@ -173,11 +175,11 @@ func (form *WebForm) messageMD(r *http.Request) string {
 
 		maxLen, maxBreaks := max[0], max[1]
 
-		if len(values[0]) > maxLen {
-			log.Printf("WRN WebForm: name=%s len=%d > max=%d", name, len(values[0]), maxLen)
+		if len(values[0]) > maxLen && maxLen > 0 {
 			extra := len(values[0]) - maxLen
-			if extra > 10 {
-				values[0] = values[0][:maxLen] + "\n" + "(cut last " + strconv.Itoa(extra) + " characters)"
+			if extra > 30 {
+				values[0] = values[0][:maxLen] +
+					"\n" + "(cut last " + strconv.Itoa(extra) + " characters)"
 				maxBreaks++
 			}
 		}
@@ -233,19 +235,29 @@ func (form *WebForm) valueMD(v string, maxBreaks int) string {
 
 	v = strings.ReplaceAll(v, "\r", "")
 
-	// avoid successive blank lines
-	v = form.blankLines.ReplaceAllString(v, "\n\n")
-
 	txt := strings.Split(v, "\n")
 	v = v[:0]
-	for i, line := range txt {
-		if i >= maxBreaks {
-			v += fmt.Sprintf("\n  (too much line breaks %d > %d)", len(txt), maxBreaks)
+	previous := ""
+	breaks := 0
+	for _, line := range txt {
+		line = Sanitize(line)
+		if line == "" && previous == "" {
+			// no blank lines in the beginning and no successive blank lines
+			continue
+		}
+
+		if breaks >= maxBreaks && maxBreaks > 0 {
+			v += fmt.Sprintf("\n  (too much line breaks %d > %d)", breaks, maxBreaks)
 			break
 		}
-		v += "\n" + "  " + // leading spaces = bullet indent
-			Sanitize(line) +
-			"  " // trailing double space = line break
+
+		if v != "" {
+			v += "\n" + "  " // leading spaces = bullet indent
+		}
+		v += line + "  " // trailing double space = line break
+
+		previous = line
+		breaks++
 	}
 
 	return v
