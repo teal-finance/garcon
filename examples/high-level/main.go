@@ -18,7 +18,6 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/teal-finance/garcon"
-	"github.com/teal-finance/notifier/logger"
 )
 
 // Garcon settings
@@ -82,52 +81,30 @@ func main() {
 // handler creates the mapping between the endpoints and the handler functions.
 func handler(g *garcon.Garcon, addr string) http.Handler {
 	r := chi.NewRouter()
+	c := g.Checker
 
-	staticWebsite(g, r)
-
-	contactForm(g, r, addr)
+	// Static website files
+	ws := garcon.NewStaticWebServer("examples/www", g.ErrWriter)
+	r.Get("/favicon.ico", ws.ServeFile("favicon.ico", "image/x-icon"))
+	r.With(c.Set).Get("/myapp", ws.ServeFile("myapp/index.html", "text/html; charset=utf-8"))
+	r.With(c.Set).Get("/myapp/", ws.ServeFile("myapp/index.html", "text/html; charset=utf-8"))
+	r.With(c.Chk).Get("/myapp/js/*", ws.ServeDir("text/javascript; charset=utf-8"))
+	r.With(c.Chk).Get("/myapp/css/*", ws.ServeDir("text/css; charset=utf-8"))
+	r.With(c.Chk).Get("/myapp/images/*", ws.ServeImages())
+ 
+	// Contact-form
+	wf := garcon.NewContactForm(addr, "", g.ErrWriter)
+	r.With(c.Set).Post("/myapp", wf.NotifyWebForm())
 
 	// API
-	tc := g.Checker
-	r.With(tc.Vet).Get("/path/not/in/cookie", items)
-	r.With(tc.Vet).Get("/myapp/api/v1/items", items)
-	r.With(tc.Vet).Get("/myapp/api/v1/ducks", g.ErrWriter.NotImplemented)
+	r.With(c.Vet).Get("/path/not/in/cookie", items)
+	r.With(c.Vet).Get("/myapp/api/v1/items", items)
+	r.With(c.Vet).Get("/myapp/api/v1/ducks", g.ErrWriter.NotImplemented)
 
 	// Other endpoints
 	r.NotFound(g.ErrWriter.InvalidPath)
 
 	return r
-}
-
-func staticWebsite(g *garcon.Garcon, r *chi.Mux) {
-	tc := g.Checker
-
-	// Static website files
-	ws := garcon.StaticWebServer{
-		Dir:    "examples/www",
-		ErrWriter: g.ErrWriter,
-	}
-
-	r.Get("/favicon.ico", ws.ServeFile("favicon.ico", "image/x-icon"))
-	r.With(tc.Set).Get("/myapp", ws.ServeFile("myapp/index.html", "text/html; charset=utf-8"))
-	r.With(tc.Set).Get("/myapp/", ws.ServeFile("myapp/index.html", "text/html; charset=utf-8"))
-	r.With(tc.Chk).Get("/myapp/js/*", ws.ServeDir("text/javascript; charset=utf-8"))
-	r.With(tc.Chk).Get("/myapp/css/*", ws.ServeDir("text/css; charset=utf-8"))
-	r.With(tc.Chk).Get("/myapp/images/*", ws.ServeImages())
-}
-
-func contactForm(g *garcon.Garcon, r *chi.Mux, addr string) {
-	tc := g.Checker
-
-	wf := garcon.WebForm{
-		ErrWriter:     g.ErrWriter,
-		Notifier:   logger.NewNotifier(),
-		Redirect:   addr,
-		TextLimits: nil,
-		FileLimits: nil,
-	}
-
-	r.With(tc.Set).Post("/myapp", wf.NotifyWebForm())
 }
 
 func items(w http.ResponseWriter, _ *http.Request) {
