@@ -52,78 +52,64 @@ func fingerprint(r *http.Request) string {
 		// 1. Accept-Language, the language preferred by the user.
 		SafeHeader(r, "Accept-Language") + " " +
 		// 2. User-Agent, name and version of the browser and OS.
-		SafeHeader(r, "User-Agent")
-
-	// 3. R=Referer, the website from which the request originated.
-	if referer := SafeHeader(r, "Referer"); referer != "" {
-		line += " R=" + referer
-	}
-
-	// 4. A=Accept, the content types the browser prefers.
-	if a := SafeHeader(r, "Accept"); a != "" {
-		line += " A=" + a
-	}
-
-	// 5. E=Accept-Encoding, the compression formats the browser supports.
-	if ae := SafeHeader(r, "Accept-Encoding"); ae != "" {
-		line += " E=" + ae
-	}
-
-	// 6. Connection, can be empty, "keep-alive" or "close".
-	if c := SafeHeader(r, "Connection"); c != "" {
-		line += " " + c
-	}
-
+		SafeHeader(r, "User-Agent") +
+		// 3. R=Referer, the website from which the request originated.
+		headerTxt(r, "Referer", "R=", "") +
+		// 4. A=Accept, the content types the browser prefers.
+		headerTxt(r, "Accept", "A=", "") +
+		// 5. E=Accept-Encoding, the compression formats the browser supports.
+		headerTxt(r, "Accept-Encoding", "E=", "") +
+		// 6. Connection, can be empty, "keep-alive" or "close".
+		headerTxt(r, "Connection", "", "")
 	// 7, DNT (Do Not Track) is being dropped by web standards and browsers.
 	if r.Header.Get("DNT") != "" {
 		line += " DNT"
 	}
+	line += "" +
+		// 8. Cache-Control, how the browser is caching data.
+		headerTxt(r, "Cache-Control", "", "") +
+		// 9. Upgrade-Insecure-Requests, the client can upgrade from HTTP to HTTPS
+		headerTxt(r, "Upgrade-Insecure-Requests", "UIR", "1") +
+		// 10. Via avoids request loops and identifies protocol capabilities
+		headerTxt(r, "Via", "Via=", "") +
+		// 11. Authorization and/or Cookie content.
+		headerTxt(r, "Authorization", "", "") +
+		headerTxt(r, "Cookie", "", "")
 
-	// 8. Cache-Control, how the browser is caching data.
-	if cc := SafeHeader(r, "Cache-Control"); cc != "" {
-		line += " " + cc
-	}
-
-	// 9. Authorization and/or Cookie content.
-
-	if a := SafeHeader(r, "Authorization"); a != "" {
-		checksum, err := Obfuscate(a)
-		if err == nil {
-			line += " " + checksum
-		} else {
-			log.Print("WRN Cannot create HighwayHash ", err)
-		}
-	}
-
-	if c := SafeHeader(r, "Cookie"); c != "" {
-		line += " " + c
-	}
-
-	return Sanitize(line)
+	return line
 }
 
 // FingerprintMD provide the browser fingerprint in markdown format.
 // Attention: read the .
 func FingerprintMD(r *http.Request) string {
 	return "" +
-		headerMD(r, "Accept-Language") + // language preferred by the user
-		headerMD(r, "User-Agent") + // name and version of browser and OS
-		headerMD(r, "Referer") + // URL from which the request originated
-		headerMD(r, "Accept") + // content types the browser prefers
 		headerMD(r, "Accept-Encoding") + // compression formats the browser supports
-		headerMD(r, "Connection") + // can be: empty, "keep-alive" or "close"
-		headerMD(r, "DNT") + // "Do Not Track" is being dropped by web standards and browsers
-		headerMD(r, "Cache-Control") + // how the browser is caching data
+		headerMD(r, "Accept-Language") + // language preferred by the user
+		headerMD(r, "Accept") + // content types the browser prefers
 		headerMD(r, "Authorization") + // Attention: may contain confidential data
-		headerMD(r, "Cookie") // Attention: may contain confidential data
+		headerMD(r, "Cache-Control") + // how the browser is caching data
+		headerMD(r, "Connection") + // can be: empty, "keep-alive" or "close"
+		headerMD(r, "Cookie") + // Attention: may contain confidential data
+		headerMD(r, "DNT") + // "Do Not Track" is being dropped by web standards and browsers
+		headerMD(r, "Referer") + // URL from which the request originated
+		headerMD(r, "User-Agent") + // name and version of browser and OS
+		headerMD(r, "Via") // avoid request loops and identify protocol capabilities
+}
+
+func headerTxt(r *http.Request, header, key, skip string) string {
+	v := SafeHeader(r, header)
+	if v == skip {
+		return ""
+	}
+	return " " + key + "=" + v
 }
 
 func headerMD(r *http.Request, header string) string {
-	str := SafeHeader(r, header)
-	if str != "" {
-		str = "\n" + "* " + header + ": " + str
+	v := SafeHeader(r, header)
+	if v == "" {
+		return ""
 	}
-	return str
+	return "\n" + "* " + header + ": " + v
 }
 
 // FingerprintExplanation provides a description of the logged HTTP headers.
@@ -136,4 +122,6 @@ const FingerprintExplanation = `
 6. Connection, can be empty, "keep-alive" or "close". 
 7. DNT (Do Not Track) can be used by Firefox (dropped by web standards). 
 8. Cache-Control, how the browser is caching data. 
-9. Authorization (obfuscated) and/or Cookie content.`
+9. URI=Upgrade-Insecure-Requests, the client can upgrade from HTTP to HTTPS 
+10. Via avoids request loops and identifies protocol capabilities 
+11. Authorization and/or Cookie content (obfuscated).`
