@@ -1,12 +1,7 @@
-// Copyright (c) 2020-2022 Teal.Finance contributors
-//
-// This file is part of Teal.Finance/Garcon, an API and website server.
-// Teal.Finance/Garcon is free software under the GNU LGPL
-// either version 3 or any later version, at the licensee's option.
-// SPDX-License-Identifier: LGPL-3.0-or-later
-//
-// Teal.Finance/Garcon is distributed WITHOUT ANY WARRANTY.
-// See the LICENSE and COPYING.LESSER files alongside the source files.
+// Copyright 2021-2022 Teal.Finance contributors
+// This file is part of Teal.Finance/Garcon,
+// an API and website server, under the MIT License.
+// SPDX-License-Identifier: MIT
 
 package garcon
 
