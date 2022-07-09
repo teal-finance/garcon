@@ -7,15 +7,16 @@ require (
 	github.com/carlmjohnson/versioninfo v0.22.4
 	github.com/go-chi/chi/v5 v5.0.7
 	github.com/golang-jwt/jwt v3.2.2+incompatible
+	github.com/julienschmidt/httprouter v1.3.0
 	github.com/mailru/easyjson v0.7.7
 	github.com/minio/highwayhash v1.0.2
-	github.com/open-policy-agent/opa v0.42.0
+	github.com/open-policy-agent/opa v0.42.1
 	github.com/pkg/profile v1.6.0
 	github.com/prometheus/client_golang v1.12.2
 	github.com/rs/cors v1.8.2
-	github.com/teal-finance/incorruptible v0.0.0-20220628195218-038c37bc3b0c
+	github.com/teal-finance/incorruptible v0.0.0-20220709110927-4a985d246192
 	github.com/teal-finance/notifier v1.1.0
-	github.com/teal-finance/quid v0.0.0-20220614042305-0190e96a7c05
+	github.com/teal-finance/quid v0.0.0-20220709111240-c30f9b77aca0
 	github.com/zhangyunhao116/fastrand v0.3.0
 	golang.org/x/time v0.0.0-20220609170525-579cf78fd858
 	mvdan.cc/gofumpt v0.3.1
@@ -55,8 +56,9 @@ require (
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 	github.com/yashtewari/glob-intersection v0.1.0 // indirect
 	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4 // indirect
+	golang.org/x/net v0.0.0-20220708220712-1185a9018129 // indirect
 	golang.org/x/sync v0.0.0-20220601150217-0de741cfad7f // indirect
-	golang.org/x/sys v0.0.0-20220704084225-05e143d24a9e // indirect
+	golang.org/x/sys v0.0.0-20220708085239-5a0f0661e09d // indirect
 	golang.org/x/tools v0.1.11 // indirect
 	google.golang.org/protobuf v1.28.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
