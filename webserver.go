@@ -215,7 +215,7 @@ func imageContentType(ext string) string {
 	switch ext {
 	case "png":
 		return "image/png"
-	case "jpg":
+	case "jpg", "jpeg":
 		return "image/jpeg"
 	case "svg":
 		return "image/svg+xml"
