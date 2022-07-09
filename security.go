@@ -49,7 +49,7 @@ func Sanitize(str string) string {
 	)
 }
 
-// SafeHeader return a stringifies a safe list of HTTP headers.
+// SafeHeader stringifies a safe list of HTTP header values.
 func SafeHeader(r *http.Request, header string) string {
 	values := r.Header.Values(header)
 
