@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2022 Teal.Finance contributors
+// Copyright 2021-2022 Teal.Finance contributors
 // This file is part of Teal.Finance/Garcon,
 // an API and website server, under the MIT License.
 // SPDX-License-Identifier: MIT
