@@ -546,7 +546,7 @@ func TestDT(t *testing.T) {
 	}
 
 	t.Run("fill expected result for 23:59:59", func(_ *testing.T) {
-		today := time.Now().UTC().Truncate(DayInNS)
+		today := time.Now().UTC().Truncate(Day)
 		str := DT(today)
 		cases[0].want = str[0:10] + "." + cases[0].in
 	})

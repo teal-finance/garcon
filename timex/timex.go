@@ -28,7 +28,7 @@ func DT(t time.Time) string {
 	if t.IsZero() {
 		return Inf
 	}
-	if d := t.Truncate(DayInNS); t.Equal(d) {
+	if d := t.Truncate(Day); t.Equal(d) {
 		return d.Format("2006-01-02")
 	}
 	return t.Format("2006-01-02.15:04:05")
@@ -63,7 +63,7 @@ func ISODefault(t time.Time, defaultVal string) string {
 func DStr(d time.Duration) string {
 	s := ""
 
-	if d <= -DayInNS || d >= DayInNS {
+	if d <= -Day || d >= Day {
 		days := d.Nanoseconds() / DayNs
 		s = fmt.Sprint(days) + "d"
 
@@ -72,19 +72,19 @@ func DStr(d time.Duration) string {
 			days = -days
 		}
 
-		if d >= WeekInNS {
+		if d >= Week {
 			return s // no sub-day precision when greater than a week
 		}
 
 		d -= time.Duration(days * DayNs)
 
 		// no sub-second precision
-		if d < SecondInNS {
+		if d < Second {
 			return s
 		}
-		d = d.Round(SecondInNS)
-	} else if d <= -MinuteInNS || d >= MinuteInNS {
-		d = d.Round(SecondInNS) // no sub-second precision when greater than a hour
+		d = d.Round(Second)
+	} else if d <= -Minute || d >= Minute {
+		d = d.Round(Second) // no sub-second precision when greater than a hour
 	}
 
 	return s + d.String()
@@ -97,7 +97,7 @@ func NsStr(nanoseconds int64) string {
 
 // SecStr stringifies seconds using the standard duration format.
 func SecStr(seconds int32) string {
-	return DStr(time.Duration(seconds) * SecondInNS)
+	return DStr(time.Duration(seconds) * Second)
 }
 
 // SameDate returns true if t1 and t2 have same YYYY-MM-DD.
@@ -120,6 +120,7 @@ func SameMinuteSecond(t1, t2 time.Time) bool {
 }
 
 // Durations in nanoseconds from 1 nanosecond to 1 year.
+//nolint:revive // "Hour" (= time.Hour) is not a unit-specific suffix.
 const (
 	MinuteSec = 60           // MinuteSec = number of seconds in one minute.
 	HourSec   = 3600         // HourSec = number of seconds in one hour.
@@ -138,16 +139,16 @@ const (
 	MonthNs       = SecondNs * MonthSec  // Number of nanoseconds in 1 month
 	YearNs        = SecondNs * YearSec   // Number of nanoseconds in 1 year
 
-	NanosecondInNS  = time.Nanosecond        // Nanosecond = one billionth of a second
-	MicrosecondInNS = time.Microsecond       // Microsecond = 1000 nanoseconds
-	MillisecondInNS = time.Millisecond       // Millisecond = 1000 microseconds
-	SecondInNS      = time.Second            // Second = 1000 milliseconds
-	MinuteInNS      = SecondInNS * MinuteSec // Minute = 60 seconds (no leap seconds)
-	HourInNS        = SecondInNS * HourSec   // Hour = 60 minutes
-	DayInNS         = SecondInNS * DaySec    // Day = 24 hours (ignoring daylight savings effects)
-	WeekInNS        = SecondInNS * WeekSec   // Week = 7 days
-	MonthInNS       = SecondInNS * MonthSec  // Month = one twelfth of a year (2629746 seconds, about 30.4 days)
-	YearInNS        = SecondInNS * YearSec   // Year = 31556952 seconds (average considering leap years, about 365.24 days)
+	Nanosecond  = time.Nanosecond   // Nanosecond = one billionth of a second
+	Microsecond = time.Microsecond  // Microsecond = 1000 nanoseconds
+	Millisecond = time.Millisecond  // Millisecond = 1000 microseconds
+	Second      = time.Second       // Second = 1000 milliseconds
+	Minute      = time.Minute       // Minute = 60 seconds (no leap seconds)
+	Hour        = time.Hour         // Hour = 60 minutes
+	Day         = Second * DaySec   // Day = 24 hours (ignoring daylight savings effects)
+	Week        = Second * WeekSec  // Week = 7 days
+	Month       = Second * MonthSec // Month = one twelfth of a year (2629746 seconds, about 30.4 days)
+	Year        = Second * YearSec  // Year = 31556952 seconds (average considering leap years, about 365.24 days)
 
 	y2000ns = (2000 - 1970) * YearNs
 	y2000s  = (2000 - 1970) * YearSec
@@ -206,7 +207,7 @@ func ParseTime(s string) (_ time.Time, ok bool) {
 	case len(TimeOnly):
 		if t, err := time.Parse(TimeOnly, s); err == nil {
 			hms := t.Sub(YearZero)
-			today := time.Now().UTC().Truncate(DayInNS)
+			today := time.Now().UTC().Truncate(Day)
 			return today.Add(hms), true
 		}
 
@@ -471,5 +472,5 @@ func Relative(t time.Time, days int) time.Time {
 		return t
 	}
 
-	return t.Add(time.Duration(days) * DayInNS)
+	return t.Add(time.Duration(days) * Day)
 }
