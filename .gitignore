@@ -5,8 +5,7 @@
 /.vscode
 /cpu.pprof
 /dev
-/go.work
-/go.work.sum
+/go.work*
 /high-level
 /keystore
 /low-level
