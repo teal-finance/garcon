@@ -451,7 +451,7 @@ your contributions are welcome. :wink:
 
 ## 🗽 Copyright and license
 
-Copyright (c) 2022 Teal.Finance contributors
+Copyright (c) 2021 Teal.Finance/Garcon contributors
 
 Teal.Finance/Garcon is free software, and can be redistributed
 and/or modified under the terms of the MIT License.

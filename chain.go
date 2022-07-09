@@ -1,6 +1,6 @@
-// Copyright 2014      Justinas Stankevicius
-// Copyright 2015-2016 contributors of alice
-// Copyright 2021-2022 Teal.Finance contributors
+// Copyright 2014 Justinas Stankevicius
+// Copyright 2015 Alice contributors
+// Copyright 2021 Teal.Finance/Garcon contributors
 //
 // This file is a modified copy from https://github.com/justinas/alice
 //

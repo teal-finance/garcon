@@ -2,7 +2,7 @@
 // Creative Commons Zero v1.0 Universal - No Rights Reserved
 // <https://creativecommons.org/publicdomain/zero/1.0>
 //
-// To the extent possible under law, the Teal.Finance contributors
+// To the extent possible under law, the Teal.Finance/Garcon contributors
 // have waived all copyright and related/neighboring rights to this
 // file "high-level/main.go" to be freely used without any restriction.
 
