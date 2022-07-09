@@ -24,9 +24,9 @@ func main() {
 	endpoint := flag.String("post-endpoint", "/", "The endpoint for the POST request.")
 	flag.Parse()
 
-	handler := chi.NewRouter()
-	handler.Post(*endpoint, post)
-	handler.NotFound(notFound)
+	router := chi.NewRouter()
+	router.Post(*endpoint, post)
+	router.MethodNotAllowed(others)
 
 	chain := garcon.NewChain(
 		garcon.LogRequest,
@@ -34,7 +34,7 @@ func main() {
 
 	server := http.Server{
 		Addr:    port,
-		Handler: chain.Then(handler),
+		Handler: chain.Then(router),
 	}
 
 	log.Print("Server listening on http://localhost", port)
@@ -43,11 +43,11 @@ func main() {
 }
 
 func post(w http.ResponseWriter, _ *http.Request) {
-	log.Print("handler.Post()")
-	_, _ = w.Write([]byte("<html><body> handler.Post() </body></html>"))
+	log.Print("router.Post()")
+	_, _ = w.Write([]byte("<html><body> router.Post() </body></html>"))
 }
 
-func notFound(w http.ResponseWriter, _ *http.Request) {
-	log.Print("handler.NotFound()")
-	_, _ = w.Write([]byte("<html><body> handler.NotFound() </body></html>"))
+func others(w http.ResponseWriter, _ *http.Request) {
+	log.Print("router.NotFound()")
+	_, _ = w.Write([]byte("<html><body> router.MethodNotAllowed() </body></html>"))
 }

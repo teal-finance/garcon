@@ -24,10 +24,10 @@ func main() {
 	endpoint := flag.String("post-endpoint", "/", "The endpoint for the POST request.")
 	flag.Parse()
 
-	handler := httprouter.New()
-	handler.POST(*endpoint, post)
-	handler.NotFound = notFound{}
-	handler.HandleMethodNotAllowed = false
+	router := httprouter.New()
+	router.POST(*endpoint, post)
+	router.NotFound = others{}
+	router.HandleMethodNotAllowed = false
 
 	chain := garcon.NewChain(
 		garcon.LogRequest,
@@ -35,7 +35,7 @@ func main() {
 
 	server := http.Server{
 		Addr:    port,
-		Handler: chain.Then(handler),
+		Handler: chain.Then(router),
 	}
 
 	log.Print("Server listening on http://localhost", port)
@@ -44,13 +44,13 @@ func main() {
 }
 
 func post(w http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
-	log.Print("handler.Post")
-	_, _ = w.Write([]byte("<html><body> handler.Post </body></html>"))
+	log.Print("router.Post")
+	_, _ = w.Write([]byte("<html><body> router.Post </body></html>"))
 }
 
-type notFound struct{}
+type others struct{}
 
-func (notFound) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
-	log.Print("handler.NotFound")
-	_, _ = w.Write([]byte("<html><body> handler.NotFound </body></html>"))
+func (others) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
+	log.Print("router.NotFound")
+	_, _ = w.Write([]byte("<html><body> router.NotFound </body></html>"))
 }
