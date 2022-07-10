@@ -17,11 +17,9 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
-	"unicode"
 
 	"github.com/go-chi/chi/v5"
 
@@ -41,6 +39,7 @@ var DevOrigins = []*url.URL{
 }
 
 type Garcon struct {
+	Namespace      Namespace
 	ConnState      func(net.Conn, http.ConnState)
 	Checker        TokenChecker
 	ErrWriter      ErrWriter
@@ -72,7 +71,7 @@ type TokenChecker interface {
 }
 
 type parameters struct {
-	namespace    string
+	namespace    Namespace
 	docURL       string
 	nameVersion  string
 	secretKey    []byte
@@ -118,6 +117,7 @@ func New(opts ...Option) (*Garcon, error) {
 
 func (s *parameters) new() (*Garcon, error) {
 	g := Garcon{
+		Namespace:      s.namespace,
 		ConnState:      nil,
 		Checker:        nil,
 		ErrWriter:      NewErrWriter(s.docURL),
@@ -296,26 +296,23 @@ func WithPProf(port int) Option {
 	}
 }
 
+func WithNamespace(namespace string) Option {
+	return func(params *parameters) {
+		oldNS := params.namespace
+		newNS := NewNamespace(namespace)
+		if oldNS != "" && params.namespace != newNS {
+			log.Panicf("WithProm(namespace=%q) overides namespace=%q", newNS, oldNS)
+		}
+		params.namespace = newNS
+	}
+}
+
 func WithProm(port int, namespace string) Option {
+	setNamespace := WithNamespace(namespace)
+
 	return func(params *parameters) {
 		params.expPort = port
-
-		// If namespace is a path or an URL, keep the last basename.
-		// Example: keep "myapp" from "https://example.com/path/myapp/"
-		namespace = strings.Trim(namespace, "/")
-		if i := strings.LastIndex(namespace, "/"); i >= 0 {
-			namespace = namespace[i+1:]
-		}
-
-		// valid namespace = [a-zA-Z][a-zA-Z0-9_]*
-		// https://prometheus.io/docs/concepts/data_model/#metric-names-and-labels
-		re := regexp.MustCompile(`[^a-zA-Z0-9_]`)
-		namespace = re.ReplaceAllLiteralString(namespace, "")
-		if !unicode.IsLetter(rune(namespace[0])) {
-			namespace = "a" + namespace
-		}
-
-		params.namespace = re.ReplaceAllLiteralString(namespace, "")
+		setNamespace(params)
 	}
 }
 

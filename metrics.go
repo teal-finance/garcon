@@ -9,8 +9,11 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"regexp"
 	"strconv"
+	"strings"
 	"time"
+	"unicode"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/prometheus/client_golang/prometheus"
@@ -22,8 +25,35 @@ import (
 // Namespace holds the Prometheus namespace.
 type Namespace string
 
+// NewNamespace extract the wider "[a-zA-Z0-9_]+" string from the end of str.
+// If str is a path or an URL, keep the last basename.
+// Example: keep "myapp" from "https://example.com/path/myapp/"
+func NewNamespace(str string) Namespace {
+	str = strings.Trim(str, "/")
+	if i := strings.LastIndex(str, "/"); i >= 0 {
+		str = str[i+1:]
+	}
+	re := regexp.MustCompile(`[^a-zA-Z0-9_]`)
+	str = re.ReplaceAllLiteralString(str, "")
+	return Namespace(str)
+}
+
+// SetPromNamingRule verifies Prom naming rules for namespace and fixes it if necessary.
+// valid namespace = [a-zA-Z][a-zA-Z0-9_]*
+// https://prometheus.io/docs/concepts/data_model/#metric-names-and-labels
+func (ns *Namespace) SetPromNamingRule() {
+	str := ns.String()
+	if !unicode.IsLetter(rune(str[0])) {
+		*ns = Namespace("a" + str)
+	}
+}
+
+func (ns Namespace) String() string {
+	return string(ns)
+}
+
 // StartMetricsServer creates and starts the Prometheus export server.
-func StartMetricsServer(port int, namespace string) (Chain, func(net.Conn, http.ConnState)) {
+func StartMetricsServer(port int, namespace Namespace) (Chain, func(net.Conn, http.ConnState)) {
 	if port <= 0 {
 		log.Print("Disable Prometheus, export port=", port)
 		return nil, nil
@@ -36,14 +66,14 @@ func StartMetricsServer(port int, namespace string) (Chain, func(net.Conn, http.
 		log.Fatal(err)
 	}()
 
-	log.Print("Prometheus export http://localhost" + addr + " namespace=" + namespace)
+	log.Print("Prometheus export http://localhost" + addr + " namespace=" + namespace.String())
 
-	// Add build info.
+	// Add build info
 	prometheus.MustRegister(collectors.NewBuildInfoCollector())
 
-	ns := Namespace(namespace)
-	chain := NewChain(ns.measureDuration)
-	counter := ns.updateHTTPMetrics()
+	namespace.SetPromNamingRule()
+	chain := NewChain(namespace.measureDuration)
+	counter := namespace.updateHTTPMetrics()
 	return chain, counter
 }
 
