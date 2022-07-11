@@ -92,7 +92,7 @@ func (db *db) list(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		db.g.ErrWriter.Write(w, r, http.StatusInternalServerError,
 			"Cannot split addr=host:port", "addr", r.RemoteAddr)
-		log.Print("WARN ", err)
+		log.Print("Cannot split addr=host:port ", err)
 		return
 	}
 
@@ -115,7 +115,7 @@ func (db *db) list(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		db.g.ErrWriter.Write(w, r, http.StatusInternalServerError,
 			"Cannot JSON-marshal the keys list")
-		log.Print("WARN ", err)
+		log.Print("Cannot JSON-marshal the keys list ", err)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -130,14 +130,14 @@ func (db *db) post(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		db.g.ErrWriter.Write(w, r, http.StatusInternalServerError,
 			"Cannot split addr=host:port", "addr", r.RemoteAddr)
-		log.Print("WARN ", err)
+		log.Print("Cannot split addr=host:port ", err)
 	}
 
 	values, err := parseForm(r)
 	if err != nil {
 		db.g.ErrWriter.Write(w, r, http.StatusInternalServerError,
 			"Cannot parse the webform (request body)")
-		log.Print("WARN ", err)
+		log.Print("Cannot parse the webform ", err)
 	}
 
 	if values == nil {
@@ -172,7 +172,7 @@ func (db *db) post(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		db.g.ErrWriter.Write(w, r, http.StatusInternalServerError,
 			"Cannot JSON-marshal the result")
-		log.Print("WARN ", err)
+		log.Print("Cannot JSON-marshal ", err)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -185,14 +185,14 @@ func (db *db) delete(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		db.g.ErrWriter.Write(w, r, http.StatusInternalServerError,
 			"Cannot split addr=host:port", "addr", r.RemoteAddr)
-		log.Print("WARN ", err)
+		log.Print("Cannot split addr=host:port ", err)
 	}
 
 	values, err := parseForm(r)
 	if err != nil {
 		db.g.ErrWriter.Write(w, r, http.StatusInternalServerError,
 			"Cannot parse the webform (request body)")
-		log.Print("WARN ", err)
+		log.Print("Cannot parse the webform ", err)
 	}
 
 	if len(values) == 0 {
