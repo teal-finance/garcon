@@ -103,7 +103,6 @@ func checkParameters(secretKey []byte, permissions ...any) ([]string, []Perm) {
 			v, ok = p.(int)
 			perms[i/2] = Perm{Value: v}
 		}
-
 		if !ok {
 			log.Panic("Wrong type for the parametric arguments in NewChecker(), " +
 				"must alternate string and int: plan1, perm1, plan2, perm2...")
@@ -134,6 +133,32 @@ func extractMainDomain(urls []*url.URL) (secure bool, dns, path, name string) {
 
 	path, name = cleanPath(u.Path)
 	return secure, u.Hostname(), path, name
+}
+
+// cleanPath returns the sanitized path and
+// a nice cookie name deduced from the path basename.
+func cleanPath(path string) (_, name string) {
+	name = defaultCookieName
+
+	if path != "" {
+		// remove trailing slash
+		if path[len(path)-1] == '/' {
+			path = path[:len(path)-1]
+		}
+
+		for i := len(path) - 1; i >= 0; i-- {
+			if path[i] == byte('/') {
+				name = path[i+1:]
+				break
+			}
+		}
+	}
+
+	if path == "" {
+		path = "/"
+	}
+
+	return path, name
 }
 
 func extractDevURLs(urls []*url.URL) []*url.URL {
@@ -177,31 +202,6 @@ func extractDevOrigins(urls []*url.URL) []string {
 
 	log.Print("JWT not required for dev. origins: ", devOrigins)
 	return devOrigins
-}
-
-// cleanPath sanitizes the Cookie path and deduces a nice cookie name.
-func cleanPath(path string) (string, string) {
-	name := defaultCookieName
-
-	if path != "" {
-		// remove trailing slash
-		if path[len(path)-1] == '/' {
-			path = path[:len(path)-1]
-		}
-
-		for i := len(path) - 1; i >= 0; i-- {
-			if path[i] == byte('/') {
-				name = path[i+1:]
-				break
-			}
-		}
-	}
-
-	if path == "" {
-		path = "/"
-	}
-
-	return path, name
 }
 
 func (ck *Checker) NewCookie(name, plan string, secure bool, dns, path string) http.Cookie {
@@ -457,6 +457,7 @@ func (ck *Checker) sign(signingString string) string {
 // --------------------------------------
 // Read/write permissions to/from context
 
+//nolint:gochecknoglobals // permKey is a Context key and need to be global
 var permKey struct{}
 
 // PermFromCtx gets the permission information from the request context.

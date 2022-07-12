@@ -60,7 +60,7 @@ func (errWriter ErrWriter) WriteSafeJSONErr(w http.ResponseWriter, r *http.Reque
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.WriteHeader(statusCode)
 
-	m := msg{
+	response := msg{
 		Error: fmt.Sprint(messages...),
 		Doc:   string(errWriter),
 		Path:  "",
@@ -68,13 +68,13 @@ func (errWriter ErrWriter) WriteSafeJSONErr(w http.ResponseWriter, r *http.Reque
 	}
 
 	if r != nil {
-		m.Path = r.URL.Path
+		response.Path = r.URL.Path
 		if r.URL.RawQuery != "" {
-			m.Query = r.URL.RawQuery
+			response.Query = r.URL.RawQuery
 		}
 	}
 
-	b, err := m.MarshalJSON()
+	b, err := response.MarshalJSON()
 	if err == nil {
 		_, _ = w.Write(b)
 	}
@@ -139,6 +139,7 @@ func appendMessages(buf []byte, messages []any) ([]byte, bool) {
 	return buf, true
 }
 
+//nolint:cyclop,gocyclo // cannot reduce cyclomatic complexity
 func appendValue(buf []byte, a any) []byte {
 	switch val := a.(type) {
 	case bool:

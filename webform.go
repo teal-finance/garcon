@@ -48,11 +48,13 @@ type WebForm struct {
 
 func NewContactForm(redirectURL, notifierURL string, errWriter ErrWriter) WebForm {
 	form := WebForm{
-		ErrWriter:  errWriter,
-		Redirect:   redirectURL,
-		Notifier:   nil,
-		TextLimits: DefaultContactSettings,
-		FileLimits: DefaultFileSettings,
+		ErrWriter:          errWriter,
+		Notifier:           nil,
+		Redirect:           redirectURL,
+		TextLimits:         DefaultContactSettings(),
+		FileLimits:         DefaultFileSettings(),
+		MaxTotalLength:     0,
+		maxFieldNameLength: 0,
 	}
 
 	if notifierURL == "" {
@@ -68,18 +70,22 @@ func NewContactForm(redirectURL, notifierURL string, errWriter ErrWriter) WebFor
 
 // DefaultContactSettings is compliant with standard names for web form input fields:
 // https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#inappropriate-for-the-control
-var DefaultContactSettings = map[string][2]int{
-	"name":      {60, 1},
-	"email":     {60, 1},
-	"text":      {900, 20},
-	"org-type":  {20, 1},
-	"tel":       {30, 1},
-	"want-call": {10, 1},
+func DefaultContactSettings() map[string][2]int {
+	return map[string][2]int{
+		"name":      {60, 1},
+		"email":     {60, 1},
+		"text":      {900, 20},
+		"org-type":  {20, 1},
+		"tel":       {30, 1},
+		"want-call": {10, 1},
+	}
 }
 
-// DefaultFileSettings.
-var DefaultFileSettings = map[string][2]int{
-	"file": {1_000_000, 1}, // max: 1 file weighting 1 MB
+// DefaultFileSettings sets FileLimits with only "file".
+func DefaultFileSettings() map[string][2]int {
+	return map[string][2]int{
+		"file": {1_000_000, 1}, // max: 1 file weighting 1 MB
+	}
 }
 
 // NotifyWebForm registers a web-form middleware
@@ -92,12 +98,12 @@ func (form *WebForm) NotifyWebForm() func(w http.ResponseWriter, r *http.Request
 	}
 
 	if form.TextLimits == nil {
-		form.TextLimits = DefaultContactSettings
+		form.TextLimits = DefaultContactSettings()
 		log.Print("Middleware WebForm: empty TextLimits => use ", form.TextLimits)
 	}
 
 	if form.FileLimits == nil {
-		form.FileLimits = DefaultFileSettings
+		form.FileLimits = DefaultFileSettings()
 		log.Print("Middleware WebForm: empty FileLimits => use ", form.FileLimits)
 	}
 
@@ -152,17 +158,7 @@ func (form *WebForm) messageMD(r *http.Request) string {
 	md := ""
 
 	for name, values := range r.Form {
-		if len(values) == 1 && values[0] == "" {
-			continue // skip empty values
-		}
-
-		if !form.valid(name) {
-			continue
-		}
-
-		if len(values) != 1 {
-			log.Printf("WRN WebForm: reject name=%s because "+
-				"received %d input field(s) while expected only one", name, len(values))
+		if !form.valid(name, values) {
 			continue
 		}
 
@@ -184,7 +180,7 @@ func (form *WebForm) messageMD(r *http.Request) string {
 			}
 		}
 
-		if len(md) > 1 {
+		if md != "" { // no break line at first loop
 			md += "\n"
 		}
 
@@ -194,7 +190,21 @@ func (form *WebForm) messageMD(r *http.Request) string {
 	return md
 }
 
-func (form *WebForm) valid(name string) bool {
+func (form *WebForm) valid(name string, values []string) bool {
+	if len(values) == 1 && values[0] == "" {
+		return false // skip empty values
+	}
+
+	if len(values) != 1 {
+		log.Printf("WRN WebForm: reject name=%s because "+
+			"received %d input field(s) while expected only one", name, len(values))
+		return false
+	}
+
+	return form.validName(name)
+}
+
+func (form *WebForm) validName(name string) bool {
 	if nLen := len(name); nLen > form.maxFieldNameLength {
 		name = Sanitize(name)
 		if len(name) > 100 {
@@ -228,15 +238,15 @@ func (form *WebForm) valid(name string) bool {
 	return true
 }
 
-func (form *WebForm) valueMD(v string, maxBreaks int) string {
-	if !strings.ContainsAny(v, "\n\r") {
-		return Sanitize(v)
+func (form *WebForm) valueMD(str string, maxBreaks int) string {
+	if !strings.ContainsAny(str, "\n\r") {
+		return Sanitize(str)
 	}
 
-	v = strings.ReplaceAll(v, "\r", "")
+	str = strings.ReplaceAll(str, "\r", "")
+	txt := strings.Split(str, "\n")
 
-	txt := strings.Split(v, "\n")
-	v = v[:0]
+	md := ""
 	previous := ""
 	breaks := 0
 	for _, line := range txt {
@@ -247,18 +257,18 @@ func (form *WebForm) valueMD(v string, maxBreaks int) string {
 		}
 
 		if breaks >= maxBreaks && maxBreaks > 0 {
-			v += fmt.Sprintf("\n  (too much line breaks %d > %d)", breaks, maxBreaks)
+			md += fmt.Sprintf("\n  (too much line breaks %d > %d)", breaks, maxBreaks)
 			break
 		}
 
-		if v != "" {
-			v += "\n" + "  " // leading spaces = bullet indent
+		if md != "" {
+			md += "\n" + "  " // leading spaces = bullet indent
 		}
-		v += line + "  " // trailing double space = line break
+		md += line + "  " // trailing double space = line break
 
 		previous = line
 		breaks++
 	}
 
-	return v
+	return md
 }

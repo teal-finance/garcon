@@ -99,7 +99,6 @@ func (rl *ReqLimiter) getVisitor(ip string) *rate.Limiter {
 			limiter:  rl.initLimiter,
 			lastSeen: time.Time{},
 		}
-
 		rl.visitors[ip] = v
 	}
 

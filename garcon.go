@@ -13,7 +13,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"math/rand"
 	"net"
 	"net/http"
 	"net/url"
@@ -33,6 +32,7 @@ import (
 // - localhost:8085 on multi devices: web auto-reload using https://github.com/synw/fwr
 // - flutter run --web-port=8080
 // - 192.168.1.x + any port on tablet: mobile app using fast builtin auto-reload.
+//nolint:gochecknoglobals // used as const
 var DevOrigins = []*url.URL{
 	{Scheme: "http", Host: "localhost:"},
 	{Scheme: "http", Host: "192.168.1."},
@@ -71,19 +71,19 @@ type TokenChecker interface {
 }
 
 type parameters struct {
-	namespace    Namespace
-	docURL       string
-	nameVersion  string
-	secretKey    []byte
-	planPerm     []any
-	opaFilenames []string
-	urls         []*url.URL
-	pprofPort    int
-	expPort      int
-	reqLogs      int
-	reqBurst     int
-	reqMinute    int
-	devMode      bool
+	namespace       Namespace
+	docURL          string
+	nameVersion     string
+	secretKey       []byte
+	planPerm        []any
+	opaFilenames    []string
+	urls            []*url.URL
+	pprofPort       int
+	expPort         int
+	reqLogVerbosity int
+	reqBurst        int
+	reqMinute       int
+	devMode         bool
 }
 
 func New(opts ...Option) (*Garcon, error) {
@@ -115,21 +115,21 @@ func New(opts ...Option) (*Garcon, error) {
 	return params.new()
 }
 
-func (s *parameters) new() (*Garcon, error) {
+func (params *parameters) new() (*Garcon, error) {
 	g := Garcon{
-		Namespace:      s.namespace,
+		Namespace:      params.namespace,
 		ConnState:      nil,
 		Checker:        nil,
-		ErrWriter:      NewErrWriter(s.docURL),
-		AllowedOrigins: OriginsFromURLs(s.urls),
+		ErrWriter:      NewErrWriter(params.docURL),
+		AllowedOrigins: OriginsFromURLs(params.urls),
 		Middlewares:    nil,
 	}
 
-	g.Middlewares, g.ConnState = StartMetricsServer(s.expPort, s.namespace)
+	g.Middlewares, g.ConnState = StartMetricsServer(params.expPort, params.namespace)
 
 	g.Middlewares.Append(RejectInvalidURI)
 
-	switch s.reqLogs {
+	switch params.reqLogVerbosity {
 	case 0:
 		break // do not log incoming HTTP requests
 	case 1:
@@ -138,37 +138,24 @@ func (s *parameters) new() (*Garcon, error) {
 		g.Middlewares = g.Middlewares.Append(LogRequestFingerprint)
 	}
 
-	if s.reqMinute > 0 {
-		reqLimiter := NewReqLimiter(s.reqBurst, s.reqMinute, s.devMode, g.ErrWriter)
+	if params.reqMinute > 0 {
+		reqLimiter := NewReqLimiter(params.reqBurst, params.reqMinute, params.devMode, g.ErrWriter)
 		g.Middlewares = g.Middlewares.Append(reqLimiter.LimitRate)
 	}
 
-	g.Middlewares = g.Middlewares.Append(
-		ServerHeader(s.nameVersion),
-		CORSHandler(g.AllowedOrigins, s.devMode),
-	)
-
-	if len(s.secretKey) > 0 {
-		if len(s.planPerm) == 1 {
-			dt, ok := s.planPerm[0].(dtoken.DToken)
-			if ok {
-				setIP := (dt.IP != nil)
-				g.Checker = g.NewSessionToken(s.urls, s.secretKey, time.Duration(dt.Expiry), setIP)
-			}
-		}
-		if g.Checker == nil {
-			g.Checker = g.NewJWTChecker(s.urls, s.secretKey, s.planPerm...)
-		}
-		// erase the secret, no longer required
-		for i := range s.secretKey {
-			s.secretKey[i] = byte(rand.Intn(256))
-		}
-		s.secretKey = nil
+	if params.nameVersion != "" {
+		g.Middlewares = g.Middlewares.Append(ServerHeader(params.nameVersion))
 	}
 
+	if len(g.AllowedOrigins) > 0 {
+		g.Middlewares = g.Middlewares.Append(CORSHandler(g.AllowedOrigins, params.devMode))
+	}
+
+	g.setChecker(params)
+
 	// Authentication rules (Open Policy Agent)
-	if len(s.opaFilenames) > 0 {
-		policy, err := NewPolicy(s.opaFilenames, g.ErrWriter)
+	if len(params.opaFilenames) > 0 {
+		policy, err := NewPolicy(params.opaFilenames, g.ErrWriter)
 		if err != nil {
 			return &g, err
 		}
@@ -176,6 +163,26 @@ func (s *parameters) new() (*Garcon, error) {
 	}
 
 	return &g, nil
+}
+
+func (g *Garcon) setChecker(params *parameters) {
+	if len(params.secretKey) > 0 {
+		if len(params.planPerm) == 1 {
+			dt, ok := params.planPerm[0].(dtoken.DToken)
+			if ok {
+				setIP := (dt.IP != nil)
+				g.Checker = g.NewSessionToken(params.urls, params.secretKey, time.Duration(dt.Expiry), setIP)
+			}
+		}
+		if g.Checker == nil {
+			g.Checker = g.NewJWTChecker(params.urls, params.secretKey, params.planPerm...)
+		}
+		// erase the secret, no longer required
+		for i := range params.secretKey {
+			params.secretKey[i] = 0
+		}
+		params.secretKey = nil
+	}
 }
 
 type Option func(*parameters)
@@ -250,21 +257,17 @@ func WithOPA(opaFilenames ...string) Option {
 
 func WithReqLogs(verbosity ...int) Option {
 	v := 1
-
 	if len(verbosity) > 0 {
 		if len(verbosity) >= 2 {
 			log.Panic("garcon.WithReqLogs() must be called with zero or one argument")
 		}
-
 		v = verbosity[0]
 		if v < 0 || v > 2 {
 			log.Panicf("garcon.WithReqLogs(verbosity=%v) currently accepts values [0, 1, 2] only", v)
 		}
 	}
 
-	return func(params *parameters) {
-		params.reqLogs = v
-	}
+	return func(params *parameters) { params.reqLogVerbosity = v }
 }
 
 func WithLimiter(values ...int) Option {
@@ -412,11 +415,11 @@ func AppendPrefixes(origins []string, prefixes ...string) []string {
 	return origins
 }
 
-func appendOnePrefix(origins []string, p string) []string {
-	for i, o := range origins {
-		// if `o` is already a prefix of `p` => stop
-		if len(o) <= len(p) {
-			if o == p[:len(o)] {
+func appendOnePrefix(origins []string, prefix string) []string {
+	for i, url := range origins {
+		// if `url` is already a prefix of `prefix` => stop
+		if len(url) <= len(prefix) {
+			if url == prefix[:len(url)] {
 				return origins
 			}
 			continue
@@ -427,14 +430,14 @@ func appendOnePrefix(origins []string, p string) []string {
 			continue
 		}
 
-		// if `p` a prefix of `o` => update origins[i]
-		if o[:len(p)] == p {
-			origins[i] = p // replace `o` by `p`
+		// if `prefix` is a prefix of `url` => update origins[i]
+		if url[:len(prefix)] == prefix {
+			origins[i] = prefix // replace `o` by `p`
 			return origins
 		}
 	}
 
-	return append(origins, p)
+	return append(origins, prefix)
 }
 
 func AppendURLs(urls []*url.URL, prefixes ...*url.URL) []*url.URL {
@@ -444,15 +447,15 @@ func AppendURLs(urls []*url.URL, prefixes ...*url.URL) []*url.URL {
 	return urls
 }
 
-func appendOneURL(urls []*url.URL, p *url.URL) []*url.URL {
-	for i, u := range urls {
-		if u.Scheme != p.Scheme {
+func appendOneURL(urls []*url.URL, prefix *url.URL) []*url.URL {
+	for i, url := range urls {
+		if url.Scheme != prefix.Scheme {
 			continue
 		}
 
-		// if `u` is already a prefix of `p` => stop
-		if len(u.Host) <= len(p.Host) {
-			if u.Host == p.Host[:len(u.Host)] {
+		// if `url` is already a prefix of `prefix` => stop
+		if len(url.Host) <= len(prefix.Host) {
+			if url.Host == prefix.Host[:len(url.Host)] {
 				return urls
 			}
 			continue
@@ -463,14 +466,14 @@ func appendOneURL(urls []*url.URL, p *url.URL) []*url.URL {
 			continue
 		}
 
-		// if `p` a prefix of `u` => update urls[i]
-		if u.Host[:len(p.Host)] == p.Host {
-			urls[i] = p // replace `u` by `p`
+		// if `prefix` is a prefix of `url` => update urls[i]
+		if url.Host[:len(prefix.Host)] == prefix.Host {
+			urls[i] = prefix // replace `u` by `prefix`
 			return urls
 		}
 	}
 
-	return append(urls, p)
+	return append(urls, prefix)
 }
 
 func ParseURLs(origins []string) []*url.URL {
@@ -508,21 +511,17 @@ var ErrNonPrintable = errors.New("non-printable")
 // else the "key" query string (URL)
 // else the HTTP header.
 func Value(r *http.Request, key, header string) (string, error) {
-	v := chi.URLParam(r, key)
-
-	if v == "" {
-		v = r.FormValue(key)
+	value := chi.URLParam(r, key)
+	if value == "" {
+		value = r.FormValue(key)
+		if value == "" {
+			value = r.Header.Get(header)
+		}
 	}
-
-	if v == "" {
-		v = r.Header.Get(header)
+	if i := Printable(value); i >= 0 {
+		return value, fmt.Errorf("%s %w at %d", key, ErrNonPrintable, i)
 	}
-
-	if i := Printable(v); i >= 0 {
-		return v, fmt.Errorf("%s %w at %d", key, ErrNonPrintable, i)
-	}
-
-	return v, nil
+	return value, nil
 }
 
 func Values(r *http.Request, key string) ([]string, error) {

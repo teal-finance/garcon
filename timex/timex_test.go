@@ -5,6 +5,7 @@
 // https://pkg.go.dev/std?tab=licenses
 // SPDX-License-Identifier: BSD-3-Clause
 
+//nolint:testpackage // test unexported functions
 package timex
 
 import (

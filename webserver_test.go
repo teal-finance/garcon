@@ -3,6 +3,7 @@
 // an API and website server under the MIT License.
 // SPDX-License-Identifier: MIT
 
+//nolint:testpackage // test unexported function
 package garcon
 
 import (

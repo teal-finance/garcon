@@ -20,7 +20,7 @@ const Inf = "inf"
 
 const Infinite = math.MaxInt32 - 1
 
-var InfTime = time.Time{}
+func InfTime() time.Time { return time.Time{} }
 
 // DT stringifies a time using the layout "2006-01-02.15:04:05".
 // DT is used in debug logs when retrieving data from InfluxDB.
@@ -61,11 +61,11 @@ func ISODefault(t time.Time, defaultVal string) string {
 // DStr stringifies the duration in number of days, seconds, microseconds and nanoseconds.
 // DStr truncates the string depending on the precision.
 func DStr(d time.Duration) string {
-	s := ""
+	str := ""
 
 	if d <= -Day || d >= Day {
 		days := d.Nanoseconds() / DayNs
-		s = fmt.Sprint(days) + "d"
+		str = fmt.Sprint(days) + "d"
 
 		if d < 0 {
 			d = -d // sign "-" already marked
@@ -73,21 +73,21 @@ func DStr(d time.Duration) string {
 		}
 
 		if d >= Week {
-			return s // no sub-day precision when greater than a week
+			return str // no sub-day precision when greater than a week
 		}
 
 		d -= time.Duration(days * DayNs)
 
 		// no sub-second precision
 		if d < Second {
-			return s
+			return str
 		}
 		d = d.Round(Second)
 	} else if d <= -Minute || d >= Minute {
 		d = d.Round(Second) // no sub-second precision when greater than a hour
 	}
 
-	return s + d.String()
+	return str + d.String()
 }
 
 // NsStr stringifies nanoseconds using the DStr pretty format.
@@ -156,21 +156,6 @@ const (
 	y2100s  = (2100 - 1970) * YearSec
 )
 
-var unitMap = map[string]int64{
-	"ns": 1,
-	"us": MicrosecondNs,
-	"µs": MicrosecondNs, // U+00B5 = micro symbol
-	"μs": MicrosecondNs, // U+03BC = Greek letter mu
-	"ms": MillisecondNs,
-	"s":  SecondNs,
-	"m":  MinuteNs,
-	"h":  HourNs,
-	"d":  DayNs,
-	"w":  WeekNs,
-	"mo": MonthNs,
-	"y":  YearNs,
-}
-
 var (
 	// ErrMissingTimeAndUnit indicates time parser was expecting at least a time value followed by a time unit.
 	ErrMissingTimeAndUnit = errors.New("time: expecting a value followed by a unit")
@@ -196,59 +181,61 @@ const (
 	TimeOnly = "15:04:05"
 )
 
-var YearZero = time.Date(0, 1, 1, 0, 0, 0, 0, time.UTC)
+//nolint:gochecknoglobals // read-only, used only by ParseTime()
+var yearZero = time.Date(0, 1, 1, 0, 0, 0, 0, time.UTC)
 
 // ParseTime converts string to time.Time.
-func ParseTime(s string) (_ time.Time, ok bool) {
-	switch len(s) {
+//nolint:gocyclo,cyclop // cannot split the function
+func ParseTime(str string) (_ time.Time, ok bool) {
+	switch len(str) {
 	case 0:
-		return InfTime, true // returned time value has: IsZero() = true
+		return InfTime(), true // returned time value has: IsZero() = true
 
 	case len(TimeOnly):
-		if t, err := time.Parse(TimeOnly, s); err == nil {
-			hms := t.Sub(YearZero)
+		if t, err := time.Parse(TimeOnly, str); err == nil {
+			hms := t.Sub(yearZero)
 			today := time.Now().UTC().Truncate(Day)
 			return today.Add(hms), true
 		}
 
 	case len(DateOnly):
-		if t, err := time.Parse(DateOnly, s); err == nil {
+		if t, err := time.Parse(DateOnly, str); err == nil {
 			return t.UTC(), true
 		}
 
 	case len(DateOnly + "T" + TimeOnly):
-		if t, err := time.Parse(DateOnly+"T"+TimeOnly, s); err == nil {
+		if t, err := time.Parse(DateOnly+"T"+TimeOnly, str); err == nil {
 			return t.UTC(), true
 		}
-		if t, err := time.Parse(DateOnly+"."+TimeOnly, s); err == nil {
+		if t, err := time.Parse(DateOnly+"."+TimeOnly, str); err == nil {
 			return t.UTC(), true
 		}
-		if t, err := time.Parse(DateOnly+"_"+TimeOnly, s); err == nil {
+		if t, err := time.Parse(DateOnly+"_"+TimeOnly, str); err == nil {
 			return t.UTC(), true
 		}
 
 	default:
-		if len(s) <= len(DateOnly+"T"+TimeOnly) {
+		if len(str) <= len(DateOnly+"T"+TimeOnly) {
 			break
 		}
-		if t, err := time.Parse(time.RFC3339, s); err == nil {
+		if t, err := time.Parse(time.RFC3339, str); err == nil {
 			return t, true
 		}
 	}
 
-	return parseTimeFallback(s)
+	return parseTimeFallback(str)
 }
 
 // ParseTime converts string to time.Time.
-func parseTimeFallback(s string) (_ time.Time, ok bool) {
+func parseTimeFallback(str string) (_ time.Time, ok bool) {
 	// Supported time units: "ns", "us" (or "µs"), "ms", "s", "m", "h", "d", "w", "mo" (month) and "y".
-	if d, err := ParseDuration(s); err == nil {
+	if d, err := ParseDuration(str); err == nil {
 		t := time.Now().UTC().Add(d)
 		return t, true
 	}
 
 	// Consider numeric value as Unix time express either in seconds or nanoseconds since epoch
-	if t, err := strconv.ParseInt(s, 10, 0); err == nil {
+	if t, err := strconv.ParseInt(str, 10, 0); err == nil {
 		if y2000ns < t && t < y2100ns {
 			return time.Unix(0, t), true // t is the number of nanoseconds since epoch
 		}
@@ -265,19 +252,19 @@ func parseTimeFallback(s string) (_ time.Time, ok bool) {
 // decimal numbers, each with optional fraction and a unit suffix,
 // such as "300ms", "-1.5h" or "2h45m".
 // Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h", "d", "w", "mo" (month) and "y".
-func ParseDuration(s string) (time.Duration, error) {
+func ParseDuration(str string) (time.Duration, error) {
 	// Check problematic cases
-	if len(s) <= 1 {
-		if s == "0" {
+	if len(str) <= 1 {
+		if str == "0" {
 			return time.Duration(0), nil
 		}
-		return time.Duration(0), fmt.Errorf("%w in '%v'", ErrMissingTimeAndUnit, s)
+		return time.Duration(0), fmt.Errorf("%w in '%v'", ErrMissingTimeAndUnit, str)
 	}
 
 	// Beginning of the time value
 	i := 0
-	if s[0] == '-' || s[0] == '+' {
-		if s[1:] == "0" {
+	if str[0] == '-' || str[0] == '+' {
+		if str[1:] == "0" {
 			return time.Duration(0), nil
 		}
 		i = 1
@@ -285,14 +272,14 @@ func ParseDuration(s string) (time.Duration, error) {
 
 	var duration int64
 
-	for s[i:] != "" {
-		shift, ns, err := consumeToken(s[i:])
+	for str[i:] != "" {
+		shift, ns, err := consumeToken(str[i:])
 		if err != nil {
-			return time.Duration(0), fmt.Errorf("consumeToken: %w in '%v' at position=%v", err, s, i)
+			return time.Duration(0), fmt.Errorf("consumeToken: %w in '%v' at position=%v", err, str, i)
 		}
 
 		if duration > math.MaxInt64-ns {
-			return time.Duration(0), fmt.Errorf("ParseDuration: %w in '%v' at position=%v", ErrOverflowTime, s, i)
+			return time.Duration(0), fmt.Errorf("ParseDuration: %w in '%v' at position=%v", ErrOverflowTime, str, i)
 		}
 		duration += ns
 
@@ -300,7 +287,7 @@ func ParseDuration(s string) (time.Duration, error) {
 	}
 
 	// check if negative
-	if s[0] == '-' {
+	if str[0] == '-' {
 		duration = -duration
 	}
 
@@ -308,13 +295,13 @@ func ParseDuration(s string) (time.Duration, error) {
 }
 
 // consumeToken converts digits and its unit into nanoseconds.
-func consumeToken(s string) (i int, ns int64, _ error) {
-	i, value, fraPart, scale, err := consumeDigits(s)
+func consumeToken(str string) (i int, ns int64, _ error) {
+	i, value, fraPart, scale, err := consumeDigits(str)
 	if err != nil {
 		return 0, 0, err
 	}
 
-	shift, unitNs, err := consumeUnit(s[i:])
+	shift, unitNs, err := consumeUnit(str[i:])
 	if err != nil {
 		return 0, 0, err
 	}
@@ -328,9 +315,9 @@ func consumeToken(s string) (i int, ns int64, _ error) {
 }
 
 // consumeDigits parses leading digits in string and returns position and integer/fraPart parts.
-func consumeDigits(s string) (i int, intPart, fraPart int64, scale float64, _ error) {
+func consumeDigits(str string) (i int, intPart, fraPart int64, scale float64, _ error) {
 	// Consume [0-9]*
-	intPart, intLen, err := integralPart(s[i:])
+	intPart, intLen, err := integralPart(str[i:])
 	if err != nil {
 		return 0, 0, 0, 0, err
 	}
@@ -338,9 +325,9 @@ func consumeDigits(s string) (i int, intPart, fraPart int64, scale float64, _ er
 
 	// Consume (\.[0-9]*)?
 	var fraLen int // number of digits in the fractional part
-	if s[i:] != "" && s[i] == '.' {
+	if str[i:] != "" && str[i] == '.' {
 		i++
-		fraPart, fraLen, scale = fractionalPart(s[i:])
+		fraPart, fraLen, scale = fractionalPart(str[i:])
 		i += fraLen
 	}
 
@@ -352,11 +339,27 @@ func consumeDigits(s string) (i int, intPart, fraPart int64, scale float64, _ er
 	return i, intPart, fraPart, scale, nil
 }
 
+//nolint:gochecknoglobals // read-only, used only by consumeUnit()
+var unitMap = map[string]int64{
+	"ns": 1,
+	"us": MicrosecondNs,
+	"µs": MicrosecondNs, // U+00B5 = micro symbol
+	"μs": MicrosecondNs, // U+03BC = Greek letter mu
+	"ms": MillisecondNs,
+	"s":  SecondNs,
+	"m":  MinuteNs,
+	"h":  HourNs,
+	"d":  DayNs,
+	"w":  WeekNs,
+	"mo": MonthNs,
+	"y":  YearNs,
+}
+
 // consumeUnit parses the time unit in the string and returns the number of nanoseconds corresponding .
-func consumeUnit(s string) (i int, nanoseconds int64, _ error) {
+func consumeUnit(str string) (i int, nanoseconds int64, _ error) {
 	// Consume unit
-	for ; i < len(s); i++ {
-		c := s[i]
+	for ; i < len(str); i++ {
+		c := str[i]
 		if c == '.' || ('0' <= c && c <= '9') {
 			break
 		}
@@ -366,7 +369,7 @@ func consumeUnit(s string) (i int, nanoseconds int64, _ error) {
 	}
 
 	// Convert unit string into nanoseconds
-	unit := s[:i]
+	unit := str[:i]
 	nanoseconds, ok := unitMap[unit]
 	if !ok {
 		return i, 0, ErrUnknownUnit
@@ -412,10 +415,10 @@ ADD_FRACTIONAL_PART:
 	return nanoseconds + value, nil
 }
 
-// integralPart consumes the leading [0-9]* from s.
-func integralPart(s string) (v int64, i int, _ error) {
-	for i = 0; i < len(s); i++ {
-		c := s[i]
+// integralPart consumes the leading [0-9]* from str.
+func integralPart(str string) (v int64, i int, _ error) {
+	for i = 0; i < len(str); i++ {
+		c := str[i]
 		if c < '0' || c > '9' {
 			break
 		}
@@ -430,16 +433,17 @@ func integralPart(s string) (v int64, i int, _ error) {
 	return v, i, nil
 }
 
-// fractionalPart consumes the leading [0-9]* from s.
+// fractionalPart consumes the leading [0-9]* from str.
 // It is used only for fractions, so does not return an error on overflow,
 // it just stops accumulating precision.
-func fractionalPart(s string) (f int64, i int, scale float64) {
+//nolint:varnamelen // f means "fractional part"
+func fractionalPart(str string) (f int64, i int, scale float64) {
 	scale = 1
 	overflow := false
 
-	for i = 0; i < len(s); i++ {
-		c := s[i]
-		if c < '0' || c > '9' {
+	for i = 0; i < len(str); i++ {
+		digit := str[i]
+		if digit < '0' || digit > '9' {
 			break
 		}
 		if overflow {
@@ -450,7 +454,7 @@ func fractionalPart(s string) (f int64, i int, scale float64) {
 			overflow = true
 			continue
 		}
-		y := f*10 + int64(c) - '0'
+		y := f*10 + int64(digit) - '0'
 		if y < 0 {
 			overflow = true
 			continue
@@ -465,7 +469,7 @@ func fractionalPart(s string) (f int64, i int, scale float64) {
 // Relative computes a relative time.
 func Relative(t time.Time, days int) time.Time {
 	if days == Infinite {
-		return InfTime
+		return InfTime()
 	}
 
 	if days == 0 {
