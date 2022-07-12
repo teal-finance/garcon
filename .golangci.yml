@@ -24,7 +24,6 @@ linters:
 
     # comment
     - godot # check if comments end in a period
-    - godox
     - misspell # find commonly misspelled English words in comments
 
     # complexity
@@ -123,6 +122,7 @@ linters:
     - maligned
     - scopelint
     # ANNOYING
+    - godox # no TODO/BUG/FIXME
     - goerr113 # error
     - nlreturn # style
     - nonamedreturns # style
@@ -437,18 +437,18 @@ issues:
     # More flexible with test source code
     - path: _test\.go
       linters:
-        # gomnd
-        - forcetypeassert
-        - gosec # weak random number generator (math/rand instead of crypto/rand)
-        - gocyclo
-        - errcheck
-        - varnamelen
-        - gochecknoglobals
+        - cyclop
         - dupl
-    ## Example commented
+        - errcheck
+        - forcetypeassert
+        - funlen
+        - gochecknoglobals
+        - gocognit
+        - gocyclo
+        - varnamelen
+    ## Examples
     #- text: "unnecessaryDefer:"
     #  linters: [gocritic]
-    ## Example commented
     #- text: "exitAfterDefer:"
     #  linters: [gocritic]
 
