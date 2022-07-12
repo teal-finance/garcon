@@ -37,8 +37,8 @@ const (
 	// (proof-of-possession).
 	authScheme        = "Bearer "
 	defaultCookieName = "g" // g as in garcon
-	defaultPlanName   = "DefaultPlan"
-	defaultPermValue  = 1
+	DefaultPlanName   = "DefaultPlan"
+	DefaultPermValue  = 1
 )
 
 var (
@@ -63,7 +63,7 @@ type Checker struct {
 }
 
 func NewChecker(urls []*url.URL, errWriter ErrWriter, secretKey []byte, permissions ...any) *Checker {
-	plans, perms := checkParameters(secretKey, permissions)
+	plans, perms := checkParameters(secretKey, permissions...)
 
 	c := &Checker{
 		errWriter:  errWriter,
@@ -87,11 +87,16 @@ func checkParameters(secretKey []byte, permissions ...any) ([]string, []Perm) {
 		log.Panic("Want HMAC-SHA256 key containing 32 bytes, but got ", len(secretKey))
 	}
 
-	n := len(permissions) / 2
+	n := len(permissions)
 	if n == 0 {
-		return []string{defaultPlanName}, []Perm{{Value: defaultPermValue}}
+		return []string{DefaultPlanName}, []Perm{{Value: DefaultPermValue}}
+	}
+	if n%2 != 0 {
+		log.Panicf("The number %d of parametric arguments in NewChecker() must be even, "+
+			"permissions must alternate string and int: plan1, perm1, plan2, perm2...", n)
 	}
 
+	n /= 2
 	plans := make([]string, n)
 	perms := make([]Perm, n)
 	for i, p := range permissions {
@@ -105,7 +110,7 @@ func checkParameters(secretKey []byte, permissions ...any) ([]string, []Perm) {
 		}
 		if !ok {
 			log.Panic("Wrong type for the parametric arguments in NewChecker(), " +
-				"must alternate string and int: plan1, perm1, plan2, perm2...")
+				"permissions must alternate string and int: plan1, perm1, plan2, perm2...")
 		}
 	}
 
@@ -365,7 +370,7 @@ func (ck *Checker) PermFromJWT(JWT string) (Perm, []any) {
 
 	perm, err := ck.permFromRefreshBytes(claimsJSON)
 	if err != nil {
-		return perm, []any{ErrExpiredToken}
+		return perm, []any{err} // TODO: ErrExpiredToken
 	}
 
 	return perm, nil
