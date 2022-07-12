@@ -47,7 +47,7 @@ func main() {
 	chain, connState, urls := setMiddlewares(errWriter)
 
 	// Handles both REST API and static web files
-	h := handler(errWriter, garcon.NewChecker(urls, errWriter, []byte(hmacSHA256)))
+	h := handler(errWriter, garcon.NewJWTChecker(urls, errWriter, []byte(hmacSHA256)))
 	h = chain.Then(h)
 
 	runServer(h, connState)
@@ -118,7 +118,7 @@ func runServer(h http.Handler, connState func(net.Conn, http.ConnState)) {
 }
 
 // handler creates the mapping between the endpoints and the handler functions.
-func handler(errWriter garcon.ErrWriter, c *garcon.Checker) http.Handler {
+func handler(errWriter garcon.ErrWriter, c *garcon.JWTChecker) http.Handler {
 	r := chi.NewRouter()
 
 	// Static website files

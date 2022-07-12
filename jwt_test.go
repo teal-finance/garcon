@@ -57,7 +57,7 @@ var cases = []struct {
 	shouldPanic: false,
 }}
 
-func TestNewChecker(t *testing.T) {
+func TestNewJWTChecker(t *testing.T) {
 	t.Parallel()
 
 	for _, c := range cases {
@@ -76,7 +76,7 @@ func TestNewChecker(t *testing.T) {
 				defer func() { recover() }()
 			}
 
-			ck := garcon.NewChecker(urls, c.errWriter, secretKey, c.permissions...)
+			ck := garcon.NewJWTChecker(urls, c.errWriter, secretKey, c.permissions...)
 
 			if c.shouldPanic {
 				t.Errorf("NewChecker() did not panic")

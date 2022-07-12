@@ -53,7 +53,7 @@ type Perm struct {
 	Value int
 }
 
-type Checker struct {
+type JWTChecker struct {
 	errWriter  ErrWriter
 	secretKey  []byte
 	perms      []Perm
@@ -62,10 +62,10 @@ type Checker struct {
 	devOrigins []string
 }
 
-func NewChecker(urls []*url.URL, errWriter ErrWriter, secretKey []byte, permissions ...any) *Checker {
+func NewJWTChecker(urls []*url.URL, errWriter ErrWriter, secretKey []byte, permissions ...any) *JWTChecker {
 	plans, perms := checkParameters(secretKey, permissions...)
 
-	c := &Checker{
+	c := &JWTChecker{
 		errWriter:  errWriter,
 		secretKey:  secretKey,
 		plans:      plans,
@@ -209,7 +209,7 @@ func extractDevOrigins(urls []*url.URL) []string {
 	return devOrigins
 }
 
-func (ck *Checker) NewCookie(name, plan string, secure bool, dns, path string) http.Cookie {
+func (ck *JWTChecker) NewCookie(name, plan string, secure bool, dns, path string) http.Cookie {
 	JWT, err := tokens.GenRefreshToken("1y", "1y", plan, "", ck.secretKey)
 	if err != nil || JWT == "" {
 		log.Panic("Cannot create JWT: ", err)
@@ -235,7 +235,7 @@ func (ck *Checker) NewCookie(name, plan string, secure bool, dns, path string) h
 }
 
 // Cookie returns the internal cookie (for test purpose).
-func (ck *Checker) Cookie(i int) *http.Cookie {
+func (ck *JWTChecker) Cookie(i int) *http.Cookie {
 	if (i < 0) || (i >= len(ck.cookies)) {
 		return nil
 	}
@@ -246,7 +246,7 @@ func (ck *Checker) Cookie(i int) *http.Cookie {
 // when no valid cookie is present.
 // The new cookie conveys the JWT of the first plan.
 // Set also puts the permission from the JWT in the request context.
-func (ck *Checker) Set(next http.Handler) http.Handler {
+func (ck *JWTChecker) Set(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		perm, a := ck.PermFromCookie(r)
 		if a != nil {
@@ -261,7 +261,7 @@ func (ck *Checker) Set(next http.Handler) http.Handler {
 
 // Chk only accepts HTTP requests having a valid cookie.
 // Then, Chk puts the permission (of the JWT) in the request context.
-func (ck *Checker) Chk(next http.Handler) http.Handler {
+func (ck *JWTChecker) Chk(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		perm, err := ck.PermFromCookie(r)
 		if err != nil {
@@ -280,7 +280,7 @@ func (ck *Checker) Chk(next http.Handler) http.Handler {
 // Vet only accepts the HTTP request having a valid JWT.
 // The JWT can be either in the cookie or in the first "Authorization" header.
 // Then, Vet puts the permission (of the JWT) in the request context.
-func (ck *Checker) Vet(next http.Handler) http.Handler {
+func (ck *JWTChecker) Vet(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		perm, err := ck.PermFromBearerOrCookie(r)
 		if err != nil {
@@ -296,7 +296,7 @@ func (ck *Checker) Vet(next http.Handler) http.Handler {
 	})
 }
 
-func (ck *Checker) isDevOrigin(r *http.Request) bool {
+func (ck *JWTChecker) isDevOrigin(r *http.Request) bool {
 	if len(ck.devOrigins) == 0 {
 		return false
 	}
@@ -316,7 +316,7 @@ func (ck *Checker) isDevOrigin(r *http.Request) bool {
 	return false
 }
 
-func (ck *Checker) PermFromBearerOrCookie(r *http.Request) (Perm, []any) {
+func (ck *JWTChecker) PermFromBearerOrCookie(r *http.Request) (Perm, []any) {
 	JWT, errBearer := ck.jwtFromBearer(r)
 	if errBearer != nil {
 		c, errCookie := r.Cookie(ck.cookies[0].Name)
@@ -334,7 +334,7 @@ func (ck *Checker) PermFromBearerOrCookie(r *http.Request) (Perm, []any) {
 	return ck.PermFromJWT(JWT)
 }
 
-func (ck *Checker) jwtFromBearer(r *http.Request) (string, error) {
+func (ck *JWTChecker) jwtFromBearer(r *http.Request) (string, error) {
 	auth := r.Header.Get("Authorization")
 	if auth == "" {
 		return "", ErrNoAuthorization
@@ -348,7 +348,7 @@ func (ck *Checker) jwtFromBearer(r *http.Request) (string, error) {
 	return "", ErrNoBearer
 }
 
-func (ck *Checker) PermFromCookie(r *http.Request) (Perm, []any) {
+func (ck *JWTChecker) PermFromCookie(r *http.Request) (Perm, []any) {
 	c, err := r.Cookie(ck.cookies[0].Name)
 	if err != nil {
 		return Perm{}, []any{err}
@@ -356,7 +356,7 @@ func (ck *Checker) PermFromCookie(r *http.Request) (Perm, []any) {
 	return ck.PermFromJWT(c.Value)
 }
 
-func (ck *Checker) PermFromJWT(JWT string) (Perm, []any) {
+func (ck *JWTChecker) PermFromJWT(JWT string) (Perm, []any) {
 	for i := range ck.cookies {
 		if JWT == ck.cookies[i].Value {
 			return ck.perms[i], nil
@@ -376,7 +376,7 @@ func (ck *Checker) PermFromJWT(JWT string) (Perm, []any) {
 	return perm, nil
 }
 
-func (ck *Checker) permFromRefreshClaims(claims *tokens.RefreshClaims) (Perm, error) {
+func (ck *JWTChecker) permFromRefreshClaims(claims *tokens.RefreshClaims) (Perm, error) {
 	for i := range ck.plans {
 		if claims.Namespace == ck.plans[i] {
 			return ck.perms[i], nil
@@ -393,7 +393,7 @@ func (ck *Checker) permFromRefreshClaims(claims *tokens.RefreshClaims) (Perm, er
 	return Perm{Value: v}, nil
 }
 
-func (ck *Checker) claimsFromJWT(JWT string) ([]byte, error) {
+func (ck *JWTChecker) claimsFromJWT(JWT string) ([]byte, error) {
 	// decompose JWT in three parts
 	parts := strings.Split(JWT, ".")
 	if len(parts) != 3 {
@@ -414,7 +414,7 @@ func (ck *Checker) claimsFromJWT(JWT string) ([]byte, error) {
 }
 
 // verifySignature of HS256 tokens.
-func (ck *Checker) verifySignature(parts []string) error {
+func (ck *JWTChecker) verifySignature(parts []string) error {
 	signingTxt := strings.Join(parts[0:2], ".")
 	signature := ck.sign(signingTxt)
 	if signature != parts[2] { // parts[2] = JWT signature
@@ -423,7 +423,7 @@ func (ck *Checker) verifySignature(parts []string) error {
 	return nil
 }
 
-func (ck *Checker) permFromRefreshBytes(claimsJSON []byte) (Perm, error) {
+func (ck *JWTChecker) permFromRefreshBytes(claimsJSON []byte) (Perm, error) {
 	claims := tokens.RefreshClaims{
 		Namespace: "",
 		UserName:  "",
@@ -453,7 +453,7 @@ func (ck *Checker) permFromRefreshBytes(claimsJSON []byte) (Perm, error) {
 
 // sign return the signature of the signingString.
 // It allocates hmac.New() each time to avoid race condition.
-func (ck *Checker) sign(signingString string) string {
+func (ck *JWTChecker) sign(signingString string) string {
 	h := hmac.New(crypto.SHA256.New, ck.secretKey)
 	_, _ = h.Write([]byte(signingString))
 	return base64.RawURLEncoding.EncodeToString(h.Sum(nil))

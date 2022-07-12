@@ -370,8 +370,8 @@ func (g *Garcon) NewSessionToken(urls []*url.URL, secretKey []byte, expiry time.
 	return incorruptible.New(urls, secretKey, expiry, setIP, g.ErrWriter.Write)
 }
 
-func (g *Garcon) NewJWTChecker(urls []*url.URL, secretKey []byte, planPerm ...any) *Checker {
-	return NewChecker(urls, g.ErrWriter, secretKey, planPerm...)
+func (g *Garcon) NewJWTChecker(urls []*url.URL, secretKey []byte, planPerm ...any) *JWTChecker {
+	return NewJWTChecker(urls, g.ErrWriter, secretKey, planPerm...)
 }
 
 // ServerHeader sets the Server HTTP header in the response.
