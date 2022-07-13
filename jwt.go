@@ -17,6 +17,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -37,8 +38,10 @@ const (
 	// (proof-of-possession).
 	authScheme        = "Bearer "
 	defaultCookieName = "g" // g as in garcon
-	DefaultPlanName   = "DefaultPlan"
-	DefaultPermValue  = 1
+	// DefaultPlan is the plan name in absence of "permissions" parametric parameters.
+	DefaultPlan = "VIP"
+	// DefaultPerm is the perm value in absence of "permissions" parametric parameters.
+	DefaultPerm = 1
 )
 
 var (
@@ -74,9 +77,9 @@ func NewJWTChecker(urls []*url.URL, errWriter ErrWriter, secretKey []byte, permi
 		devOrigins: extractDevOrigins(urls),
 	}
 
-	secure, dns, path, name := extractMainDomain(urls)
+	secure, dns, dir, name := extractMainDomain(urls)
 	for i := range plans {
-		c.cookies[i] = c.NewCookie(name, plans[i], secure, dns, path)
+		c.cookies[i] = c.NewCookie(name, plans[i], "", secure, dns, dir)
 	}
 
 	return c
@@ -89,7 +92,7 @@ func checkParameters(secretKey []byte, permissions ...any) ([]string, []Perm) {
 
 	n := len(permissions)
 	if n == 0 {
-		return []string{DefaultPlanName}, []Perm{{Value: DefaultPermValue}}
+		return []string{DefaultPlan}, []Perm{{Value: DefaultPerm}}
 	}
 	if n%2 != 0 {
 		log.Panicf("The number %d of parametric arguments in NewChecker() must be even, "+
@@ -117,7 +120,7 @@ func checkParameters(secretKey []byte, permissions ...any) ([]string, []Perm) {
 	return plans, perms
 }
 
-func extractMainDomain(urls []*url.URL) (secure bool, dns, path, name string) {
+func extractMainDomain(urls []*url.URL) (secure bool, dns, dir, name string) {
 	if len(urls) == 0 {
 		log.Panic("No urls => Cannot set Cookie domain")
 	}
@@ -136,34 +139,26 @@ func extractMainDomain(urls []*url.URL) (secure bool, dns, path, name string) {
 		log.Panic("Unexpected URL scheme in ", u)
 	}
 
-	path, name = cleanPath(u.Path)
-	return secure, u.Hostname(), path, name
+	dir, name = cleanPath(u.Path)
+	return secure, u.Hostname(), dir, name
 }
 
 // cleanPath returns the sanitized path and
 // a nice cookie name deduced from the path basename.
-func cleanPath(path string) (_, name string) {
+func cleanPath(dir string) (_, name string) {
 	name = defaultCookieName
-
-	if path != "" {
-		// remove trailing slash
-		if path[len(path)-1] == '/' {
-			path = path[:len(path)-1]
-		}
-
-		for i := len(path) - 1; i >= 0; i-- {
-			if path[i] == byte('/') {
-				name = path[i+1:]
+	dir = path.Clean(dir)
+	if dir == "." {
+		dir = "/"
+	} else if dir != "/" {
+		for i := len(dir) - 1; i >= 0; i-- {
+			if dir[i] == byte('/') {
+				name = dir[i+1:]
 				break
 			}
 		}
 	}
-
-	if path == "" {
-		path = "/"
-	}
-
-	return path, name
+	return dir, name
 }
 
 func extractDevURLs(urls []*url.URL) []*url.URL {
@@ -209,19 +204,19 @@ func extractDevOrigins(urls []*url.URL) []string {
 	return devOrigins
 }
 
-func (ck *JWTChecker) NewCookie(name, plan string, secure bool, dns, path string) http.Cookie {
-	JWT, err := tokens.GenRefreshToken("1y", "1y", plan, "", ck.secretKey)
+func (ck *JWTChecker) NewCookie(name, plan, user string, secure bool, dns, dir string) http.Cookie {
+	JWT, err := tokens.GenRefreshToken("1y", "1y", plan, user, ck.secretKey)
 	if err != nil || JWT == "" {
 		log.Panic("Cannot create JWT: ", err)
 	}
 
 	log.Print("newCookie plan="+plan+" domain="+dns+
-		" path="+path+" secure=", secure, " "+name+"="+JWT)
+		" path="+dir+" secure=", secure, " "+name+"="+JWT)
 
 	return http.Cookie{
 		Name:       name,
 		Value:      JWT,
-		Path:       path,
+		Path:       dir,
 		Domain:     dns,
 		Expires:    time.Time{},
 		RawExpires: "",
