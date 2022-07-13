@@ -32,13 +32,13 @@ const (
 )
 
 func main() {
-	garcon.SetCustomVersionFlag(nil, "", "")
+	garcon.SetVersionFlag()
 	auth := flag.Bool("auth", false, "Enable OPA authorization specified in file "+authCfg)
 	prod := flag.Bool("prod", false, "Use settings for production")
 	jwt := flag.Bool("jwt", false, "Use JWT in lieu of the incorruptible token")
 	flag.Parse()
 
-	garcon.LogVersion("")
+	garcon.LogVersion()
 
 	opaFilenames := []string{}
 	if *auth {
