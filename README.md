@@ -74,7 +74,7 @@ func main() {
     g, _ := garcon.New(
         garcon.WithURLs("http://localhost:8080/myapp"),
         garcon.WithDocURL("/doc"), // URL --> http://localhost:8080/myapp/doc
-        garcon.WithServerHeader("MyBackendName-1.2.0"),
+        garcon.WithServerHeader("MyBackendName"),
         garcon.WithJWT(hmacSHA256, "FreePlan", 10, "PremiumPlan", 100),
         garcon.WithOPA("auth.rego"),
         garcon.WithLimiter(10, 30),

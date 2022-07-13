@@ -73,7 +73,7 @@ type TokenChecker interface {
 type parameters struct {
 	namespace       Namespace
 	docURL          string
-	nameVersion     string
+	version         string
 	secretKey       []byte
 	planPerm        []any
 	opaFilenames    []string
@@ -143,8 +143,8 @@ func (params *parameters) new() (*Garcon, error) {
 		g.Middlewares = g.Middlewares.Append(reqLimiter.LimitRate)
 	}
 
-	if params.nameVersion != "" {
-		g.Middlewares = g.Middlewares.Append(ServerHeader(params.nameVersion))
+	if params.version != "" {
+		g.Middlewares = g.Middlewares.Append(ServerHeader(params.version))
 	}
 
 	if len(g.AllowedOrigins) > 0 {
@@ -199,9 +199,9 @@ func WithDocURL(docURL string) Option {
 	}
 }
 
-func WithServerHeader(nameVersion string) Option {
+func WithServerHeader(program string) Option {
 	return func(params *parameters) {
-		params.nameVersion = nameVersion
+		params.version = Version(program)
 	}
 }
 

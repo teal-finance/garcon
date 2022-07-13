@@ -38,7 +38,7 @@ func main() {
 	g, err := garcon.New(
 		garcon.WithURLs(addr),
 		garcon.WithDocURL("/doc"),
-		garcon.WithServerHeader("KeyStore-v0"),
+		garcon.WithServerHeader("KeyStore"),
 		garcon.WithReqLogs(),
 		garcon.WithLimiter(burst, perMinute),
 		garcon.WithPProf(pprofPort),

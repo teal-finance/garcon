@@ -61,7 +61,7 @@ func main() {
 		tokenOption,
 		garcon.WithURLs(addr),
 		garcon.WithDocURL("/doc"),
-		garcon.WithServerHeader("MyApp-1.2.0"),
+		garcon.WithServerHeader("MyApp"),
 		garcon.WithOPA(opaFilenames...),
 		garcon.WithReqLogs(),
 		garcon.WithLimiter(burst, perMinute),
