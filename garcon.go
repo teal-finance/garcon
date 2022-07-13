@@ -515,6 +515,8 @@ func Value(r *http.Request, key, header string) (string, error) {
 	if value == "" {
 		value = r.FormValue(key)
 		if value == "" {
+			// Check only the first Header,
+			// because we do not know how to manage several ones.
 			value = r.Header.Get(header)
 		}
 	}

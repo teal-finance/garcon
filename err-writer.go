@@ -7,6 +7,7 @@ package garcon
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -57,7 +58,6 @@ type msg struct {
 // WriteSafeJSONErr concatenates all messages in "error" field.
 func (errWriter ErrWriter) WriteSafeJSONErr(w http.ResponseWriter, r *http.Request, statusCode int, messages ...any) {
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.WriteHeader(statusCode)
 
 	response := msg{
@@ -75,9 +75,12 @@ func (errWriter ErrWriter) WriteSafeJSONErr(w http.ResponseWriter, r *http.Reque
 	}
 
 	b, err := response.MarshalJSON()
-	if err == nil {
-		_, _ = w.Write(b)
+	if err != nil {
+		log.Print("WRN WriteSafeJSONErr: ", err)
+		return
 	}
+
+	_, _ = w.Write(b)
 }
 
 // Write is a fast pretty-JSON marshaler dedicated to the HTTP error response.

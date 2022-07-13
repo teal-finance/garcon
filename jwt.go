@@ -297,6 +297,7 @@ func (ck *JWTChecker) isDevOrigin(r *http.Request) bool {
 	}
 
 	if len(ck.devOrigins) > 0 {
+		// simple: check only the first header "Origin"
 		origin := r.Header.Get("Origin")
 		for _, prefix := range ck.devOrigins {
 			if prefix == "*" {
@@ -330,6 +331,7 @@ func (ck *JWTChecker) PermFromBearerOrCookie(r *http.Request) (Perm, []any) {
 }
 
 func (ck *JWTChecker) jwtFromBearer(r *http.Request) (string, error) {
+	// simple: check only the first header "Authorization"
 	auth := r.Header.Get("Authorization")
 	if auth == "" {
 		return "", ErrNoAuthorization
