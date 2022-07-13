@@ -1,5 +1,5 @@
 .DS_Store
-.ignore/
+*.ignore.*
 *.log
 *.xcf
 /.vscode
