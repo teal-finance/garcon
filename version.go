@@ -8,7 +8,9 @@ package garcon
 import (
 	"flag"
 	"fmt"
+	"html/template"
 	"log"
+	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -134,4 +136,60 @@ func SetCustomVersionFlag(fs *flag.FlagSet, flagName, program string) {
 	f := func() error { PrintVersion(program); return nil }
 
 	flagx.BoolFunc(fs, flagName, "Print version and exit", f)
+}
+
+const html = `<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<title>Version Info</title>
+</head>
+<body>
+	{{range .Items}}<div>{{ . }}</div>{{else}}<div><strong>no version</strong></div>{{end}}
+</body>
+</html>`
+
+// ServeVersion send HTML or JSON depending on Accept header.
+func (g *Garcon) ServeVersion() func(w http.ResponseWriter, r *http.Request) {
+	tmpl, err := template.New("version").Parse(html)
+	if err != nil {
+		log.Panic("ServeVersion template.New:", err)
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		info := VersionInfo("")
+		if len(info) == 0 {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		accept := r.Header.Get("Accept")
+		if strings.Contains(accept, "json") {
+			writeJSON(w, info)
+			return
+		}
+
+		data := struct{ Items []string }{info}
+		err = tmpl.Execute(w, data)
+		if err != nil {
+			log.Print("WRN ServeVersion Execute:", err)
+		}
+	}
+}
+
+// lines is used to generate a fast JSON marshaler.
+type lines struct {
+	Version []string
+}
+
+// writeJSON converts the version info from string slice to JSON.
+func writeJSON(w http.ResponseWriter, info []string) {
+	b, err := lines{info}.MarshalJSON()
+	if err != nil {
+		log.Print("WRN WriteVersionJSON: ", err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write(b)
 }
