@@ -21,14 +21,14 @@ import (
 	"github.com/teal-finance/garcon/timex"
 )
 
-// V is set using the following link flag `-ldflags`:
+// V is set at build time using the `-ldflags` build flag:
 //
 //    v="$(git describe --tags --always --broken)"
 //    go build -ldflags="-X 'github.com/teal-finance/garcon.V=$v'" ./cmd/main/package
 //
-// The following formats the version as "v1.2.0-my-branch+3".
-// The trailing "+3" is the number of commits since v1.2.0.
-// If no tag in Git repo, $t is the current commit long SHA1.
+// The following commands provide a semver-like version format such as
+// "v1.2.0-my-branch+3" where "+3" is the number of commits since "v1.2.0".
+// If no tag in the Git repo, $t is the long SHA1 of the last commit.
 //
 //    t="$(git describe --tags --abbrev=0 --always)"
 //    b="$(git branch --show-current)"
@@ -62,44 +62,6 @@ func Version(program string) string {
 	}
 
 	return program + V
-}
-
-// PrintVersion computes the version and (Git) commit information.
-func VersionInfo(program string) []string {
-	info := make([]string, 0, 3)
-	info = append(info, Version(program))
-
-	short := versioninfo.Short()
-	if !strings.HasSuffix(V, short) {
-		info = append(info, "ShortVersion: "+versioninfo.Short())
-	}
-
-	if !versioninfo.LastCommit.IsZero() {
-		line := "LastCommit: " + versioninfo.LastCommit.Format("2006-01-02 15:04:05")
-		line += " (" + timex.DStr(time.Since(versioninfo.LastCommit)) + " ago)"
-		info = append(info, line)
-	}
-
-	return info
-}
-
-// LogVersion logs the version and (Git) commit information.
-func LogVersion() {
-	for i, line := range VersionInfo("") {
-		if i == 0 {
-			line = "Version: " + line
-		}
-		log.Println(line)
-	}
-}
-
-// PrintVersion prints the version and (Git) commit information.
-//nolint:forbidigo // must print on stdout
-func PrintVersion(program string) {
-	for _, line := range VersionInfo(program) {
-		fmt.Println(line)
-	}
-	os.Exit(0)
 }
 
 // SetVersionFlag defines -version flag to print the version stored in V.
@@ -138,6 +100,80 @@ func SetCustomVersionFlag(fs *flag.FlagSet, flagName, program string) {
 	flagx.BoolFunc(fs, flagName, "Print version and exit", f)
 }
 
+// PrintVersion prints the version and (Git) commit information.
+//nolint:forbidigo // must print on stdout
+func PrintVersion(program string) {
+	for _, line := range versionStrings(program) {
+		fmt.Println(line)
+	}
+	os.Exit(0)
+}
+
+// LogVersion logs the version and (Git) commit information.
+func LogVersion() {
+	for i, line := range versionStrings("") {
+		if i == 0 {
+			line = "Version: " + line
+		}
+		log.Println(line)
+	}
+}
+
+// versionStrings computes the version and (Git) commit information.
+func versionStrings(program string) []string {
+	vi := make([]string, 0, 3)
+	vi = append(vi, Version(program))
+
+	if info.Short != "" {
+		vi = append(vi, "ShortVersion: "+info.Short)
+	}
+
+	if info.LastCommit != "" {
+		line := "LastCommit: " + info.LastCommit
+		line += " (" + sinceLastCommit() + " ago)"
+		vi = append(vi, line)
+	}
+
+	return vi
+}
+
+func sinceLastCommit() string {
+	if versioninfo.LastCommit.IsZero() {
+		return ""
+	}
+	return timex.DStr(time.Since(versioninfo.LastCommit))
+}
+
+//nolint:gochecknoglobals // set at startup time
+// except field Ago that is updated (possible race condition).
+var info = versionStruct("")
+
+// versionInfo is used to generate a fast JSON marshaler.
+type versionInfo struct {
+	Version    string
+	Short      string
+	LastCommit string
+	Ago        string
+}
+
+// versionStruct computes the version and (Git) commit information.
+func versionStruct(program string) versionInfo {
+	var vi versionInfo
+
+	vi.Version = Version(program)
+
+	short := versioninfo.Short()
+	if !strings.HasSuffix(V, short) {
+		vi.Short = versioninfo.Short()
+	}
+
+	if !versioninfo.LastCommit.IsZero() {
+		vi.LastCommit = versioninfo.LastCommit.Format("2006-01-02 15:04:05")
+	}
+
+	return vi
+}
+
 const html = `<!DOCTYPE html>
 <html>
 <head>
@@ -157,39 +193,34 @@ func (g *Garcon) ServeVersion() func(w http.ResponseWriter, r *http.Request) {
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		info := VersionInfo("")
-		if len(info) == 0 {
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
-
 		accept := r.Header.Get("Accept")
 		if strings.Contains(accept, "json") {
-			writeJSON(w, info)
-			return
-		}
-
-		data := struct{ Items []string }{info}
-		err = tmpl.Execute(w, data)
-		if err != nil {
-			log.Print("WRN ServeVersion Execute:", err)
+			writeJSON(w)
+		} else {
+			writeHTML(w, tmpl)
 		}
 	}
-}
-
-// lines is used to generate a fast JSON marshaler.
-type lines struct {
-	Version []string
 }
 
 // writeJSON converts the version info from string slice to JSON.
-func writeJSON(w http.ResponseWriter, info []string) {
-	b, err := lines{info}.MarshalJSON()
+func writeJSON(w http.ResponseWriter) {
+	info.Ago = sinceLastCommit()
+	b, err := info.MarshalJSON()
 	if err != nil {
-		log.Print("WRN WriteVersionJSON: ", err)
+		log.Print("WRN ServeVersion MarshalJSON: ", err)
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
-
 	w.Header().Set("Content-Type", "application/json")
 	_, _ = w.Write(b)
+}
+
+// writeHTML converts the version info from string slice to JSON.
+func writeHTML(w http.ResponseWriter, tmpl *template.Template) {
+	info := versionStrings("")
+	data := struct{ Items []string }{info}
+	if err := tmpl.Execute(w, data); err != nil {
+		log.Print("WRN ServeVersion Execute:", err)
+		w.WriteHeader(http.StatusNoContent)
+	}
 }

@@ -94,7 +94,8 @@ func handler(g *garcon.Garcon, addr string) http.Handler {
 	r.With(c.Chk).Get("/myapp/js/*", ws.ServeDir("text/javascript; charset=utf-8"))
 	r.With(c.Chk).Get("/myapp/css/*", ws.ServeDir("text/css; charset=utf-8"))
 	r.With(c.Chk).Get("/myapp/images/*", ws.ServeImages())
- 
+	r.With(c.Chk).Get("/myapp/version", g.ServeVersion())
+
 	// Contact-form
 	wf := garcon.NewContactForm(addr, "", g.ErrWriter)
 	r.With(c.Set).Post("/myapp", wf.NotifyWebForm())

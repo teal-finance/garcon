@@ -18,13 +18,16 @@ file "myapp/index.html" to be freely used without any restriction.
 
 <body>
 
+  <h1>Version</h1>
+  <a href="/myapp/version">Version information</a>
+
   <h1>API test</h1>
   <p>GET <a href="/path/not/in/cookie">/path/not/in/cookie</a> (unauthorized by cookie path)</p>
   <p>GET <a href="/myapp/api/v1/items">/myapp/api/v1/items</a> (implemented)</p>
   <p>GET <a href="/myapp/api/v1/ducks">/myapp/api/v1/ducks</a> (not implemented)</p>
   <p>GET <a href="/myapp/api/v1/atlantis">/myapp/api/v1/atlantis</a> (not found)</p>
 
-  <h2>Simple contact form</h2>
+  <h1>Simple contact form</h1>
   <form action="/myapp" method="post">
     <input type="email" name="email" placeholder="Email" />
     <br>
@@ -33,7 +36,7 @@ file "myapp/index.html" to be freely used without any restriction.
     <input type="submit" value="Send" />
   </form>
 
-  <h2>Advanced contact form</h2>
+  <h1>Advanced contact form</h1>
   <form name="contact-form" method="POST">
     <p>
       <input name="name" type="text" placeholder="Name" aria-label="Fill out your name." title="Fill out your name."

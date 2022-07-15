@@ -17,7 +17,7 @@ var (
 	_ easyjson.Marshaler
 )
 
-func easyjson8e52a332DecodeGithubComTealFinanceGarcon(in *jlexer.Lexer, out *lines) {
+func easyjson8e52a332DecodeGithubComTealFinanceGarcon(in *jlexer.Lexer, out *versionInfo) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -37,28 +37,13 @@ func easyjson8e52a332DecodeGithubComTealFinanceGarcon(in *jlexer.Lexer, out *lin
 		}
 		switch key {
 		case "version":
-			if in.IsNull() {
-				in.Skip()
-				out.Version = nil
-			} else {
-				in.Delim('[')
-				if out.Version == nil {
-					if !in.IsDelim(']') {
-						out.Version = make([]string, 0, 4)
-					} else {
-						out.Version = []string{}
-					}
-				} else {
-					out.Version = (out.Version)[:0]
-				}
-				for !in.IsDelim(']') {
-					var v1 string
-					v1 = string(in.String())
-					out.Version = append(out.Version, v1)
-					in.WantComma()
-				}
-				in.Delim(']')
-			}
+			out.Version = string(in.String())
+		case "short":
+			out.Short = string(in.String())
+		case "last_commit":
+			out.LastCommit = string(in.String())
+		case "ago":
+			out.Ago = string(in.String())
 		default:
 			in.SkipRecursive()
 		}
@@ -69,48 +54,69 @@ func easyjson8e52a332DecodeGithubComTealFinanceGarcon(in *jlexer.Lexer, out *lin
 		in.Consumed()
 	}
 }
-func easyjson8e52a332EncodeGithubComTealFinanceGarcon(out *jwriter.Writer, in lines) {
+func easyjson8e52a332EncodeGithubComTealFinanceGarcon(out *jwriter.Writer, in versionInfo) {
 	out.RawByte('{')
 	first := true
 	_ = first
-	if len(in.Version) != 0 {
+	if in.Version != "" {
 		const prefix string = ",\"version\":"
 		first = false
 		out.RawString(prefix[1:])
-		{
-			out.RawByte('[')
-			for v2, v3 := range in.Version {
-				if v2 > 0 {
-					out.RawByte(',')
-				}
-				out.String(string(v3))
-			}
-			out.RawByte(']')
+		out.String(string(in.Version))
+	}
+	if in.Short != "" {
+		const prefix string = ",\"short\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
 		}
+		out.String(string(in.Short))
+	}
+	if in.LastCommit != "" {
+		const prefix string = ",\"last_commit\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.String(string(in.LastCommit))
+	}
+	if in.Ago != "" {
+		const prefix string = ",\"ago\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.String(string(in.Ago))
 	}
 	out.RawByte('}')
 }
 
 // MarshalJSON supports json.Marshaler interface
-func (v lines) MarshalJSON() ([]byte, error) {
+func (v versionInfo) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
 	easyjson8e52a332EncodeGithubComTealFinanceGarcon(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
-func (v lines) MarshalEasyJSON(w *jwriter.Writer) {
+func (v versionInfo) MarshalEasyJSON(w *jwriter.Writer) {
 	easyjson8e52a332EncodeGithubComTealFinanceGarcon(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
-func (v *lines) UnmarshalJSON(data []byte) error {
+func (v *versionInfo) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
 	easyjson8e52a332DecodeGithubComTealFinanceGarcon(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
-func (v *lines) UnmarshalEasyJSON(l *jlexer.Lexer) {
+func (v *versionInfo) UnmarshalEasyJSON(l *jlexer.Lexer) {
 	easyjson8e52a332DecodeGithubComTealFinanceGarcon(l, v)
 }
