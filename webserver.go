@@ -171,25 +171,19 @@ func (ws *StaticWebServer) send(w http.ResponseWriter, r *http.Request, absPath 
 func (ws *StaticWebServer) imagePathAndType(r *http.Request) (absPath, contentType string) {
 	extPos := extIndex(r.URL.Path)
 
-	// We only check the first Header "Accept":
-	// We do not care to miss an "image/avif" within the second Header "Accept",
-	// because we do not break anything: we send the image requested by the client.
+	// Just check the first "Accept" header because missing an "image/avif" (from another "Accept" header)
+	// do not break anything: will send the image with the original requested encoding format.
 	accept := r.Header.Get("Accept")
 
-	// We perform a stupid search to be fast,
-	// but we hope there is no Content-Type such as "image/avifauna"
+	// The search is fast but not 100% sure, hoping there is no Content-Type such as "image/avifauna".
 	const avifContentType = "image/avif"
 	if strings.Contains(accept, avifContentType) {
-		avifPath := r.URL.Path[:extPos] + "avif"
-		absPath = path.Join(ws.Dir, avifPath)
-
+		imgFile := r.URL.Path[:extPos] + "avif"
+		absPath = path.Join(ws.Dir, imgFile)
 		_, err := os.Stat(absPath)
 		if err == nil {
 			return absPath, avifContentType
 		}
-
-		log.Printf("WRN WebServer supports Content-Type=%q "+
-			"but cannot access %q %v", avifContentType, absPath, err)
 	}
 
 	absPath = path.Join(ws.Dir, r.URL.Path)
