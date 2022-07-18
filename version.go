@@ -32,9 +32,9 @@ import (
 //
 //    t="$(git describe --tags --abbrev=0 --always)"
 //    b="$(git branch --show-current)"
-//    [[ $b == main ]] && b="" || b="-$b"
+//    [ _$b = _main ] && b="" || b="-$b"
 //    n="$(git rev-list --count "$t"..)"
-//    [[ $n == 0 ]] && n="" || n="+$n"
+//    [ "$n" -eq 0 ] && n="" || n="+$n"
 //    go build -ldflags="-X 'github.com/teal-finance/garcon.V=$t$b$n'" ./cmd/main/package
 //
 //nolint:gochecknoglobals,varnamelen // set at build time: should be global and short.
@@ -111,7 +111,8 @@ func PrintVersion(program string) {
 
 // LogVersion logs the version and (Git) commit information.
 func LogVersion() {
-	for i, line := range versionStrings("") {
+	noProgramName := ""
+	for i, line := range versionStrings(noProgramName) {
 		if i == 0 {
 			line = "Version: " + line
 		}
@@ -121,20 +122,20 @@ func LogVersion() {
 
 // versionStrings computes the version and (Git) commit information.
 func versionStrings(program string) []string {
-	vi := make([]string, 0, 3)
-	vi = append(vi, Version(program))
+	lines := make([]string, 0, 3)
+	lines = append(lines, Version(program))
 
 	if info.Short != "" {
-		vi = append(vi, "ShortVersion: "+info.Short)
+		lines = append(lines, "ShortVersion: "+info.Short)
 	}
 
 	if info.LastCommit != "" {
-		line := "LastCommit: " + info.LastCommit
-		line += " (" + sinceLastCommit() + " ago)"
-		vi = append(vi, line)
+		last := "LastCommit: " + info.LastCommit
+		last += " (" + sinceLastCommit() + " ago)"
+		lines = append(lines, last)
 	}
 
-	return vi
+	return lines
 }
 
 func sinceLastCommit() string {
@@ -146,7 +147,7 @@ func sinceLastCommit() string {
 
 //nolint:gochecknoglobals // set at startup time
 // except field Ago that is updated (possible race condition).
-var info = versionStruct("")
+var info = versionStruct()
 
 // versionInfo is used to generate a fast JSON marshaler.
 type versionInfo struct {
@@ -157,21 +158,22 @@ type versionInfo struct {
 }
 
 // versionStruct computes the version and (Git) commit information.
-func versionStruct(program string) versionInfo {
-	var vi versionInfo
+func versionStruct() versionInfo {
+	var info versionInfo
 
-	vi.Version = Version(program)
+	noProgramName := ""
+	info.Version = Version(noProgramName)
 
 	short := versioninfo.Short()
 	if !strings.HasSuffix(V, short) {
-		vi.Short = versioninfo.Short()
+		info.Short = versioninfo.Short()
 	}
 
 	if !versioninfo.LastCommit.IsZero() {
-		vi.LastCommit = versioninfo.LastCommit.Format("2006-01-02 15:04:05")
+		info.LastCommit = versioninfo.LastCommit.Format("2006-01-02 15:04:05")
 	}
 
-	return vi
+	return info
 }
 
 const html = `<!DOCTYPE html>
@@ -181,13 +183,13 @@ const html = `<!DOCTYPE html>
 	<title>Version Info</title>
 </head>
 <body>
-	{{range .Items}}<div>{{ . }}</div>{{else}}<div><strong>no version</strong></div>{{end}}
+	{{range .Items}}<div>{{ . }}</div>{{else}}<div>no version</div>{{end}}
 </body>
 </html>`
 
 // ServeVersion send HTML or JSON depending on Accept header.
 func (g *Garcon) ServeVersion() func(w http.ResponseWriter, r *http.Request) {
-	tmpl, err := template.New("version").Parse(html)
+	t, err := template.New("version").Parse(html)
 	if err != nil {
 		log.Panic("ServeVersion template.New:", err)
 	}
@@ -197,7 +199,7 @@ func (g *Garcon) ServeVersion() func(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(accept, "json") {
 			writeJSON(w)
 		} else {
-			writeHTML(w, tmpl)
+			writeHTML(w, t)
 		}
 	}
 }
@@ -207,20 +209,21 @@ func writeJSON(w http.ResponseWriter) {
 	info.Ago = sinceLastCommit()
 	b, err := info.MarshalJSON()
 	if err != nil {
-		log.Print("WRN ServeVersion MarshalJSON: ", err)
+		log.Print("WRN writeJSON MarshalJSON: ", err)
 		w.WriteHeader(http.StatusNoContent)
-		return
+	} else {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(b)
 	}
-	w.Header().Set("Content-Type", "application/json")
-	_, _ = w.Write(b)
 }
 
 // writeHTML converts the version info from string slice to JSON.
-func writeHTML(w http.ResponseWriter, tmpl *template.Template) {
-	info := versionStrings("")
-	data := struct{ Items []string }{info}
-	if err := tmpl.Execute(w, data); err != nil {
-		log.Print("WRN ServeVersion Execute:", err)
+func writeHTML(w http.ResponseWriter, t *template.Template) {
+	noProgramName := ""
+	lines := versionStrings(noProgramName)
+	data := struct{ Items []string }{lines}
+	if err := t.Execute(w, data); err != nil {
+		log.Print("WRN writeHTML Execute:", err)
 		w.WriteHeader(http.StatusNoContent)
 	}
 }
