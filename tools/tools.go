@@ -10,7 +10,7 @@ import (
 	// _ "github.com/golangci/golangci-lint/cmd/golangci-lint"
 
 	_ "github.com/mailru/easyjson"
-	_ "mvdan.cc/gofumpt"
+	// _ "mvdan.cc/gofumpt"
 )
 
 // Lint:
