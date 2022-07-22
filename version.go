@@ -147,7 +147,7 @@ func sinceLastCommit() string {
 
 //nolint:gochecknoglobals // set at startup time
 // except field Ago that is updated (possible race condition).
-var info = versionStruct()
+var info = initVersionInfo()
 
 // versionInfo is used to generate a fast JSON marshaler.
 type versionInfo struct {
@@ -157,8 +157,9 @@ type versionInfo struct {
 	Ago        string
 }
 
-// versionStruct computes the version and (Git) commit information.
-func versionStruct() versionInfo {
+// initVersionInfo computes the version and (Git) commit information.
+//nolint:govet // local var "init" sets global var "init"
+func initVersionInfo() versionInfo {
 	var info versionInfo
 
 	noProgramName := ""
