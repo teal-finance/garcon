@@ -38,6 +38,7 @@ var DevOrigins = []*url.URL{
 	{Scheme: "http", Host: "192.168.1."},
 }
 
+// Garcon is the main struct of the package garcon.
 type Garcon struct {
 	Namespace      Namespace
 	ConnState      func(net.Conn, http.ConnState)
@@ -304,7 +305,7 @@ func WithNamespace(namespace string) Option {
 		oldNS := params.namespace
 		newNS := NewNamespace(namespace)
 		if oldNS != "" && params.namespace != newNS {
-			log.Panicf("WithProm(namespace=%q) overides namespace=%q", newNS, oldNS)
+			log.Panicf("WithProm(namespace=%q) overrides namespace=%q", newNS, oldNS)
 		}
 		params.namespace = newNS
 	}

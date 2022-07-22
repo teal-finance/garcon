@@ -43,11 +43,12 @@ func CORSHandler(origins []string, debug bool) func(next http.Handler) http.Hand
 	return cors.New(options).Handler
 }
 
-func InsertSchema(origins []string) {
-	for i, o := range origins {
-		if !strings.HasPrefix(o, "https://") &&
-			!strings.HasPrefix(o, "http://") {
-			origins[i] = "http://" + o
+// InsertSchema inserts "http://" when HTTP schema is missing.
+func InsertSchema(urls []string) {
+	for i, u := range urls {
+		if !strings.HasPrefix(u, "https://") &&
+			!strings.HasPrefix(u, "http://") {
+			urls[i] = "http://" + u
 		}
 	}
 }

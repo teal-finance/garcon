@@ -46,6 +46,7 @@ type WebForm struct {
 	maxFieldNameLength int
 }
 
+// NewContactForm initializes a new WebForm with the default contact-form settings.
 func NewContactForm(redirectURL, notifierURL string, errWriter ErrWriter) WebForm {
 	form := WebForm{
 		ErrWriter:          errWriter,

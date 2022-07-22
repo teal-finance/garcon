@@ -22,6 +22,7 @@ type StaticWebServer struct {
 	ErrWriter ErrWriter
 }
 
+// NewStaticWebServer creates a StaticWebServer.
 func NewStaticWebServer(dir string, errWriter ErrWriter) StaticWebServer {
 	return StaticWebServer{dir, errWriter}
 }
