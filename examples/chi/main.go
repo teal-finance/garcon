@@ -27,7 +27,7 @@ func main() {
 	router := chi.NewRouter()
 	router.Post(*endpoint, post)
 	router.MethodNotAllowed(others) // handle other methods of the above POST endpoint
-	router.NotFound(others) // handle all other endpoints
+	router.NotFound(others)         // handle all other endpoints
 
 	chain := garcon.NewChain(
 		garcon.LogRequest,

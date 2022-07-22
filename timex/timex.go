@@ -28,9 +28,11 @@ func DT(t time.Time) string {
 	if t.IsZero() {
 		return Inf
 	}
+
 	if d := t.Truncate(Day); t.Equal(d) {
 		return d.Format("2006-01-02")
 	}
+
 	return t.Format("2006-01-02.15:04:05")
 }
 
@@ -120,7 +122,6 @@ func SameMinuteSecond(t1, t2 time.Time) bool {
 }
 
 // Durations in nanoseconds from 1 nanosecond to 1 year.
-//nolint:revive // "Hour" (= time.Hour) is not a unit-specific suffix.
 const (
 	MinuteSec = 60           // MinuteSec = number of seconds in one minute.
 	HourSec   = 3600         // HourSec = number of seconds in one hour.
