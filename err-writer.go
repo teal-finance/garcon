@@ -54,9 +54,9 @@ type msg struct {
 	Query string
 }
 
-// WriteSafe is a safe alternative to Write, may be slower despite the easyjson generated code.
-// Disadvantage: WriteSafe concatenates all messages in "error" field.
-func (errWriter ErrWriter) WriteSafe(w http.ResponseWriter, r *http.Request, statusCode int, messages ...any) {
+// WriteSafeJSONErr is a safe alternative to Write, may be slower despite the easyjson generated code.
+// Disadvantage: WriteSafeJSONErr concatenates all messages in "error" field.
+func (errWriter ErrWriter) WriteSafeJSONErr(w http.ResponseWriter, r *http.Request, statusCode int, messages ...any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 
