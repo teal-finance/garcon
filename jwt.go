@@ -50,6 +50,7 @@ var (
 	ErrNoAuthorization = errors.New("provide your JWT within the 'Authorization Bearer' HTTP header")
 	ErrNoBase64JWT     = errors.New("the token claims (second part of the JWT) is not base64-valid")
 	ErrNoBearer        = errors.New("malformed HTTP Authorization, must be Bearer")
+	ErrNoValidJWT      = errors.New("cannot find a valid JWT in either the cookie or the first 'Authorization' HTTP header")
 )
 
 type Perm struct {
@@ -318,9 +319,8 @@ func (ck *JWTChecker) PermFromBearerOrCookie(r *http.Request) (Perm, []any) {
 		c, errCookie := r.Cookie(ck.cookies[0].Name)
 		if errCookie != nil {
 			return Perm{}, []any{
-				fmt.Errorf("cannot find a valid JWT in either "+
-					"the first 'Authorization' HTTP header or "+
-					"the cookie '%s'", ck.cookies[0].Name),
+				ErrNoValidJWT,
+				"expected_cookie_name", ck.cookies[0].Name,
 				"error_bearer", errBearer,
 				"error_cookie", errCookie,
 			}
