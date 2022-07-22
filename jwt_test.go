@@ -107,7 +107,7 @@ func TestNewJWTChecker(t *testing.T) {
 			}
 
 			if c.shouldPanic {
-				defer func() { recover() }()
+				defer func() { _ = recover() }()
 			}
 
 			ck := garcon.NewJWTChecker(urls, c.errWriter, secretKey, c.permissions...)
@@ -188,7 +188,11 @@ func TestNewJWTChecker(t *testing.T) {
 				t.Errorf("checker.Vet() has not called next.ServeHTTP()")
 			}
 			if len(c.permissions) >= 2 {
-				c.perm = c.permissions[1].(int)
+				var ok bool
+				c.perm, ok = c.permissions[1].(int)
+				if !ok {
+					t.Errorf("c.permissions[1] is not int")
+				}
 			}
 			if next.perm != c.perm {
 				t.Errorf("checker.Set() request ctx perm got=%d want=%d "+
