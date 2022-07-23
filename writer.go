@@ -6,6 +6,7 @@
 package garcon
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -18,32 +19,40 @@ const (
 	pathInvalid  = "Path is not valid. Please refer to the documentation."
 )
 
-// ErrWriter enables writing useful JSON error message in the HTTP response body.
-type ErrWriter string
+// Writer enables writing useful JSON error message in the HTTP response body.
+type Writer string
 
-// NewErrWriter creates a ErrWriter structure.
-func NewErrWriter(docURL string) ErrWriter {
-	return ErrWriter(docURL)
+// NewWriter creates a Writer structure.
+func NewWriter(docURL string) Writer {
+	return Writer(docURL)
 }
 
 func NotImplemented(w http.ResponseWriter, r *http.Request) {
-	ErrWriter("").NotImplemented(w, r)
+	Writer("").NotImplemented(w, r)
 }
 
 func InvalidPath(w http.ResponseWriter, r *http.Request) {
-	ErrWriter("").InvalidPath(w, r)
+	Writer("").InvalidPath(w, r)
 }
 
-func (errWriter ErrWriter) NotImplemented(w http.ResponseWriter, r *http.Request) {
-	errWriter.Write(w, r, http.StatusNotImplemented, pathReserved)
+func (gWriter Writer) NotImplemented(w http.ResponseWriter, r *http.Request) {
+	gWriter.WriteErr(w, r, http.StatusNotImplemented, pathReserved)
 }
 
-func (errWriter ErrWriter) InvalidPath(w http.ResponseWriter, r *http.Request) {
-	errWriter.Write(w, r, http.StatusBadRequest, pathInvalid)
+func (gWriter Writer) InvalidPath(w http.ResponseWriter, r *http.Request) {
+	gWriter.WriteErr(w, r, http.StatusBadRequest, pathInvalid)
 }
 
-func WriteJSONErr(w http.ResponseWriter, r *http.Request, statusCode int, a ...any) {
-	ErrWriter("").Write(w, r, statusCode, a)
+func WriteErr(w http.ResponseWriter, r *http.Request, statusCode int, a ...any) {
+	Writer("").WriteErr(w, r, statusCode, a)
+}
+
+func WriteErrSafe(w http.ResponseWriter, r *http.Request, statusCode int, a ...any) {
+	Writer("").WriteErrSafe(w, r, statusCode, a...)
+}
+
+func WriteOK(w http.ResponseWriter, a ...any) {
+	Writer("").WriteOK(w, a)
 }
 
 // msg is only used by SafeWrite to generate a fast JSON marshaler.
@@ -54,15 +63,12 @@ type msg struct {
 	Query string
 }
 
-// WriteSafeJSONErr is a safe alternative to Write, may be slower despite the easyjson generated code.
-// Disadvantage: WriteSafeJSONErr concatenates all messages in "error" field.
-func (errWriter ErrWriter) WriteSafeJSONErr(w http.ResponseWriter, r *http.Request, statusCode int, messages ...any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(statusCode)
-
+// WriteErrSafe is a safe alternative to Write, may be slower despite the easyjson generated code.
+// Disadvantage: WriteErrSafe concatenates all key-values (kv) in "error" field.
+func (gWriter Writer) WriteErrSafe(w http.ResponseWriter, r *http.Request, statusCode int, kv ...any) {
 	response := msg{
-		Error: fmt.Sprint(messages...),
-		Doc:   string(errWriter),
+		Error: fmt.Sprint(kv...),
+		Doc:   string(gWriter),
 		Path:  "",
 		Query: "",
 	}
@@ -77,23 +83,23 @@ func (errWriter ErrWriter) WriteSafeJSONErr(w http.ResponseWriter, r *http.Reque
 	buf, err := response.MarshalJSON()
 	if err != nil {
 		log.Print("WRN WriteSafeJSONErr: ", err)
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	_, _ = w.Write(buf)
-}
-
-// Write is a fast pretty-JSON marshaler dedicated to the HTTP error response.
-// Write extends the JSON content when more than two messages are provided.
-func (errWriter ErrWriter) Write(w http.ResponseWriter, r *http.Request, statusCode int, messages ...any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.WriteHeader(statusCode)
+	_, _ = w.Write(buf)
+}
 
+// WriteErr is a fast pretty-JSON marshaler dedicated to the HTTP error response.
+// WriteErr extends the JSON content when more than two key-values (kv) are provided.
+func (gWriter Writer) WriteErr(w http.ResponseWriter, r *http.Request, statusCode int, kv ...any) {
 	buf := make([]byte, 0, 1024)
 	buf = append(buf, '{')
 
-	buf, comma := appendMessages(buf, messages)
+	buf, comma := appendMessages(buf, kv)
 
 	if r != nil {
 		if comma {
@@ -103,43 +109,89 @@ func (errWriter ErrWriter) Write(w http.ResponseWriter, r *http.Request, statusC
 		comma = true
 	}
 
-	if string(errWriter) != "" {
+	if string(gWriter) != "" {
 		if comma {
 			buf = append(buf, ',', '\n')
 		}
-		buf = errWriter.appendDoc(buf)
+		buf = gWriter.appendDoc(buf)
 	}
 
 	buf = append(buf, '}')
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.WriteHeader(statusCode)
 	_, _ = w.Write(buf)
 }
 
-func appendMessages(buf []byte, messages []any) ([]byte, bool) {
-	if len(messages) == 0 {
+// WriteOK is a fast pretty-JSON marshaler dedicated to the HTTP successful response.
+func (gWriter Writer) WriteOK(w http.ResponseWriter, kv ...any) {
+	var buf []byte
+	var err error
+
+	switch {
+	case len(kv) == 0:
+		buf = []byte("{}")
+
+	case len(kv) == 1:
+		buf, err = json.Marshal(kv)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+	default:
+		buf = make([]byte, 0, 1024)
+		buf = append(buf, '{')
+		buf = appendKeyValues(buf, false, kv)
+		buf = append(buf, '}')
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(buf)
+}
+
+func appendMessages(buf []byte, kv []any) ([]byte, bool) {
+	if len(kv) == 0 {
 		return buf, false
 	}
 
 	buf = append(buf, []byte(`"error":`)...)
 
-	if len(messages) == 2 {
-		s := fmt.Sprintf("%v%v", messages[0], messages[1])
+	if len(kv) == 2 {
+		s := fmt.Sprintf("%v%v", kv[0], kv[1])
 		buf = strconv.AppendQuoteToGraphic(buf, s)
 		return buf, true
 	}
 
-	buf = appendQuote(buf, messages[0])
-	for i := 1; i < len(messages); i += 2 {
-		buf = append(buf, ',', '\n')
-		buf = appendQuote(buf, messages[i])
-		buf = append(buf, ':')
-		if i+1 < len(messages) {
-			buf = appendValue(buf, messages[i+1])
-		} else {
-			buf = append(buf, '0')
-		}
+	buf = appendQuote(buf, kv[0])
+
+	if len(kv) > 1 {
+		buf = appendKeyValues(buf, true, kv[1:])
 	}
 
 	return buf, true
+}
+
+func appendKeyValues(buf []byte, comma bool, kv []any) []byte {
+	if (len(kv) == 0) || (len(kv)%2 != 0) {
+		log.Panic("Writer: want non-zero even len(kv) but got ", len(kv))
+	}
+
+	for i := 1; i < len(kv); i += 2 {
+		if comma {
+			buf = append(buf, ',', '\n')
+		} else {
+			comma = true
+		}
+		buf = appendQuote(buf, kv[i])
+		buf = append(buf, ':')
+		buf = appendValue(buf, kv[i+1])
+	}
+
+	return buf
 }
 
 //nolint:cyclop,gocyclo // cannot reduce cyclomatic complexity
@@ -199,9 +251,9 @@ func appendURL(buf []byte, u *url.URL) []byte {
 	return buf
 }
 
-func (errWriter ErrWriter) appendDoc(buf []byte) []byte {
+func (gWriter Writer) appendDoc(buf []byte) []byte {
 	buf = append(buf, '"', 'd', 'o', 'c', '"', ':', '"')
-	buf = append(buf, []byte(string(errWriter))...)
+	buf = append(buf, []byte(string(gWriter))...)
 	buf = append(buf, '"')
 	return buf
 }

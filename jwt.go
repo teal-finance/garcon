@@ -58,7 +58,7 @@ type Perm struct {
 }
 
 type JWTChecker struct {
-	errWriter  ErrWriter
+	gWriter    Writer
 	secretKey  []byte
 	perms      []Perm
 	plans      []string
@@ -66,11 +66,11 @@ type JWTChecker struct {
 	devOrigins []string
 }
 
-func NewJWTChecker(urls []*url.URL, errWriter ErrWriter, secretKey []byte, permissions ...any) *JWTChecker {
+func NewJWTChecker(urls []*url.URL, gWriter Writer, secretKey []byte, permissions ...any) *JWTChecker {
 	plans, perms := checkParameters(secretKey, permissions...)
 
 	c := &JWTChecker{
-		errWriter:  errWriter,
+		gWriter:    gWriter,
 		secretKey:  secretKey,
 		plans:      plans,
 		perms:      perms,
@@ -264,7 +264,7 @@ func (ck *JWTChecker) Chk(next http.Handler) http.Handler {
 			if ck.isDevOrigin(r) {
 				perm = ck.perms[0]
 			} else {
-				ck.errWriter.Write(w, r, http.StatusUnauthorized, err...)
+				ck.gWriter.WriteErr(w, r, http.StatusUnauthorized, err...)
 				return
 			}
 		}
@@ -283,7 +283,7 @@ func (ck *JWTChecker) Vet(next http.Handler) http.Handler {
 			if ck.isDevOrigin(r) {
 				perm = ck.perms[0]
 			} else {
-				ck.errWriter.Write(w, r, http.StatusUnauthorized, err...)
+				ck.gWriter.WriteErr(w, r, http.StatusUnauthorized, err...)
 				return
 			}
 		}

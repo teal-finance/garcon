@@ -87,7 +87,7 @@ func handler(g *garcon.Garcon, addr string) http.Handler {
 	c := g.Checker
 
 	// Static website files
-	ws := garcon.NewStaticWebServer("examples/www", g.ErrWriter)
+	ws := garcon.NewStaticWebServer("examples/www", g.Writer)
 	r.Get("/favicon.ico", ws.ServeFile("favicon.ico", "image/x-icon"))
 	r.With(c.Set).Get("/myapp", ws.ServeFile("myapp/index.html", "text/html; charset=utf-8"))
 	r.With(c.Set).Get("/myapp/", ws.ServeFile("myapp/index.html", "text/html; charset=utf-8"))
@@ -97,16 +97,16 @@ func handler(g *garcon.Garcon, addr string) http.Handler {
 	r.With(c.Chk).Get("/myapp/version", g.ServeVersion())
 
 	// Contact-form
-	wf := garcon.NewContactForm(addr, "", g.ErrWriter)
+	wf := garcon.NewContactForm(addr, "", g.Writer)
 	r.With(c.Set).Post("/myapp", wf.NotifyWebForm())
 
 	// API
 	r.With(c.Vet).Get("/path/not/in/cookie", items)
 	r.With(c.Vet).Get("/myapp/api/v1/items", items)
-	r.With(c.Vet).Get("/myapp/api/v1/ducks", g.ErrWriter.NotImplemented)
+	r.With(c.Vet).Get("/myapp/api/v1/ducks", g.Writer.NotImplemented)
 
 	// Other endpoints
-	r.NotFound(g.ErrWriter.InvalidPath)
+	r.NotFound(g.Writer.InvalidPath)
 
 	return r
 }

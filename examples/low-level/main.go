@@ -42,18 +42,18 @@ func main() {
 	garcon.StartPProfServer(pprofPort)
 
 	// Uniformize error responses with API doc
-	errWriter := garcon.NewErrWriter(apiDoc)
+	gWriter := garcon.NewWriter(apiDoc)
 
-	chain, connState, urls := setMiddlewares(errWriter)
+	chain, connState, urls := setMiddlewares(gWriter)
 
 	// Handles both REST API and static web files
-	h := handler(errWriter, garcon.NewJWTChecker(urls, errWriter, []byte(hmacSHA256)))
+	h := handler(gWriter, garcon.NewJWTChecker(urls, gWriter, []byte(hmacSHA256)))
 	h = chain.Then(h)
 
 	runServer(h, connState)
 }
 
-func setMiddlewares(errWriter garcon.ErrWriter) (chain garcon.Chain, connState func(net.Conn, http.ConnState), urls []*url.URL) {
+func setMiddlewares(gWriter garcon.Writer) (chain garcon.Chain, connState func(net.Conn, http.ConnState), urls []*url.URL) {
 	auth := flag.Bool("auth", false, "Enable OPA authorization specified in file "+authCfg)
 	dev := flag.Bool("dev", true, "Use development or production settings")
 	flag.Parse()
@@ -63,7 +63,7 @@ func setMiddlewares(errWriter garcon.ErrWriter) (chain garcon.Chain, connState f
 	chain, connState = garcon.StartMetricsServer(expPort, "LowLevel")
 
 	// Limit the input request rate per IP
-	reqLimiter := garcon.NewReqLimiter(burst, reqMinute, *dev, errWriter)
+	reqLimiter := garcon.NewReqLimiter(burst, reqMinute, *dev, gWriter)
 
 	corsConfig := allowedProdOrigin
 	if *dev {
@@ -82,7 +82,7 @@ func setMiddlewares(errWriter garcon.ErrWriter) (chain garcon.Chain, connState f
 	// Endpoint authentication rules (Open Policy Agent)
 	if *auth {
 		files := garcon.SplitClean(authCfg)
-		policy, err := garcon.NewPolicy(files, errWriter)
+		policy, err := garcon.NewPolicy(files, gWriter)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -118,11 +118,11 @@ func runServer(h http.Handler, connState func(net.Conn, http.ConnState)) {
 }
 
 // handler creates the mapping between the endpoints and the handler functions.
-func handler(errWriter garcon.ErrWriter, c *garcon.JWTChecker) http.Handler {
+func handler(gWriter garcon.Writer, c *garcon.JWTChecker) http.Handler {
 	r := chi.NewRouter()
 
 	// Static website files
-	ws := garcon.StaticWebServer{Dir: "examples/www", ErrWriter: errWriter}
+	ws := garcon.StaticWebServer{Dir: "examples/www", Writer: gWriter}
 	r.Get("/favicon.ico", ws.ServeFile("favicon.ico", "image/x-icon"))
 	r.With(c.Set).Get("/myapp", ws.ServeFile("myapp/index.html", "text/html; charset=utf-8"))
 	r.With(c.Set).Get("/myapp/", ws.ServeFile("myapp/index.html", "text/html; charset=utf-8"))
@@ -133,10 +133,10 @@ func handler(errWriter garcon.ErrWriter, c *garcon.JWTChecker) http.Handler {
 	// API
 	r.With(c.Vet).Get("/path/not/in/cookie", items)
 	r.With(c.Vet).Get("/myapp/api/v1/items", items)
-	r.With(c.Vet).Get("/myapp/api/v1/ducks", errWriter.NotImplemented)
+	r.With(c.Vet).Get("/myapp/api/v1/ducks", gWriter.NotImplemented)
 
 	// Other endpoints
-	r.NotFound(errWriter.InvalidPath)
+	r.NotFound(gWriter.InvalidPath)
 
 	return r
 }

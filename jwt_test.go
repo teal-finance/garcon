@@ -29,7 +29,7 @@ func (next *next) ServeHTTP(_ http.ResponseWriter, r *http.Request) {
 var cases = []struct {
 	name        string
 	addresses   []string
-	errWriter   garcon.ErrWriter
+	gWriter     garcon.Writer
 	secretHex   string
 	permissions []any
 	plan        string
@@ -38,7 +38,7 @@ var cases = []struct {
 }{{
 	name:        "0plans",
 	addresses:   []string{"http://my-dns.co"},
-	errWriter:   garcon.NewErrWriter("http://my-dns.co/doc"),
+	gWriter:     garcon.NewWriter("http://my-dns.co/doc"),
 	secretHex:   "0a02123112dfb13d58a1bc0c8ce55b154878085035ae4d2e13383a79a3e3de1b",
 	permissions: nil,
 	plan:        garcon.DefaultPlan,
@@ -47,7 +47,7 @@ var cases = []struct {
 }, {
 	name:        "1plans",
 	addresses:   []string{"http://my-dns.co/"},
-	errWriter:   garcon.NewErrWriter("http://my-dns.co/doc"),
+	gWriter:     garcon.NewWriter("http://my-dns.co/doc"),
 	secretHex:   "0a02123112dfb13d58a1bc0c8ce55b154878085035ae4d2e13383a79a3e3de1b",
 	permissions: []any{"Anonymous", 6},
 	plan:        "Anonymous",
@@ -56,7 +56,7 @@ var cases = []struct {
 }, {
 	name:        "bad-plans",
 	addresses:   []string{"http://my-dns.co/g"},
-	errWriter:   garcon.NewErrWriter("doc"),
+	gWriter:     garcon.NewWriter("doc"),
 	secretHex:   "0a02123112dfb13d58a1bc0c8ce55b154878085035ae4d2e13383a79a3e3de1b",
 	permissions: []any{"Anonymous", 6, "Personal"}, // len(permissions) is not even => panic
 	plan:        "error",
@@ -65,7 +65,7 @@ var cases = []struct {
 }, {
 	name:        "3plans",
 	addresses:   []string{"http://my-dns.co//./sss/..///g///"},
-	errWriter:   garcon.NewErrWriter("/doc"),
+	gWriter:     garcon.NewWriter("/doc"),
 	secretHex:   "0a02123112dfb13d58a1bc0c8ce55b154878085035ae4d2e13383a79a3e3de1b",
 	permissions: []any{"Anonymous", 6, "Personal", 48, "Enterprise", 0},
 	plan:        "Personal",
@@ -74,7 +74,7 @@ var cases = []struct {
 }, {
 	name:        "localhost",
 	addresses:   []string{"http://localhost:8080/"},
-	errWriter:   garcon.NewErrWriter(""),
+	gWriter:     garcon.NewWriter(""),
 	secretHex:   "0a02123112dfb13d58a1bc0c8ce55b154878085035ae4d2e13383a79a3e3de1b",
 	permissions: []any{"Anonymous", 6, "Personal", 48, "Enterprise", -1},
 	plan:        "Enterprise",
@@ -83,7 +83,7 @@ var cases = []struct {
 }, {
 	name:        "customPlan",
 	addresses:   []string{"http://localhost:8080/"},
-	errWriter:   garcon.NewErrWriter(""),
+	gWriter:     garcon.NewWriter(""),
 	secretHex:   "0a02123112dfb13d58a1bc0c8ce55b154878085035ae4d2e13383a79a3e3de1b",
 	permissions: []any{"Anonymous", 6, "Personal", 48, "Enterprise", -1},
 	plan:        "55",
@@ -110,7 +110,7 @@ func TestNewJWTChecker(t *testing.T) {
 				defer func() { _ = recover() }()
 			}
 
-			ck := garcon.NewJWTChecker(urls, c.errWriter, secretKey, c.permissions...)
+			ck := garcon.NewJWTChecker(urls, c.gWriter, secretKey, c.permissions...)
 
 			if c.shouldPanic {
 				t.Errorf("NewChecker() did not panic")

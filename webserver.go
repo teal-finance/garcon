@@ -18,13 +18,13 @@ import (
 // StaticWebServer is a webserver serving static files
 // among HTML, CSS, JS and popular image formats.
 type StaticWebServer struct {
-	Dir       string
-	ErrWriter ErrWriter
+	Dir    string
+	Writer Writer
 }
 
 // NewStaticWebServer creates a StaticWebServer.
-func NewStaticWebServer(dir string, errWriter ErrWriter) StaticWebServer {
-	return StaticWebServer{dir, errWriter}
+func NewStaticWebServer(dir string, gWriter Writer) StaticWebServer {
+	return StaticWebServer{dir, gWriter}
 }
 
 // ServeFile handles one specific file (and its specific Content-Type).
@@ -135,7 +135,7 @@ func (ws *StaticWebServer) openFile(w http.ResponseWriter, r *http.Request, absP
 	file, err := os.Open(absPath)
 	if err != nil {
 		log.Print("WRN WebServer: ", err)
-		ws.ErrWriter.Write(w, r, http.StatusNotFound, "Page not found")
+		ws.Writer.WriteErr(w, r, http.StatusNotFound, "Page not found")
 		return nil, ""
 	}
 

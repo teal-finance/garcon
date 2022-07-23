@@ -61,7 +61,7 @@ func handler(g *garcon.Garcon) http.Handler {
 	r := chi.NewRouter()
 
 	// Static website files
-	ws := garcon.StaticWebServer{Dir: "examples/www", ErrWriter: g.ErrWriter}
+	ws := garcon.StaticWebServer{Dir: "examples/www", Writer: g.Writer}
 	r.Get("/", ws.ServeFile("keystore/index.html", "text/html; charset=utf-8"))
 	r.Get("/favicon.ico", ws.ServeFile("keystore/favicon.ico", "image/x-icon"))
 
@@ -75,7 +75,7 @@ func handler(g *garcon.Garcon) http.Handler {
 	r.Delete("/keys", db.delete)
 
 	// Other endpoints
-	r.NotFound(g.ErrWriter.InvalidPath)
+	r.NotFound(g.Writer.InvalidPath)
 
 	return r
 }
@@ -90,14 +90,14 @@ type Keys map[string]string
 func (db *db) list(w http.ResponseWriter, r *http.Request) {
 	ip, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
-		db.g.ErrWriter.Write(w, r, http.StatusInternalServerError,
+		db.g.Writer.WriteErr(w, r, http.StatusInternalServerError,
 			"Cannot split addr=host:port", "addr", r.RemoteAddr)
 		log.Print("Cannot split addr=host:port ", err)
 		return
 	}
 
 	if ip != "127.0.0.1" {
-		db.g.ErrWriter.Write(w, r, http.StatusForbidden,
+		db.g.Writer.WriteErr(w, r, http.StatusForbidden,
 			"GET is forbidden for IP="+r.RemoteAddr+" (only 127.0.0.1)",
 			"IP", r.RemoteAddr)
 		return
@@ -113,7 +113,7 @@ func (db *db) list(w http.ResponseWriter, r *http.Request) {
 
 	bytes, err := json.Marshal(keyNames)
 	if err != nil {
-		db.g.ErrWriter.Write(w, r, http.StatusInternalServerError,
+		db.g.Writer.WriteErr(w, r, http.StatusInternalServerError,
 			"Cannot JSON-marshal the keys list")
 		log.Print("Cannot JSON-marshal the keys list ", err)
 	}
@@ -128,20 +128,20 @@ func (db *db) list(w http.ResponseWriter, r *http.Request) {
 func (db *db) post(w http.ResponseWriter, r *http.Request) {
 	ip, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
-		db.g.ErrWriter.Write(w, r, http.StatusInternalServerError,
+		db.g.Writer.WriteErr(w, r, http.StatusInternalServerError,
 			"Cannot split addr=host:port", "addr", r.RemoteAddr)
 		log.Print("Cannot split addr=host:port ", err)
 	}
 
 	values, err := parseForm(r)
 	if err != nil {
-		db.g.ErrWriter.Write(w, r, http.StatusInternalServerError,
+		db.g.Writer.WriteErr(w, r, http.StatusInternalServerError,
 			"Cannot parse the webform (request body)")
 		log.Print("Cannot parse the webform ", err)
 	}
 
 	if values == nil {
-		db.g.ErrWriter.Write(w, r, http.StatusBadRequest,
+		db.g.Writer.WriteErr(w, r, http.StatusBadRequest,
 			"Missing webform (request body)")
 	}
 
@@ -170,7 +170,7 @@ func (db *db) post(w http.ResponseWriter, r *http.Request) {
 
 	bytes, err := json.Marshal(result)
 	if err != nil {
-		db.g.ErrWriter.Write(w, r, http.StatusInternalServerError,
+		db.g.Writer.WriteErr(w, r, http.StatusInternalServerError,
 			"Cannot JSON-marshal the result")
 		log.Print("Cannot JSON-marshal ", err)
 	}
@@ -183,14 +183,14 @@ func (db *db) post(w http.ResponseWriter, r *http.Request) {
 func (db *db) delete(w http.ResponseWriter, r *http.Request) {
 	ip, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
-		db.g.ErrWriter.Write(w, r, http.StatusInternalServerError,
+		db.g.Writer.WriteErr(w, r, http.StatusInternalServerError,
 			"Cannot split addr=host:port", "addr", r.RemoteAddr)
 		log.Print("Cannot split addr=host:port ", err)
 	}
 
 	values, err := parseForm(r)
 	if err != nil {
-		db.g.ErrWriter.Write(w, r, http.StatusInternalServerError,
+		db.g.Writer.WriteErr(w, r, http.StatusInternalServerError,
 			"Cannot parse the webform (request body)")
 		log.Print("Cannot parse the webform ", err)
 	}

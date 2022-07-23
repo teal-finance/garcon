@@ -19,7 +19,7 @@ type ReqLimiter struct {
 	visitors    map[string]*visitor
 	initLimiter *rate.Limiter
 	mu          sync.Mutex
-	errWriter   ErrWriter
+	gWriter     Writer
 }
 
 type visitor struct {
@@ -27,7 +27,7 @@ type visitor struct {
 	limiter  *rate.Limiter
 }
 
-func NewReqLimiter(maxReqBurst, maxReqPerMinute int, devMode bool, errWriter ErrWriter) ReqLimiter {
+func NewReqLimiter(maxReqBurst, maxReqPerMinute int, devMode bool, gWriter Writer) ReqLimiter {
 	if devMode {
 		maxReqBurst *= 10
 		maxReqPerMinute *= 10
@@ -39,7 +39,7 @@ func NewReqLimiter(maxReqBurst, maxReqPerMinute int, devMode bool, errWriter Err
 		visitors:    make(map[string]*visitor),
 		initLimiter: rate.NewLimiter(rate.Limit(ratePerSecond), maxReqBurst),
 		mu:          sync.Mutex{},
-		errWriter:   errWriter,
+		gWriter:     gWriter,
 	}
 }
 
@@ -52,7 +52,7 @@ func (rl *ReqLimiter) LimitRate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ip, _, err := net.SplitHostPort(r.RemoteAddr)
 		if err != nil {
-			rl.errWriter.Write(w, r, http.StatusInternalServerError,
+			rl.gWriter.WriteErr(w, r, http.StatusInternalServerError,
 				"Cannot split addr=host:port", "addr", r.RemoteAddr)
 			log.Print("in  ", r.RemoteAddr, " ", r.Method, " ", r.RequestURI, " ERR SplitHostPort ", err)
 			return
@@ -62,7 +62,7 @@ func (rl *ReqLimiter) LimitRate(next http.Handler) http.Handler {
 
 		if err := limiter.Wait(r.Context()); err != nil {
 			if r.Context().Err() == nil {
-				rl.errWriter.Write(w, r, http.StatusTooManyRequests, "Too Many Requests",
+				rl.gWriter.WriteErr(w, r, http.StatusTooManyRequests, "Too Many Requests",
 					"advice", "Please contact the team support is this is annoying")
 				log.Print("WRN ", r.RemoteAddr, " ", r.Method, " ", r.RequestURI, "TooManyRequests ", err)
 			} else {

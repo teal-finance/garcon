@@ -43,7 +43,7 @@ type Garcon struct {
 	Namespace      Namespace
 	ConnState      func(net.Conn, http.ConnState)
 	Checker        TokenChecker
-	ErrWriter      ErrWriter
+	Writer         Writer
 	AllowedOrigins []string
 	Middlewares    Chain
 }
@@ -121,7 +121,7 @@ func (params *parameters) new() (*Garcon, error) {
 		Namespace:      params.namespace,
 		ConnState:      nil,
 		Checker:        nil,
-		ErrWriter:      NewErrWriter(params.docURL),
+		Writer:         NewWriter(params.docURL),
 		AllowedOrigins: OriginsFromURLs(params.urls),
 		Middlewares:    nil,
 	}
@@ -140,7 +140,7 @@ func (params *parameters) new() (*Garcon, error) {
 	}
 
 	if params.reqMinute > 0 {
-		reqLimiter := NewReqLimiter(params.reqBurst, params.reqMinute, params.devMode, g.ErrWriter)
+		reqLimiter := NewReqLimiter(params.reqBurst, params.reqMinute, params.devMode, g.Writer)
 		g.Middlewares = g.Middlewares.Append(reqLimiter.LimitRate)
 	}
 
@@ -156,7 +156,7 @@ func (params *parameters) new() (*Garcon, error) {
 
 	// Authentication rules (Open Policy Agent)
 	if len(params.opaFilenames) > 0 {
-		policy, err := NewPolicy(params.opaFilenames, g.ErrWriter)
+		policy, err := NewPolicy(params.opaFilenames, g.Writer)
 		if err != nil {
 			return &g, err
 		}
@@ -368,11 +368,11 @@ func (g *Garcon) Run(h http.Handler, port int) error {
 }
 
 func (g *Garcon) NewSessionToken(urls []*url.URL, secretKey []byte, expiry time.Duration, setIP bool) *incorruptible.Incorruptible {
-	return incorruptible.New(urls, secretKey, expiry, setIP, g.ErrWriter.Write)
+	return incorruptible.New(urls, secretKey, expiry, setIP, g.Writer.WriteErr)
 }
 
 func (g *Garcon) NewJWTChecker(urls []*url.URL, secretKey []byte, planPerm ...any) *JWTChecker {
-	return NewJWTChecker(urls, g.ErrWriter, secretKey, planPerm...)
+	return NewJWTChecker(urls, g.Writer, secretKey, planPerm...)
 }
 
 // ServerHeader sets the Server HTTP header in the response.

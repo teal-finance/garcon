@@ -18,9 +18,9 @@ import (
 )
 
 type WebForm struct {
-	ErrWriter ErrWriter
-	Notifier  notifier.Notifier
-	Redirect  string
+	Writer   Writer
+	Notifier notifier.Notifier
+	Redirect string
 
 	// TextLimits are used as security limits
 	// to avoid being flooded by large web forms
@@ -47,9 +47,9 @@ type WebForm struct {
 }
 
 // NewContactForm initializes a new WebForm with the default contact-form settings.
-func NewContactForm(redirectURL, notifierURL string, errWriter ErrWriter) WebForm {
+func NewContactForm(redirectURL, notifierURL string, gWriter Writer) WebForm {
 	form := WebForm{
-		ErrWriter:          errWriter,
+		Writer:             gWriter,
 		Notifier:           nil,
 		Redirect:           redirectURL,
 		TextLimits:         DefaultContactSettings(),
@@ -131,7 +131,7 @@ func (form *WebForm) notify(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	if err != nil {
 		log.Print("WRN WebForm ParseForm:", err)
-		form.ErrWriter.Write(w, r, http.StatusInternalServerError, "Cannot parse the webform")
+		form.Writer.WriteErr(w, r, http.StatusInternalServerError, "Cannot parse the webform")
 		return
 	}
 
@@ -146,7 +146,7 @@ func (form *WebForm) notify(w http.ResponseWriter, r *http.Request) {
 	err = form.Notifier.Notify(md)
 	if err != nil {
 		log.Print("WRN WebForm Notify: ", err)
-		form.ErrWriter.Write(w, r, http.StatusInternalServerError, "Cannot store webform data")
+		form.Writer.WriteErr(w, r, http.StatusInternalServerError, "Cannot store webform data")
 		return
 	}
 

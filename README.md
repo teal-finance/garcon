@@ -83,7 +83,7 @@ func main() {
         garcon.WithDev(),
     )
 
-    h := handler(g.ErrWriter, g.Checker)
+    h := handler(g.Writer, g.Checker)
 
     g.Run(h, 8080)
 }
@@ -154,11 +154,11 @@ The resources and API endpoints are protected with a HttpOnly cookie.
 The [high-level example](examples/high-level/main.go) sets the cookie to browsers visiting the `index.html`.
 
 ```go
-func handler(errWriter garcon.ErrWriter, jc *jwtperm.Checker) http.Handler {
+func handler(gWriter garcon.Writer, jc *jwtperm.Checker) http.Handler {
     r := chi.NewRouter()
 
     // Static website files
-    ws := webserver.WebServer{Dir: "examples/www", ErrWriter: errWriter}
+    ws := webserver.WebServer{Dir: "examples/www", Writer: gWriter}
     r.With(jc.SetCookie).Get("/", ws.ServeFile("index.html", "text/html; charset=utf-8"))
     r.With(jc.SetCookie).Get("/favicon.ico", ws.ServeFile("favicon.ico", "image/x-icon"))
     r.With(jc.ChkCookie).Get("/js/*", ws.ServeDir("text/javascript; charset=utf-8"))
@@ -167,10 +167,10 @@ func handler(errWriter garcon.ErrWriter, jc *jwtperm.Checker) http.Handler {
 
     // API
     r.With(jc.ChkJWT).Get("/api/v1/items", items)
-    r.With(jc.ChkJWT).Get("/api/v1/ducks", errWriter.NotImplemented)
+    r.With(jc.ChkJWT).Get("/api/v1/ducks", gWriter.NotImplemented)
 
     // Other endpoints
-    r.NotFound(errWriter.InvalidPath)
+    r.NotFound(gWriter.InvalidPath)
 
     return r
 }
@@ -317,25 +317,25 @@ func main() {
     garcon.StartPProfServer(pprofPort)
 
     // Uniformize error responses with API doc
-    errWriter := garcon.NewErrWriter(apiDoc)
+    gWriter := garcon.NewWriter(apiDoc)
 
-    chain, connState := setMiddlewares(errWriter)
+    chain, connState := setMiddlewares(gWriter)
 
     // Handles both REST API and static web files
-    h := handler(errWriter)
+    h := handler(gWriter)
     h = chain.Then(h)
 
     runServer(h, connState)
 }
 
-func setMiddlewares(errWriter garcon.ErrWriter) (chain garcon.Chain, connState func(net.Conn, http.ConnState)) {
+func setMiddlewares(gWriter garcon.Writer) (chain garcon.Chain, connState func(net.Conn, http.ConnState)) {
     // Start a metrics server in background if export port > 0.
     // The metrics server is for use with Prometheus or another compatible monitoring tool.
     metrics := garcon.Metrics{}
     chain, connState = garcon.StartMetricsServer(expPort, devMode)
 
     // Limit the input request rate per IP
-    reqLimiter := garcon.NewReqLimiter(burst, reqMinute, devMode, errWriter)
+    reqLimiter := garcon.NewReqLimiter(burst, reqMinute, devMode, gWriter)
 
     corsConfig := allowedProdOrigin
     if devMode {
@@ -352,7 +352,7 @@ func setMiddlewares(errWriter garcon.ErrWriter) (chain garcon.Chain, connState f
 
     // Endpoint authentication rules (Open Policy Agent)
     files := garcon.SplitClean(authCfg)
-    policy, err := garcon.NewPolicy(files, errWriter)
+    policy, err := garcon.NewPolicy(files, gWriter)
     if err != nil {
         log.Fatal(err)
     }
@@ -390,11 +390,11 @@ func runServer(h http.Handler, connState func(net.Conn, http.ConnState)) {
 }
 
 // handler creates the mapping between the endpoints and the handler functions.
-func handler(errWriter garcon.ErrWriter) http.Handler {
+func handler(gWriter garcon.Writer) http.Handler {
     r := chi.NewRouter()
 
     // Website with static files
-    ws := garcon.NewStaticWebServer("examples/www", errWriter)
+    ws := garcon.NewStaticWebServer("examples/www", gWriter)
     r.Get("/", ws.ServeFile("index.html", "text/html; charset=utf-8"))
     r.Get("/js/*", ws.ServeDir("text/javascript; charset=utf-8"))
     r.Get("/css/*", ws.ServeDir("text/css; charset=utf-8"))
@@ -402,10 +402,10 @@ func handler(errWriter garcon.ErrWriter) http.Handler {
 
     // API
     r.Get("/api/v1/items", items)
-    r.Get("/api/v1/ducks", errWriter.NotImplemented)
+    r.Get("/api/v1/ducks", gWriter.NotImplemented)
 
     // Other endpoints
-    r.NotFound(errWriter.InvalidPath)
+    r.NotFound(gWriter.InvalidPath)
 
     return r
 }

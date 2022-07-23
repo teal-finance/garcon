@@ -423,7 +423,6 @@ linters-settings:
     #
     # Default: []
     ignore-decls:
-      - c echo.Context
       - t testing.T
       - f *foo.Bar
       - e error

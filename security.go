@@ -127,7 +127,7 @@ func RejectInvalidURI(next http.Handler) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			if i := Printable(r.RequestURI); i >= 0 {
-				WriteJSONErr(w, r, http.StatusBadRequest,
+				WriteErr(w, r, http.StatusBadRequest,
 					"Invalid URI with non-printable symbol",
 					"position", i)
 				log.Print("WRN: reject non-printable URI or with <CR> or <LF>:", Sanitize(r.RequestURI))
@@ -141,7 +141,7 @@ func RejectInvalidURI(next http.Handler) http.Handler {
 // TraversalPath returns true when path contains ".." to prevent path traversal attack.
 func TraversalPath(w http.ResponseWriter, r *http.Request) bool {
 	if strings.Contains(r.URL.Path, "..") {
-		WriteJSONErr(w, r, http.StatusBadRequest, "URL contains '..'")
+		WriteErr(w, r, http.StatusBadRequest, "URL contains '..'")
 		log.Print("WRN: reject path with '..' ", Sanitize(r.URL.Path))
 		return true
 	}
