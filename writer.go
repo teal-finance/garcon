@@ -35,12 +35,12 @@ func InvalidPath(w http.ResponseWriter, r *http.Request) {
 	Writer("").InvalidPath(w, r)
 }
 
-func (gWriter Writer) NotImplemented(w http.ResponseWriter, r *http.Request) {
-	gWriter.WriteErr(w, r, http.StatusNotImplemented, pathReserved)
+func (gw Writer) NotImplemented(w http.ResponseWriter, r *http.Request) {
+	gw.WriteErr(w, r, http.StatusNotImplemented, pathReserved)
 }
 
-func (gWriter Writer) InvalidPath(w http.ResponseWriter, r *http.Request) {
-	gWriter.WriteErr(w, r, http.StatusBadRequest, pathInvalid)
+func (gw Writer) InvalidPath(w http.ResponseWriter, r *http.Request) {
+	gw.WriteErr(w, r, http.StatusBadRequest, pathInvalid)
 }
 
 func WriteErr(w http.ResponseWriter, r *http.Request, statusCode int, a ...any) {
@@ -65,10 +65,10 @@ type msg struct {
 
 // WriteErrSafe is a safe alternative to Write, may be slower despite the easyjson generated code.
 // Disadvantage: WriteErrSafe concatenates all key-values (kv) in "error" field.
-func (gWriter Writer) WriteErrSafe(w http.ResponseWriter, r *http.Request, statusCode int, kv ...any) {
+func (gw Writer) WriteErrSafe(w http.ResponseWriter, r *http.Request, statusCode int, kv ...any) {
 	response := msg{
 		Error: fmt.Sprint(kv...),
-		Doc:   string(gWriter),
+		Doc:   string(gw),
 		Path:  "",
 		Query: "",
 	}
@@ -95,7 +95,7 @@ func (gWriter Writer) WriteErrSafe(w http.ResponseWriter, r *http.Request, statu
 
 // WriteErr is a fast pretty-JSON marshaler dedicated to the HTTP error response.
 // WriteErr extends the JSON content when more than two key-values (kv) are provided.
-func (gWriter Writer) WriteErr(w http.ResponseWriter, r *http.Request, statusCode int, kv ...any) {
+func (gw Writer) WriteErr(w http.ResponseWriter, r *http.Request, statusCode int, kv ...any) {
 	buf := make([]byte, 0, 1024)
 	buf = append(buf, '{')
 
@@ -109,11 +109,11 @@ func (gWriter Writer) WriteErr(w http.ResponseWriter, r *http.Request, statusCod
 		comma = true
 	}
 
-	if string(gWriter) != "" {
+	if string(gw) != "" {
 		if comma {
 			buf = append(buf, ',', '\n')
 		}
-		buf = gWriter.appendDoc(buf)
+		buf = gw.appendDoc(buf)
 	}
 
 	buf = append(buf, '}')
@@ -125,7 +125,7 @@ func (gWriter Writer) WriteErr(w http.ResponseWriter, r *http.Request, statusCod
 }
 
 // WriteOK is a fast pretty-JSON marshaler dedicated to the HTTP successful response.
-func (gWriter Writer) WriteOK(w http.ResponseWriter, kv ...any) {
+func (gw Writer) WriteOK(w http.ResponseWriter, kv ...any) {
 	var buf []byte
 	var err error
 
@@ -251,9 +251,9 @@ func appendURL(buf []byte, u *url.URL) []byte {
 	return buf
 }
 
-func (gWriter Writer) appendDoc(buf []byte) []byte {
+func (gw Writer) appendDoc(buf []byte) []byte {
 	buf = append(buf, '"', 'd', 'o', 'c', '"', ':', '"')
-	buf = append(buf, []byte(string(gWriter))...)
+	buf = append(buf, []byte(string(gw))...)
 	buf = append(buf, '"')
 	return buf
 }

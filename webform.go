@@ -47,9 +47,9 @@ type WebForm struct {
 }
 
 // NewContactForm initializes a new WebForm with the default contact-form settings.
-func NewContactForm(redirectURL, notifierURL string, gWriter Writer) WebForm {
+func NewContactForm(redirectURL, notifierURL string, gw Writer) WebForm {
 	form := WebForm{
-		Writer:             gWriter,
+		Writer:             gw,
 		Notifier:           nil,
 		Redirect:           redirectURL,
 		TextLimits:         DefaultContactSettings(),

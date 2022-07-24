@@ -23,8 +23,8 @@ type StaticWebServer struct {
 }
 
 // NewStaticWebServer creates a StaticWebServer.
-func NewStaticWebServer(dir string, gWriter Writer) StaticWebServer {
-	return StaticWebServer{dir, gWriter}
+func NewStaticWebServer(dir string, gw Writer) StaticWebServer {
+	return StaticWebServer{dir, gw}
 }
 
 // ServeFile handles one specific file (and its specific Content-Type).

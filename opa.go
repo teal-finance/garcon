@@ -23,15 +23,15 @@ import (
 // see https://www.openpolicyagent.org/docs/edge/integration/#integrating-with-the-go-api
 type Policy struct {
 	compiler *ast.Compiler
-	gWriter  Writer
+	gw       Writer
 }
 
 var ErrEmptyOPAFilename = errors.New("OPA: missing filename")
 
 // NewPolicy creates a new Policy by loading rego files.
-func NewPolicy(filenames []string, gWriter Writer) (Policy, error) {
+func NewPolicy(filenames []string, gw Writer) (Policy, error) {
 	compiler, err := LoadPolicy(filenames)
-	return Policy{compiler, gWriter}, err
+	return Policy{compiler, gw}, err
 }
 
 // LoadPolicy checks the Rego filenames and loads them to build the OPA compiler.
@@ -65,7 +65,7 @@ func (opa Policy) AuthOPA(next http.Handler) http.Handler {
 	log.Print("Middleware OPA: ", opa.compiler.Modules)
 
 	compiler := opa.compiler
-	gWriter := opa.gWriter
+	gw := opa.gw
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		input := map[string]any{
@@ -83,20 +83,20 @@ func (opa Policy) AuthOPA(next http.Handler) http.Handler {
 
 		rs, err := rg.Eval(context.Background())
 		if err != nil || len(rs) == 0 {
-			gWriter.WriteErr(w, r, http.StatusInternalServerError, "Cannot evaluate autorisation settings")
+			gw.WriteErr(w, r, http.StatusInternalServerError, "Cannot evaluate autorisation settings")
 			log.Print("ERR OPA Eval: ", err)
 			return
 		}
 
 		allow, ok := rs[0].Expressions[0].Value.(bool)
 		if !ok {
-			gWriter.WriteErr(w, r, http.StatusInternalServerError, "Missing autorisation settings")
+			gw.WriteErr(w, r, http.StatusInternalServerError, "Missing autorisation settings")
 			log.Print("ERR missing OPA data in ", rs)
 			return
 		}
 
 		if !allow {
-			gWriter.WriteErr(w, r, http.StatusUnauthorized, "No valid JWT",
+			gw.WriteErr(w, r, http.StatusUnauthorized, "No valid JWT",
 				"advice", "Provide your JWT within the 'Authorization Bearer' HTTP header")
 			log.Print("OPA: Missing or invalid Authorization header " + r.RemoteAddr + " " + r.RequestURI)
 			return
