@@ -36,8 +36,8 @@ func easyjsonE873f711DecodeGithubComTealFinanceGarcon(in *jlexer.Lexer, out *msg
 			continue
 		}
 		switch key {
-		case "error":
-			out.Error = string(in.String())
+		case "message":
+			out.Message = string(in.String())
 		case "doc":
 			out.Doc = string(in.String())
 		case "path":
@@ -58,11 +58,11 @@ func easyjsonE873f711EncodeGithubComTealFinanceGarcon(out *jwriter.Writer, in ms
 	out.RawByte('{')
 	first := true
 	_ = first
-	if in.Error != "" {
-		const prefix string = ",\"error\":"
+	if in.Message != "" {
+		const prefix string = ",\"message\":"
 		first = false
 		out.RawString(prefix[1:])
-		out.String(string(in.Error))
+		out.String(string(in.Message))
 	}
 	if in.Doc != "" {
 		const prefix string = ",\"doc\":"

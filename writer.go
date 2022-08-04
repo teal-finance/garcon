@@ -57,20 +57,20 @@ func WriteOK(w http.ResponseWriter, a ...any) {
 
 // msg is only used by SafeWrite to generate a fast JSON marshaler.
 type msg struct {
-	Error string
-	Doc   string
-	Path  string
-	Query string
+	Message string // "message" is more common than "error"
+	Doc     string
+	Path    string
+	Query   string
 }
 
 // WriteErrSafe is a safe alternative to Write, may be slower despite the easyjson generated code.
-// Disadvantage: WriteErrSafe concatenates all key-values (kv) in "error" field.
+// Disadvantage: WriteErrSafe concatenates all key-values (kv) in "message" field.
 func (gw Writer) WriteErrSafe(w http.ResponseWriter, r *http.Request, statusCode int, kv ...any) {
 	response := msg{
-		Error: fmt.Sprint(kv...),
-		Doc:   string(gw),
-		Path:  "",
-		Query: "",
+		Message: fmt.Sprint(kv...),
+		Doc:     string(gw),
+		Path:    "",
+		Query:   "",
 	}
 
 	if r != nil {
@@ -158,7 +158,8 @@ func appendMessages(buf []byte, kv []any) ([]byte, bool) {
 		return buf, false
 	}
 
-	buf = append(buf, []byte(`"error":`)...)
+	// {"message":"xxxxx"} is more common than {"error":"xxxxx"}
+	buf = append(buf, []byte(`"message":`)...)
 
 	if len(kv) == 2 {
 		s := fmt.Sprintf("%v%v", kv[0], kv[1])
