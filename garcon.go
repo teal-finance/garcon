@@ -10,6 +10,7 @@ package garcon
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -546,12 +547,8 @@ func Values(r *http.Request, key string) ([]string, error) {
 	return form, nil
 }
 
-type unmarshallable interface {
-	UnmarshalJSON(data []byte) error
-}
-
 // DecodeJSONBody unmarshals the JSON from the request body.
-func DecodeJSONBody[T unmarshallable](r *http.Request, msg T) error {
+func DecodeJSONBody[T json.Unmarshaler](r *http.Request, msg T) error {
 	if r.Body == nil {
 		return errors.New("empty body")
 	}
