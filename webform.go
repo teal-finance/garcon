@@ -216,14 +216,14 @@ func (form *WebForm) validName(name string) bool {
 		return false
 	}
 
-	if p := Printable(name); p >= 0 {
+	if p := printable(name); p >= 0 {
 		log.Printf("WRN WebForm: reject name=%s because "+
 			"contains a bad character at position %d",
 			Sanitize(name), p)
 		return false
 	}
 
-	if p := Printable(name); p >= 0 {
+	if p := printable(name); p >= 0 {
 		log.Printf("WRN WebForm: reject name=%s because "+
 			"contains a bad character at position %d",
 			Sanitize(name), p)

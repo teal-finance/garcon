@@ -92,13 +92,13 @@ func PrintableRune(r rune) bool {
 	return true
 }
 
-// Printable returns the position (index) of
+// printable returns the position (index) of
 // a Carriage Return "\r", or a Line Feed "\n",
 // or any other ASCII control code (except space),
 // or, as well as, bn invalid UTF-8 code.
-// Printable returns -1 if the string
+// printable returns -1 if the string
 // is safely printable preventing log injection.
-func Printable(s string) int {
+func printable(s string) int {
 	for i, r := range s {
 		if !PrintableRune(r) {
 			return i
@@ -107,11 +107,11 @@ func Printable(s string) int {
 	return -1
 }
 
-// Printables returns -1 when all the strings are printable
+// Printable returns -1 when all the strings are printable
 // else returns the position of the rejected character.
-func Printables(array []string) int {
+func Printable(array ...string) int {
 	for _, s := range array {
-		if i := Printable(s); i >= 0 {
+		if i := printable(s); i >= 0 {
 			return i
 		}
 	}
@@ -126,7 +126,7 @@ func RejectInvalidURI(next http.Handler) http.Handler {
 
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			if i := Printable(r.RequestURI); i >= 0 {
+			if i := printable(r.RequestURI); i >= 0 {
 				WriteErr(w, r, http.StatusBadRequest,
 					"Invalid URI with non-printable symbol",
 					"position", i)

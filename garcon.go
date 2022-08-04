@@ -12,6 +12,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -511,26 +512,29 @@ var ErrNonPrintable = errors.New("non-printable")
 // else the "key" form (HTTP body)
 // else the "key" query string (URL)
 // else the HTTP header.
+// Value requires chi.URLParam().
 func Value(r *http.Request, key, header string) (string, error) {
 	value := chi.URLParam(r, key)
 	if value == "" {
 		value = r.FormValue(key)
-		if value == "" {
+		if value == "" && header != "" {
 			// Check only the first Header,
 			// because we do not know how to manage several ones.
 			value = r.Header.Get(header)
 		}
 	}
-	if i := Printable(value); i >= 0 {
+
+	if i := printable(value); i >= 0 {
 		return value, fmt.Errorf("%s %w at %d", key, ErrNonPrintable, i)
 	}
 	return value, nil
 }
 
+// Values requires chi.URLParam().
 func Values(r *http.Request, key string) ([]string, error) {
 	form := r.Form[key]
 
-	if i := Printables(form); i >= 0 {
+	if i := Printable(form...); i >= 0 {
 		return form, fmt.Errorf("%s %w at %d", key, ErrNonPrintable, i)
 	}
 
@@ -540,4 +544,27 @@ func Values(r *http.Request, key string) ([]string, error) {
 	}
 
 	return form, nil
+}
+
+type unmarshallable interface {
+	UnmarshalJSON(data []byte) error
+}
+
+// DecodeJSONBody unmarshals the JSON from the request body.
+func DecodeJSONBody[T unmarshallable](r *http.Request, msg T) error {
+	if r.Body == nil {
+		return errors.New("empty body")
+	}
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		return fmt.Errorf("cannot read body %w", err)
+	}
+
+	err = msg.UnmarshalJSON(body)
+	if err != nil {
+		return fmt.Errorf("bad JSON %w", err)
+	}
+
+	return nil
 }
