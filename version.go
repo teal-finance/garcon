@@ -23,19 +23,19 @@ import (
 
 // V is set at build time using the `-ldflags` build flag:
 //
-//    v="$(git describe --tags --always --broken)"
-//    go build -ldflags="-X 'github.com/teal-finance/garcon.V=$v'" ./cmd/main/package
+//	v="$(git describe --tags --always --broken)"
+//	go build -ldflags="-X 'github.com/teal-finance/garcon.V=$v'" ./cmd/main/package
 //
 // The following commands provide a semver-like version format such as
 // "v1.2.0-my-branch+3" where "+3" is the number of commits since "v1.2.0".
 // If no tag in the Git repo, $t is the long SHA1 of the last commit.
 //
-//    t="$(git describe --tags --abbrev=0 --always)"
-//    b="$(git branch --show-current)"
-//    [ _$b = _main ] && b="" || b="-$b"
-//    n="$(git rev-list --count "$t"..)"
-//    [ "$n" -eq 0 ] && n="" || n="+$n"
-//    go build -ldflags="-X 'github.com/teal-finance/garcon.V=$t$b$n'" ./cmd/main/package
+//	t="$(git describe --tags --abbrev=0 --always)"
+//	b="$(git branch --show-current)"
+//	[ _$b = _main ] && b="" || b="-$b"
+//	n="$(git rev-list --count "$t"..)"
+//	[ "$n" -eq 0 ] && n="" || n="+$n"
+//	go build -ldflags="-X 'github.com/teal-finance/garcon.V=$t$b$n'" ./cmd/main/package
 //
 //nolint:gochecknoglobals,varnamelen // set at build time: should be global and short.
 var V string
@@ -74,22 +74,21 @@ func SetVersionFlag() {
 //
 // Example with default values:
 //
-//     import "github.com/teal-finance/garcon"
+//	import "github.com/teal-finance/garcon"
 //
-//     func main() {
-//          garcon.SetCustomVersionFlag(nil, "", "")
-//          flag.Parse()
-//     }
+//	func main() {
+//	     garcon.SetCustomVersionFlag(nil, "", "")
+//	     flag.Parse()
+//	}
 //
 // Example with custom values values:
 //
-//     import "github.com/teal-finance/garcon"
+//	import "github.com/teal-finance/garcon"
 //
-//     func main() {
-//          garcon.SetCustomVersionFlag(nil, "v", "MyApp")
-//          flag.Parse()
-//     }
-//
+//	func main() {
+//	     garcon.SetCustomVersionFlag(nil, "v", "MyApp")
+//	     flag.Parse()
+//	}
 func SetCustomVersionFlag(fs *flag.FlagSet, flagName, program string) {
 	if flagName == "" {
 		flagName = "version" // default flag is: -version
@@ -101,6 +100,7 @@ func SetCustomVersionFlag(fs *flag.FlagSet, flagName, program string) {
 }
 
 // PrintVersion prints the version and (Git) commit information.
+//
 //nolint:forbidigo // must print on stdout
 func PrintVersion(program string) {
 	for _, line := range versionStrings(program) {
@@ -145,8 +145,10 @@ func sinceLastCommit() string {
 	return timex.DStr(time.Since(versioninfo.LastCommit))
 }
 
+// info is not a runtime constant because
+// the field Ago may be updated during the execution.
+//
 //nolint:gochecknoglobals // set at startup time
-// except field Ago that is updated (possible race condition).
 var info = initVersionInfo()
 
 // versionInfo is used to generate a fast JSON marshaler.
@@ -157,7 +159,8 @@ type versionInfo struct {
 	Ago        string
 }
 
-// initVersionInfo computes the version and (Git) commit information.
+// initVersionInfo computes the version and commit information (Git).
+//
 //nolint:govet // local var "init" sets global var "init"
 func initVersionInfo() versionInfo {
 	var info versionInfo

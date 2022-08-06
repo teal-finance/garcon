@@ -32,20 +32,20 @@ func NewChain(chain ...Middleware) Chain {
 // Append extends a chain, adding the specified middleware
 // as the last ones in the request flow.
 //
-//     chain := chain.New(m1, m2)
-//     chain = chain.Append(m3, m4)
-//     // requests in chain go m1 -> m2 -> m3 -> m4
+//	chain := chain.New(m1, m2)
+//	chain = chain.Append(m3, m4)
+//	// requests in chain go m1 -> m2 -> m3 -> m4
 func (c Chain) Append(chain ...Middleware) Chain {
 	return append(c, chain...)
 }
 
 // Then chains the middleware and returns the final http.Handler.
 //
-//     chain.New(m1, m2, m3).Then(h)
+//	chain.New(m1, m2, m3).Then(h)
 //
 // is equivalent to:
 //
-//     m1(m2(m3(h)))
+//	m1(m2(m3(h)))
 //
 // When the request comes in, it will be passed to m1, then m2, then m3
 // and finally, the given handler
@@ -53,9 +53,9 @@ func (c Chain) Append(chain ...Middleware) Chain {
 //
 // A chain can be safely reused by calling Then() several times.
 //
-//     chain := chain.New(rateLimitHandler, csrfHandler)
-//     indexPipe = chain.Then(indexHandler)
-//     authPipe  = chain.Then(authHandler)
+//	chain := chain.New(rateLimitHandler, csrfHandler)
+//	indexPipe = chain.Then(indexHandler)
+//	authPipe  = chain.Then(authHandler)
 //
 // Note: every call to Then() calls all middleware pieces.
 // Thus several instances of the same middleware will be created
@@ -78,8 +78,8 @@ func (c Chain) Then(handler http.Handler) http.Handler {
 //
 // The following two statements are equivalent:
 //
-//     c.Then(http.HandlerFunc(fn))
-//     c.ThenFunc(fn)
+//	c.Then(http.HandlerFunc(fn))
+//	c.ThenFunc(fn)
 //
 // ThenFunc provides all the guarantees of Then.
 func (c Chain) ThenFunc(fn http.HandlerFunc) http.Handler {

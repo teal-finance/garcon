@@ -17,21 +17,20 @@ import (
 
 // ProbeCPU is used like the following:
 //
-//     defer pprof.ProbeCPU.Stop()
+//	defer pprof.ProbeCPU.Stop()
 //
 // When the caller reaches its function end,
 // the defer executes Stop() that writes the file "cpu.pprof".
 // To visualize "cpu.pprof" use the pprof tool:
 //
-//    cd ~/go
-//    go get -u github.com/google/pprof
-//    cd -
-//    pprof -http=: cpu.pprof
+//	cd ~/go
+//	go get -u github.com/google/pprof
+//	cd -
+//	pprof -http=: cpu.pprof
 //
 // or using one single command line:
 //
-//    go run github.com/google/pprof@latest -http=: cpu.pprof
-//
+//	go run github.com/google/pprof@latest -http=: cpu.pprof
 func ProbeCPU() interface{ Stop() } {
 	log.Print("Probing CPU. To visualize the profile: pprof -http=: cpu.pprof")
 	return profile.Start(profile.ProfilePath("."))
@@ -40,17 +39,17 @@ func ProbeCPU() interface{ Stop() } {
 // StartPProfServer starts a PProf server in background.
 // Endpoints usage example:
 //
-//     curl http://localhost:6063/debug/pprof/allocs > allocs.pprof
-//     pprof -http=: allocs.pprof
+//	curl http://localhost:6063/debug/pprof/allocs > allocs.pprof
+//	pprof -http=: allocs.pprof
 //
-//     wget http://localhost:31415/debug/pprof/goroutine
-//     pprof -http=: goroutine
+//	wget http://localhost:31415/debug/pprof/goroutine
+//	pprof -http=: goroutine
 //
-//     wget http://localhost:31415/debug/pprof/heap
-//     pprof -http=: heap
+//	wget http://localhost:31415/debug/pprof/heap
+//	pprof -http=: heap
 //
-//     wget http://localhost:31415/debug/pprof/trace
-//     pprof -http=: trace
+//	wget http://localhost:31415/debug/pprof/trace
+//	pprof -http=: trace
 func StartPProfServer(port int) {
 	if port == 0 {
 		return // Disable PProf endpoints /debug/pprof/*

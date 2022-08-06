@@ -34,6 +34,7 @@ import (
 // - localhost:8085 on multi devices: web auto-reload using https://github.com/synw/fwr
 // - flutter run --web-port=8080
 // - 192.168.1.x + any port on tablet: mobile app using fast builtin auto-reload.
+//
 //nolint:gochecknoglobals // used as const
 var DevOrigins = []*url.URL{
 	{Scheme: "http", Host: "localhost:"},
