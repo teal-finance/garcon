@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math/rand"
 	"net"
 	"net/http"
 	"net/url"
@@ -25,7 +26,6 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/teal-finance/incorruptible"
-	"github.com/teal-finance/incorruptible/dtoken"
 )
 
 // DevOrigins provides the development origins:
@@ -78,7 +78,7 @@ type parameters struct {
 	docURL          string
 	version         string
 	secretKey       []byte
-	planPerm        []any
+	checkerCfg      []any
 	opaFilenames    []string
 	urls            []*url.URL
 	pprofPort       int
@@ -169,23 +169,26 @@ func (params *parameters) new() (*Garcon, error) {
 }
 
 func (g *Garcon) setChecker(params *parameters) {
-	if len(params.secretKey) > 0 {
-		if len(params.planPerm) == 1 {
-			dt, ok := params.planPerm[0].(dtoken.DToken)
-			if ok {
-				setIP := (dt.IP != nil)
-				g.Checker = g.NewSessionToken(params.urls, params.secretKey, time.Duration(dt.Expiry), setIP)
-			}
-		}
-		if g.Checker == nil {
-			g.Checker = g.NewJWTChecker(params.urls, params.secretKey, params.planPerm...)
-		}
-		// erase the secret, no longer required
-		for i := range params.secretKey {
-			params.secretKey[i] = 0
-		}
-		params.secretKey = nil
+	if len(params.secretKey) == 0 {
+		return
 	}
+
+	if len(params.checkerCfg) == 3 {
+		name, ok1 := params.checkerCfg[0].(string)
+		maxAge, ok2 := params.checkerCfg[0].(int)
+		setIP, ok3 := params.checkerCfg[0].(bool)
+		if ok1 && ok2 && ok3 {
+			g.Checker = g.NewIncorruptible(name, params.urls, params.secretKey, maxAge, setIP)
+		}
+	}
+
+	if g.Checker == nil {
+		g.Checker = g.NewJWTChecker(params.urls, params.secretKey, params.checkerCfg...)
+	}
+
+	// erase the secret, no longer required
+	_, _ = rand.Read(params.secretKey)
+	params.secretKey = nil
 }
 
 type Option func(*parameters)
@@ -221,14 +224,14 @@ func WithJWT(secretKeyHex string, planPerm ...any) Option {
 
 	return func(params *parameters) {
 		params.secretKey = key
-		params.planPerm = planPerm
+		params.checkerCfg = planPerm
 	}
 }
 
-// WithIncorruptible enables the "session" cookies based on fast and tiny token.
-// WithIncorruptible requires WithURLs() to set the Cookie name, secure, domain and path.
-// WithIncorruptible is not compatible with WithJWT: use only one of them.
-func WithIncorruptible(secretKeyHex string, expiry time.Duration, setIP bool) Option {
+// WithIncorruptible uses cookies based on fast and tiny token.
+// WithIncorruptible requires WithURLs() to set the Cookie secure, domain and path.
+// WithIncorruptible is not compatible with WithJWT: use only one of the two.
+func WithIncorruptible(name, secretKeyHex string, maxAge int, setIP bool) Option {
 	key, err := hex.DecodeString(secretKeyHex)
 	if err != nil {
 		log.Panic("WithIncorruptible: cannot decode the 128-bit AES key, please provide hexadecimal format (32 characters)")
@@ -239,16 +242,7 @@ func WithIncorruptible(secretKeyHex string, expiry time.Duration, setIP bool) Op
 
 	return func(params *parameters) {
 		params.secretKey = key
-		// ugly trick to store parameters for the "incorruptible" token
-		var ip net.IP
-		if setIP {
-			ip = []byte{}
-		}
-		params.planPerm = []any{dtoken.DToken{
-			Expiry: expiry.Nanoseconds(),
-			IP:     ip,
-			Values: nil,
-		}}
+		params.checkerCfg = []any{name, maxAge, setIP}
 	}
 }
 
@@ -369,8 +363,11 @@ func (g *Garcon) Run(h http.Handler, port int) error {
 	return err
 }
 
-func (g *Garcon) NewSessionToken(urls []*url.URL, secretKey []byte, expiry time.Duration, setIP bool) *incorruptible.Incorruptible {
-	return incorruptible.New(urls, secretKey, expiry, setIP, g.Writer.WriteErr)
+func (g *Garcon) NewIncorruptible(name string, urls []*url.URL, secretKey []byte, maxAge int, setIP bool) *incorruptible.Incorruptible {
+	if name == "" {
+		name = string(g.Namespace)
+	}
+	return incorruptible.New(name, urls, secretKey, maxAge, setIP, g.Writer.WriteErr)
 }
 
 func (g *Garcon) NewJWTChecker(urls []*url.URL, secretKey []byte, planPerm ...any) *JWTChecker {
