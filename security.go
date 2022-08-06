@@ -148,15 +148,20 @@ func TraversalPath(w http.ResponseWriter, r *http.Request) bool {
 	return false
 }
 
-// NewHash uses HighwayHash is a hashing algorithm enabling high speed (especially on AMD64).
-func NewHash() (hash.Hash, error) {
-	key := make([]byte, 32)
-
+func RandomBytes(n int) []byte {
+	key := make([]byte, n)
 	if _, err := rand.Read(key); err != nil {
-		return nil, err
+		log.Panic("RandomBytes: ", err)
 	}
+	return key
+}
 
-	h, err := highwayhash.New(key)
+var hasherKey = RandomBytes(32)
+
+// NewHash is based on HighwayHash, a hashing algorithm enabling high speed (especially on AMD64).
+// See the study on HighwayHash and some other hash functions: https://github.com/fwessels/HashCompare
+func NewHash() (hash.Hash, error) {
+	h, err := highwayhash.New64(hasherKey)
 	return h, err
 }
 
@@ -164,9 +169,8 @@ func NewHash() (hash.Hash, error) {
 func Obfuscate(str string) (string, error) {
 	h, err := NewHash()
 	if err != nil {
-		return str, err
+		return "", err
 	}
-
-	checksum := h.Sum([]byte(str))
-	return base64.StdEncoding.EncodeToString(checksum), nil
+	digest := h.Sum([]byte(str))
+	return base64.StdEncoding.EncodeToString(digest), nil
 }
