@@ -78,7 +78,8 @@ func NewJWTChecker(urls []*url.URL, gw Writer, secretKey []byte, permissions ...
 		devOrigins: extractDevOrigins(urls),
 	}
 
-	secure, dns, dir, name := extractMainDomain(urls)
+	secure, dns, dir := extractCookieAttributes(urls)
+	name := forgeCookieName(secure, dns, dir)
 	for i := range plans {
 		c.cookies[i] = c.NewCookie(name, plans[i], "", secure, dns, dir)
 	}
@@ -121,7 +122,7 @@ func checkParameters(secretKey []byte, permissions ...any) ([]string, []Perm) {
 	return plans, perms
 }
 
-func extractMainDomain(urls []*url.URL) (secure bool, dns, dir, name string) {
+func extractCookieAttributes(urls []*url.URL) (secure bool, dns, dir string) {
 	if len(urls) == 0 {
 		log.Panic("No urls => Cannot set Cookie domain")
 	}
@@ -140,18 +141,21 @@ func extractMainDomain(urls []*url.URL) (secure bool, dns, dir, name string) {
 		log.Panic("Unexpected URL scheme in ", u)
 	}
 
-	dir, name = cleanPath(u.Path)
-	return secure, u.Hostname(), dir, name
-}
+	dns = u.Hostname()
 
-// cleanPath returns the sanitized path and
-// a nice cookie name deduced from the path basename.
-func cleanPath(dir string) (_, name string) {
-	name = defaultCookieName
 	dir = path.Clean(dir)
 	if dir == "." {
 		dir = "/"
-	} else if dir != "/" {
+	}
+
+	return secure, dns, dir
+}
+
+// forgeCookieName returns the sanitized path and
+// a nice cookie name deduced from the path basename.
+func forgeCookieName(secure bool, dns, dir string) string {
+	name := defaultCookieName
+	if dir != "/" {
 		for i := len(dir) - 1; i >= 0; i-- {
 			if dir[i] == byte('/') {
 				name = dir[i+1:]
@@ -159,7 +163,19 @@ func cleanPath(dir string) (_, name string) {
 			}
 		}
 	}
-	return dir, name
+
+	if secure {
+		if dns == "" && dir == "/" {
+			// "__Host-" is when cookie has "Secure" flag, has no "Domain", has "Path=/" and is sent from a secure origin.
+			name = "__Host-" + name
+		} else {
+			// "__Secure-" is when cookie has "Secure" flag and is sent from a secure origin
+			// "__Host-" is better than the "__Secure-" prefix.
+			name = "__Secure-" + name
+		}
+	}
+
+	return name
 }
 
 func extractDevURLs(urls []*url.URL) []*url.URL {
