@@ -120,7 +120,7 @@ func (form *WebForm) NotifyWebForm() func(w http.ResponseWriter, r *http.Request
 		}
 	}
 
-	log.Printf("Middleware WebForm redirect=%s", form.Redirect)
+	log.Print("Middleware WebForm redirect=", form.Redirect)
 
 	return form.notify
 }

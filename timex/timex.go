@@ -186,6 +186,7 @@ const (
 var yearZero = time.Date(0, 1, 1, 0, 0, 0, 0, time.UTC)
 
 // ParseTime converts string to time.Time.
+//
 //nolint:gocyclo,cyclop // cannot split the function
 func ParseTime(str string) (_ time.Time, ok bool) {
 	switch len(str) {
@@ -437,6 +438,7 @@ func integralPart(str string) (v int64, i int, _ error) {
 // fractionalPart consumes the leading [0-9]* from str.
 // It is used only for fractions, so does not return an error on overflow,
 // it just stops accumulating precision.
+//
 //nolint:varnamelen // f means "fractional part"
 func fractionalPart(str string) (f int64, i int, scale float64) {
 	scale = 1
