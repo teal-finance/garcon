@@ -155,12 +155,10 @@ func extractCookieAttributes(urls []*url.URL) (secure bool, dns, dir string) {
 // a nice cookie name deduced from the path basename.
 func forgeCookieName(secure bool, dns, dir string) string {
 	name := defaultCookieName
-	if dir != "/" {
-		for i := len(dir) - 1; i >= 0; i-- {
-			if dir[i] == byte('/') {
-				name = dir[i+1:]
-				break
-			}
+	for i := len(dir) - 2; i >= 0; i-- {
+		if dir[i] == byte('/') {
+			name = dir[i+1:]
+			break
 		}
 	}
 
