@@ -105,7 +105,7 @@ func (g *Garcon) Run(h http.Handler, port int) error {
 	return err
 }
 
-// Server returns a default http.Server ready to handle API endpoints, static web pages…
+// Server returns a default http.Server ready to handle API endpoints, static web pages...
 func (g *Garcon) Server(h http.Handler, port int) http.Server {
 	h, connState := g.Handler(h)
 

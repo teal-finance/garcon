@@ -19,7 +19,7 @@ type Middleware func(http.Handler) http.Handler
 
 // RTMiddleware for a piece of RoundTrip middleware.
 // Some middleware uses this out of the box,
-// so in most cases you can just use somepackage.New
+// so in most cases you can just use somepackage.New().
 type RTMiddleware func(http.RoundTripper) http.RoundTripper
 
 // RoundTripperFunc is to RoundTripper what HandlerFunc is to Handler.

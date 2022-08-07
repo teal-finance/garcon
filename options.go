@@ -150,7 +150,7 @@ func WithOPA(opaFilenames ...string) Option {
 	}
 }
 
-// OPAHandler creates the middleware for Authentication rules (Open Policy Agent)
+// OPAHandler creates the middleware for Authentication rules (Open Policy Agent).
 func (g *Garcon) OPAHandler() Middleware {
 	if len(g.opaFilenames) == 0 {
 		return nil
