@@ -8,10 +8,12 @@
 //
 // SPDX-License-Identifier: MIT
 
+//nolint:paralleltest // is not suitable in this file
 package garcon_test
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -97,35 +99,39 @@ func TestRTChain_ThenFunc_TreatsNilAsDefaultTransport(t *testing.T) {
 
 func TestChain_ThenFunc_ConstructsHandlerFunc(t *testing.T) {
 	fn := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(200)
+		w.WriteHeader(http.StatusOK)
 	})
 	chained := garcon.NewChain().ThenFunc(fn)
 	rec := httptest.NewRecorder()
 
 	chained.ServeHTTP(rec, (*http.Request)(nil))
 
-	if reflect.TypeOf(chained) != reflect.TypeOf((http.HandlerFunc)(nil)) {
+	if reflect.TypeOf(chained) != reflect.TypeOf(http.HandlerFunc(nil)) {
 		t.Error("ThenFunc does not construct HandlerFunc")
 	}
 }
 
 func TestRTChain_ThenFunc_ConstructsRoundTripperFunc(t *testing.T) {
 	fn := garcon.RoundTripperFunc(func(r *http.Request) (*http.Response, error) {
-		return &http.Response{}, nil
+		var res http.Response
+		return &res, nil
 	})
 	chained := garcon.NewRTChain().ThenFunc(fn)
 
-	r, err := http.NewRequest("GET", "/", nil)
+	r, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "/", http.NoBody)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = chained.RoundTrip(r)
+	res, err := chained.RoundTrip(r)
 	if err != nil {
 		t.Fatal(err)
 	}
+	if res.Body != nil {
+		res.Body.Close()
+	}
 
-	if reflect.TypeOf(chained) != reflect.TypeOf((garcon.RoundTripperFunc)(nil)) {
+	if reflect.TypeOf(chained) != reflect.TypeOf(garcon.RoundTripperFunc(nil)) {
 		t.Error("ThenFunc does not construct RoundTripperFunc")
 	}
 }
@@ -138,7 +144,7 @@ func TestChain_Then_OrdersHandlersCorrectly(t *testing.T) {
 	chained := garcon.NewChain(t1, t2, t3).Then(testApp)
 
 	w := httptest.NewRecorder()
-	r, err := http.NewRequest("GET", "/", nil)
+	r, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "/", http.NoBody)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -157,14 +163,17 @@ func TestChain_Then_OrdersRoundTrippersCorrectly(t *testing.T) {
 
 	chained := garcon.NewRTChain(t1, t2, t3).Then(testRoundTripApp)
 
-	r, err := http.NewRequest("GET", "/", nil)
+	r, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "/", http.NoBody)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = chained.RoundTrip(r)
+	res, err := chained.RoundTrip(r)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if res.Body != nil {
+		res.Body.Close()
 	}
 
 	body, err := bodyAsString(r)
@@ -190,7 +199,7 @@ func TestChain_Append_AddsHandlersCorrectly1(t *testing.T) {
 	chained := newChain.Then(testApp)
 
 	w := httptest.NewRecorder()
-	r, err := http.NewRequest("GET", "/", nil)
+	r, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "/", http.NoBody)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -215,14 +224,17 @@ func TestRTChain_Append_AddsRoundTrippersCorrectly1(t *testing.T) {
 
 	chained := newChain.Then(testRoundTripApp)
 
-	r, err := http.NewRequest("GET", "/", nil)
+	r, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "/", http.NoBody)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = chained.RoundTrip(r)
+	res, err := chained.RoundTrip(r)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if res.Body != nil {
+		res.Body.Close()
 	}
 
 	body, err := bodyAsString(r)
@@ -252,7 +264,7 @@ func TestChain_Append_AddsHandlersCorrectly2(t *testing.T) {
 	chained := newChain.Then(testApp)
 
 	w := httptest.NewRecorder()
-	r, err := http.NewRequest("GET", "/", nil)
+	r, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "/", http.NoBody)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -281,14 +293,17 @@ func TestRTChain_Append_AddsRoundTrippersCorrectly2(t *testing.T) {
 
 	chained := newChain.Then(testRoundTripApp)
 
-	r, err := http.NewRequest("GET", "/", nil)
+	r, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "/", http.NoBody)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = chained.RoundTrip(r)
+	res, err := chained.RoundTrip(r)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if res.Body != nil {
+		res.Body.Close()
 	}
 
 	body, err := bodyAsString(r)
@@ -383,22 +398,24 @@ var testRoundTripApp = garcon.RoundTripperFunc(func(r *http.Request) (*http.Resp
 	if err != nil {
 		panic(err)
 	}
-	return &http.Response{}, nil
+	var res http.Response
+	return &res, nil
 })
 
 func appendTag(tag string, r *http.Request) error {
-	var newBody []byte
+	var body []byte
 	if r.Body == nil {
-		newBody = []byte(tag)
+		body = []byte(tag)
 	} else {
-		body, err := io.ReadAll(r.Body)
-		r.Body.Close()
+		var err error
+		body, err = io.ReadAll(r.Body)
 		if err != nil {
 			return err
 		}
-		newBody = append(body, []byte(tag)...)
+		r.Body.Close()
+		body = append(body, []byte(tag)...)
 	}
-	r.Body = io.NopCloser(bytes.NewBuffer(newBody))
+	r.Body = io.NopCloser(bytes.NewBuffer(body))
 	return nil
 }
 
@@ -408,5 +425,5 @@ func bodyAsString(r *http.Request) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return string(body[:]), nil
+	return string(body), nil
 }

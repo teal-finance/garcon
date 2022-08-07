@@ -118,7 +118,7 @@ func TestNewJWTChecker(t *testing.T) {
 
 			cookie := ck.NewCookie("g", c.plan, "Jonh Doe", false, c.addresses[0][6:], "/")
 
-			r, err := http.NewRequestWithContext(context.Background(), "GET", c.addresses[0], http.NoBody)
+			r, err := http.NewRequestWithContext(context.Background(), http.MethodGet, c.addresses[0], http.NoBody)
 			if err != nil {
 				t.Fatal("NewRequestWithContext err:", err)
 			}
@@ -143,7 +143,7 @@ func TestNewJWTChecker(t *testing.T) {
 				t.Errorf("checker.Chk() request ctx perm got=%d want=%d", next.perm, c.perm)
 			}
 
-			r, err = http.NewRequestWithContext(context.Background(), "GET", c.addresses[0], http.NoBody)
+			r, err = http.NewRequestWithContext(context.Background(), http.MethodGet, c.addresses[0], http.NoBody)
 			if err != nil {
 				t.Fatal("NewRequestWithContext err:", err)
 			}
@@ -166,7 +166,7 @@ func TestNewJWTChecker(t *testing.T) {
 				t.Errorf("checker.Vet() request ctx perm got=%d want=%d", next.perm, c.perm)
 			}
 
-			r, err = http.NewRequestWithContext(context.Background(), "GET", c.addresses[0], http.NoBody)
+			r, err = http.NewRequestWithContext(context.Background(), http.MethodGet, c.addresses[0], http.NoBody)
 			if err != nil {
 				t.Fatal("NewRequestWithContext err:", err)
 			}
