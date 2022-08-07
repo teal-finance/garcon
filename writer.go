@@ -181,7 +181,7 @@ func appendKeyValues(buf []byte, comma bool, kv []any) []byte {
 		log.Panic("Writer: want non-zero even len(kv) but got ", len(kv))
 	}
 
-	for i := 1; i < len(kv); i += 2 {
+	for i := 0; i < len(kv); i += 2 {
 		if comma {
 			buf = append(buf, ',', '\n')
 		} else {
