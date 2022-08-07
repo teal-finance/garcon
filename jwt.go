@@ -69,7 +69,7 @@ type JWTChecker struct {
 func NewJWTChecker(urls []*url.URL, gw Writer, secretKey []byte, permissions ...any) *JWTChecker {
 	plans, perms := checkParameters(secretKey, permissions...)
 
-	c := &JWTChecker{
+	ck := &JWTChecker{
 		gw:         gw,
 		secretKey:  secretKey,
 		plans:      plans,
@@ -81,10 +81,10 @@ func NewJWTChecker(urls []*url.URL, gw Writer, secretKey []byte, permissions ...
 	secure, dns, dir := extractCookieAttributes(urls)
 	name := forgeCookieName(secure, dns, dir)
 	for i := range plans {
-		c.cookies[i] = c.NewCookie(name, plans[i], "", secure, dns, dir)
+		ck.cookies[i] = ck.NewCookie(name, plans[i], "", secure, dns, dir)
 	}
 
-	return c
+	return ck
 }
 
 func checkParameters(secretKey []byte, permissions ...any) ([]string, []Perm) {
