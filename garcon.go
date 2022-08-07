@@ -232,7 +232,7 @@ func WithJWT(secretKeyHex string, planPerm ...any) Option {
 // WithIncorruptible uses cookies based on fast and tiny token.
 // WithIncorruptible requires WithURLs() to set the Cookie secure, domain and path.
 // WithIncorruptible is not compatible with WithJWT: use only one of the two.
-func WithIncorruptible(name, secretKeyHex string, maxAge int, setIP bool) Option {
+func WithIncorruptible(secretKeyHex string, maxAge int, setIP bool) Option {
 	key, err := hex.DecodeString(secretKeyHex)
 	if err != nil {
 		log.Panic("WithIncorruptible: cannot decode the 128-bit AES key, please provide hexadecimal format (32 characters)")
@@ -241,9 +241,11 @@ func WithIncorruptible(name, secretKeyHex string, maxAge int, setIP bool) Option
 		log.Panic("WithIncorruptible: want 128-bit AES key containing 16 bytes, but got ", len(key))
 	}
 
+	const cookieName = ""
+
 	return func(params *parameters) {
 		params.secretKey = key
-		params.checkerCfg = []any{name, maxAge, setIP}
+		params.checkerCfg = []any{cookieName, maxAge, setIP}
 	}
 }
 
