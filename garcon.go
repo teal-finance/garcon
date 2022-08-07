@@ -88,10 +88,10 @@ func DevOrigins() []*url.URL {
 	}
 }
 
-// Run runs the HTTP server(s) in foreground.
+// ListenAndServe runs the HTTP server(s) in foreground.
 // Optionally it also starts a metrics server in background (if export port > 0).
 // The metrics server is for use with Prometheus or another compatible monitoring tool.
-func (g *Garcon) Run(h http.Handler, port int) error {
+func (g *Garcon) ListenAndServe(h http.Handler, port int) error {
 	server := g.Server(h, port)
 
 	log.Print("Server listening on http://localhost", server.Addr)

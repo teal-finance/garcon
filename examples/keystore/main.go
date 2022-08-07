@@ -49,7 +49,7 @@ func main() {
 	// handles both REST API and static web files
 	h := handler(g)
 
-	err := g.Run(h, mainPort)
+	err := g.ListenAndServe(h, mainPort)
 	log.Fatal(err)
 }
 
