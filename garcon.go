@@ -227,6 +227,7 @@ func (g *Garcon) NewJWTChecker() *JWTChecker {
 
 // OverwriteBufferContent is to erase secrets when they are no longer required.
 func OverwriteBufferContent(b []byte) {
+	//nolint:gosec // does not matter if written bytes are not good random values
 	_, _ = rand.Read(b)
 }
 

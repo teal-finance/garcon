@@ -156,6 +156,7 @@ func RandomBytes(n int) []byte {
 	return key
 }
 
+//nolint:gochecknoglobals // set at startup time, used as constant during runtime
 var hasherKey = RandomBytes(32)
 
 // NewHash is based on HighwayHash, a hashing algorithm enabling high speed (especially on AMD64).
