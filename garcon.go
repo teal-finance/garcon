@@ -46,33 +46,33 @@ type Garcon struct {
 }
 
 func New(opts ...Option) *Garcon {
-	var c Garcon
+	var g Garcon
 	for _, opt := range opts {
 		if opt != nil {
-			opt(&c)
+			opt(&g)
 		}
 	}
 
-	StartPProfServer(c.pprofPort)
+	StartPProfServer(g.pprofPort)
 
-	if c.urls == nil {
-		c.urls = DevOrigins()
-	} else if c.devMode {
-		c.urls = AppendURLs(c.urls, DevOrigins()...)
+	if g.urls == nil {
+		g.urls = DevOrigins()
+	} else if g.devMode {
+		g.urls = AppendURLs(g.urls, DevOrigins()...)
 	}
-	c.origins = OriginsFromURLs(c.urls)
+	g.origins = OriginsFromURLs(g.urls)
 
-	if len(c.docURL) > 0 {
+	if len(g.docURL) > 0 {
 		// if docURL is just a path => complete it with the base URL (scheme + host)
-		baseURL := c.urls[0].String()
-		if !strings.HasPrefix(c.docURL, baseURL) &&
-			!strings.Contains(c.docURL, "://") {
-			c.docURL = baseURL + c.docURL
+		baseURL := g.urls[0].String()
+		if !strings.HasPrefix(g.docURL, baseURL) &&
+			!strings.Contains(g.docURL, "://") {
+			g.docURL = baseURL + g.docURL
 		}
 	}
-	c.Writer = NewWriter(c.docURL)
+	g.Writer = NewWriter(g.docURL)
 
-	return &c
+	return &g
 }
 
 // DevOrigins provides the development origins:
