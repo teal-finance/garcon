@@ -12,11 +12,11 @@ require (
 	github.com/minio/highwayhash v1.0.2
 	github.com/open-policy-agent/opa v0.43.0
 	github.com/pkg/profile v1.6.0
-	github.com/prometheus/client_golang v1.12.2
+	github.com/prometheus/client_golang v1.13.0
 	github.com/rs/cors v1.8.2
-	github.com/teal-finance/incorruptible v0.0.0-20220802095442-4cd354c95b90
+	github.com/teal-finance/incorruptible v0.0.0-20220806121243-4fc82a6d6a6f
 	github.com/teal-finance/notifier v1.1.0
-	github.com/teal-finance/quid v0.0.0-20220804130412-8c04ffb16e22
+	github.com/teal-finance/quid v0.0.0-20220807070037-39d45221e797
 	github.com/zhangyunhao116/fastrand v0.3.0
 	golang.org/x/time v0.0.0-20220722155302-e5dcc9cfc0b9
 )
@@ -53,7 +53,7 @@ require (
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 	github.com/yashtewari/glob-intersection v0.1.0 // indirect
-	golang.org/x/net v0.0.0-20220802222814-0bcc04d9c69b // indirect
+	golang.org/x/net v0.0.0-20220805013720-a33c5aa5df48 // indirect
 	golang.org/x/sys v0.0.0-20220804214406-8e32c043e418 // indirect
 	golang.org/x/tools v0.1.12 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
