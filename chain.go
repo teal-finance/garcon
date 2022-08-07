@@ -135,7 +135,10 @@ func (c Chain) Then(handler http.Handler) http.Handler {
 	}
 
 	for i := range c {
-		handler = c[len(c)-1-i](handler)
+		middleware := c[len(c)-1-i]
+		if middleware != nil {
+			handler = middleware(handler)
+		}
 	}
 
 	return handler
@@ -171,7 +174,10 @@ func (c RTChain) Then(rt http.RoundTripper) http.RoundTripper {
 	}
 
 	for i := range c {
-		rt = c[len(c)-1-i](rt)
+		middleware := c[len(c)-1-i]
+		if middleware != nil {
+			rt = middleware(rt)
+		}
 	}
 
 	return rt
