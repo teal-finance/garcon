@@ -244,7 +244,7 @@ func (ck *JWTChecker) NewCookie(name, plan, user string, secure bool, dns, dir s
 	}
 }
 
-// Cookie returns the internal cookie (for test purpose).
+// Cookie returns a default cookie (make testing easier).
 func (ck *JWTChecker) Cookie(i int) *http.Cookie {
 	if (i < 0) || (i >= len(ck.cookies)) {
 		return nil
