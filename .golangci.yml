@@ -5,7 +5,10 @@
 # go run github.com/golangci/golangci-lint/cmd/golangci-lint@latest run --fix
 
 # List linters by category in a YAML-compatible format:
-# go run github.com/golangci/golangci-lint/cmd/golangci-lint@latest --color always linters | sed -n '/Linters presets:/,$p' | sed 's/^/# /;s/[:,]/\n-/g'
+# go run github.com/golangci/golangci-lint/cmd/golangci-lint@latest --color always help linters | sed -n '/Linters presets:/,$p' | sed 's/^/# /;s/[:,]/\n-/g'
+
+# List non-deprecated linters that may be enabled:
+# go run github.com/golangci/golangci-lint/cmd/golangci-lint@latest --color always linters | sed -n '/Disabled.*:/,$p' | grep -v deprecated
 ---
 linters:
   enable:
@@ -83,7 +86,6 @@ linters:
     - goprintffuncname # check printf-like functions are named with `f` at the end
     - gosimple # simplify code
     - grouper # Aanalyze expression groups
-    - ifshort # check code uses short syntax for if-statements whenever possible
     - importas # enforce consistent import aliases    - ireturn # accept Interfaces, return Concrete Types
     - lll
     - nakedret # find naked returns in functions greater than a specified function length
@@ -114,20 +116,28 @@ linters:
     - unused # check for unused constants, variables, functions and types
     - varcheck # find unused global variables and constants
 
+    # new
+    - asasalint # []any as any in variadic func(...any)
+    - nosnakecase # detects snake case of variable naming and function name
+    - usestdlibvars # A linter that detect the possibility to use variables/constants from the Go standard library
+
   disable:
+    # ANNOYING
+    - godox # no TODO/BUG/FIXME
+    - goerr113 # error
+    - ireturn # Accept Interfaces, Return Concrete Types
+    - nlreturn # style - new line before return and branch statements
+    - nonamedreturns # style
+    - stylecheck # replacement for golint
+    - wrapcheck # error
+    - wsl # style
     # DEPRECATED
     - exhaustivestruct
     - golint # alternatives: revive and stylecheck
     - interfacer
     - maligned
     - scopelint
-    # ANNOYING
-    - godox # no TODO/BUG/FIXME
-    - goerr113 # error
-    - nlreturn # style
-    - nonamedreturns # style
-    - wrapcheck # error
-    - wsl # style
+    - ifshort # check code uses short syntax for if-statements whenever possible
 
 linters-settings:
   dupl:
@@ -136,7 +146,7 @@ linters-settings:
   exhaustruct:
     include: []
     exclude:
-      - 'Perm$'
+      - "Perm$"
 
   funlen:
     lines: 100
@@ -240,7 +250,7 @@ linters-settings:
       - underef # Detects dereference expressions that can be omitted
       - unlabelStmt # Detects redundant statement labels
       - unlambda # Detects function literals that can be simplified
-      # unnamedResult # Detects unnamed results that may benefit from names
+      # ANNOYING unnamedResult # Detects unnamed results that may benefit from names
       - unnecessaryBlock # Detects unnecessary braced statement blocks
       - unslice # Detects slice expressions that can be simplified to sliced expression itself
       - valSwap # Detects value swapping code that are not using parallel assignment
@@ -249,7 +259,7 @@ linters-settings:
       - yodaStyleExpr # Detects Yoda style expressions and suggests to replace them
       - appendCombine # Detects `append` chains to the same slice that can be done in a single `append` call
       - equalFold # Detects unoptimal strings/bytes case-insensitive comparison
-      - hugeParam # Detects params that incur excessive amount of copying
+      # CRASH hugeParam # Detects params that incur excessive amount of copying
       - indexAlloc # Detects strings.Index calls that may cause unwanted allocs
       - preferDecodeRune # Detects expressions like []rune(s)[0] that may cause unwanted rune slice allocation
       - preferFprint # Detects fmt.Sprint(f|ln) calls which can be replaced with fmt.Fprint(f|ln)
@@ -462,7 +472,7 @@ run:
   # from this option's value:
   #     vendor$, third_party$, testdata$, examples$, Godeps$, builtin$
   skip-dirs: [poc]
-  go: "1.17"
+  go: "1.18"
 
 output:
   # colored-line-number|line-number|json|tab|checkstyle, default is "colored-line-number"
