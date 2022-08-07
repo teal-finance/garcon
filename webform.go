@@ -46,6 +46,10 @@ type WebForm struct {
 	maxFieldNameLength int
 }
 
+func (g *Garcon) NewContactForm(redirectURL, notifierURL string) WebForm {
+	return NewContactForm(redirectURL, notifierURL, g.Writer)
+}
+
 // NewContactForm initializes a new WebForm with the default contact-form settings.
 func NewContactForm(redirectURL, notifierURL string, gw Writer) WebForm {
 	form := WebForm{
