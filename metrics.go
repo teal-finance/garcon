@@ -53,6 +53,11 @@ func (ns Namespace) String() string {
 }
 
 // StartMetricsServer creates and starts the Prometheus export server.
+func (g *Garcon) StartMetricsServer() (Chain, func(net.Conn, http.ConnState)) {
+	return StartMetricsServer(g.expPort, g.Namespace)
+}
+
+// StartMetricsServer creates and starts the Prometheus export server.
 func StartMetricsServer(port int, namespace Namespace) (Chain, func(net.Conn, http.ConnState)) {
 	if port <= 0 {
 		log.Print("Disable Prometheus, export port=", port)

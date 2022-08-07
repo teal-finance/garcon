@@ -56,7 +56,7 @@ func main() {
 		tokenOption = garcon.WithJWT(hmacSHA256, "FreePlan", 10, "PremiumPlan", 100)
 	}
 
-	g, err := garcon.New(
+	g := garcon.New(
 		tokenOption,
 		garcon.WithURLs(addr),
 		garcon.WithDocURL("/doc"),
@@ -69,21 +69,18 @@ func main() {
 		garcon.WithDev(!*prod),
 		nil, // just to test "none" option
 	)
-	if err != nil {
-		log.Fatal(err)
-	}
 
 	// handles both REST API and static web files
 	h := handler(g, addr)
 
-	err = g.Run(h, mainPort)
+	err := g.Run(h, mainPort)
 	log.Fatal(err)
 }
 
 // handler creates the mapping between the endpoints and the handler functions.
 func handler(g *garcon.Garcon, addr string) http.Handler {
 	r := chi.NewRouter()
-	c := g.Checker
+	c := g.TokenChecker()
 
 	// Static website files
 	ws := garcon.NewStaticWebServer("examples/www", g.Writer)
@@ -93,10 +90,10 @@ func handler(g *garcon.Garcon, addr string) http.Handler {
 	r.With(c.Chk).Get("/myapp/js/*", ws.ServeDir("text/javascript; charset=utf-8"))
 	r.With(c.Chk).Get("/myapp/css/*", ws.ServeDir("text/css; charset=utf-8"))
 	r.With(c.Chk).Get("/myapp/images/*", ws.ServeImages())
-	r.With(c.Chk).Get("/myapp/version", g.ServeVersion())
+	r.With(c.Chk).Get("/myapp/version", garcon.ServeVersion())
 
 	// Contact-form
-	wf := garcon.NewContactForm(addr, "", g.Writer)
+	wf := g.NewContactForm(addr, "")
 	r.With(c.Set).Post("/myapp", wf.NotifyWebForm())
 
 	// API

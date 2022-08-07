@@ -35,7 +35,7 @@ func main() {
 
 	addr := "http://localhost:" + strconv.Itoa(mainPort)
 
-	g, err := garcon.New(
+	g := garcon.New(
 		garcon.WithURLs(addr),
 		garcon.WithDocURL("/doc"),
 		garcon.WithServerHeader("KeyStore"),
@@ -45,14 +45,11 @@ func main() {
 		garcon.WithProm(expPort, "keystore"),
 		garcon.WithDev(!*prod),
 	)
-	if err != nil {
-		log.Fatal(err)
-	}
 
 	// handles both REST API and static web files
 	h := handler(g)
 
-	err = g.Run(h, mainPort)
+	err := g.Run(h, mainPort)
 	log.Fatal(err)
 }
 

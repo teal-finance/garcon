@@ -9,7 +9,6 @@
 package garcon
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -28,31 +27,146 @@ import (
 	"github.com/teal-finance/incorruptible"
 )
 
+type Garcon struct {
+	Namespace       Namespace
+	Writer          Writer
+	docURL          string
+	version         string
+	secretKey       []byte
+	checkerCfg      []any
+	opaFilenames    []string
+	urls            []*url.URL
+	origins         []string
+	pprofPort       int
+	expPort         int
+	reqLogVerbosity int
+	reqBurst        int
+	reqMinute       int
+	devMode         bool
+}
+
+func New(opts ...Option) *Garcon {
+	var c Garcon
+	for _, opt := range opts {
+		if opt != nil {
+			opt(&c)
+		}
+	}
+
+	StartPProfServer(c.pprofPort)
+
+	if c.urls == nil {
+		c.urls = DevOrigins()
+	} else if c.devMode {
+		c.urls = AppendURLs(c.urls, DevOrigins()...)
+	}
+	c.origins = OriginsFromURLs(c.urls)
+
+	if len(c.docURL) > 0 {
+		// if docURL is just a path => complete it with the base URL (scheme + host)
+		baseURL := c.urls[0].String()
+		if !strings.HasPrefix(c.docURL, baseURL) &&
+			!strings.Contains(c.docURL, "://") {
+			c.docURL = baseURL + c.docURL
+		}
+	}
+	c.Writer = NewWriter(c.docURL)
+
+	return &c
+}
+
 // DevOrigins provides the development origins:
 // - yarn run vite --port 3000
 // - yarn run vite preview --port 5000
 // - localhost:8085 on multi devices: web auto-reload using https://github.com/synw/fwr
 // - flutter run --web-port=8080
 // - 192.168.1.x + any port on tablet: mobile app using fast builtin auto-reload.
-//
-//nolint:gochecknoglobals // used as const
-var DevOrigins = []*url.URL{
-	{Scheme: "http", Host: "localhost:"},
-	{Scheme: "http", Host: "192.168.1."},
+func DevOrigins() []*url.URL {
+	return []*url.URL{
+		{Scheme: "http", Host: "localhost:"},
+		{Scheme: "http", Host: "192.168.1."},
+	}
 }
 
-// Garcon is the main struct of the package garcon.
-type Garcon struct {
-	Namespace      Namespace
-	ConnState      func(net.Conn, http.ConnState)
-	Checker        TokenChecker
-	Writer         Writer
-	AllowedOrigins []string
-	Middlewares    Chain
+// Run runs the HTTP server(s) in foreground.
+// Optionally it also starts a metrics server in background (if export port > 0).
+// The metrics server is for use with Prometheus or another compatible monitoring tool.
+func (g *Garcon) Run(h http.Handler, port int) error {
+	server := g.Server(h, port)
+
+	log.Print("Server listening on http://localhost", server.Addr)
+
+	err := server.ListenAndServe()
+
+	log.Print("ERR: Install ncat and ss: sudo apt install ncat iproute2")
+	log.Printf("ERR: Try to listen port %v: sudo ncat -l %v", port, port)
+	log.Printf("ERR: Get the process using port %v: sudo ss -pan | grep %v", port, port)
+
+	return err
+}
+
+// Server returns a default http.Server ready to handle API endpoints, static web pages…
+func (g *Garcon) Server(h http.Handler, port int) http.Server {
+	h, connState := g.Handler(h)
+
+	return http.Server{
+		Addr:              ":" + strconv.Itoa(port),
+		Handler:           h,
+		TLSConfig:         nil,
+		ReadTimeout:       time.Second,
+		ReadHeaderTimeout: time.Second,
+		WriteTimeout:      time.Minute, // Garcon.Limiter delays responses, so people (attackers) who click frequently will wait longer.
+		IdleTimeout:       time.Second,
+		MaxHeaderBytes:    444, // 444 bytes should be enough
+		TLSNextProto:      nil,
+		ConnState:         connState,
+		ErrorLog:          log.Default(),
+		BaseContext:       nil,
+		ConnContext:       nil,
+	}
+}
+
+func (g *Garcon) Handler(h http.Handler) (http.Handler, func(net.Conn, http.ConnState)) {
+	chain, connState := g.ChainMiddleware()
+	g.EraseSecretKey()
+	return chain.Then(h), connState
+}
+
+func (g *Garcon) ChainMiddleware() (Chain, func(net.Conn, http.ConnState)) {
+	chain, connState := g.StartMetricsServer()
+
+	chain = chain.Append(RejectInvalidURI)
+
+	reqLogger := g.RequestLogger()
+	if reqLogger != nil {
+		chain = chain.Append(reqLogger)
+	}
+
+	rateLimiter := g.RateLimiter()
+	if rateLimiter != nil {
+		chain = chain.Append(rateLimiter)
+	}
+
+	serverSetter := g.ServerSetter()
+	if serverSetter != nil {
+		chain = chain.Append(serverSetter)
+	}
+
+	cors := g.CORSHandler()
+	if cors != nil {
+		chain = chain.Append(cors)
+	}
+
+	opa := g.OPAHandler()
+	if opa != nil {
+		chain = chain.Append(opa)
+	}
+
+	return chain, connState
 }
 
 type TokenChecker interface {
-	// Cookie returns the internal cookie (for test purpose).
+	// Cookie returns a default cookie (make testing easier).
 	Cookie(i int) *http.Cookie
 
 	// Set sets a cookie in the response when the request has no valid token.
@@ -74,307 +188,52 @@ type TokenChecker interface {
 	Vet(next http.Handler) http.Handler
 }
 
-type parameters struct {
-	namespace       Namespace
-	docURL          string
-	version         string
-	secretKey       []byte
-	checkerCfg      []any
-	opaFilenames    []string
-	urls            []*url.URL
-	pprofPort       int
-	expPort         int
-	reqLogVerbosity int
-	reqBurst        int
-	reqMinute       int
-	devMode         bool
+func (g *Garcon) TokenChecker() TokenChecker {
+	if len(g.secretKey) == 0 {
+		return nil
+	}
+
+	m := g.NewIncorruptible()
+	if m != nil {
+		return m
+	}
+
+	return g.NewJWTChecker()
 }
 
-func New(opts ...Option) (*Garcon, error) {
-	var params parameters
-
-	for _, opt := range opts {
-		if opt != nil {
-			opt(&params)
-		}
+func (g *Garcon) NewIncorruptible() *incorruptible.Incorruptible {
+	if len(g.checkerCfg) != 3 {
+		return nil
 	}
 
-	StartPProfServer(params.pprofPort)
+	name, ok1 := g.checkerCfg[0].(string)
+	maxAge, ok2 := g.checkerCfg[0].(int)
+	setIP, ok3 := g.checkerCfg[0].(bool)
 
-	if params.urls == nil {
-		params.urls = DevOrigins
-	} else if params.devMode {
-		params.urls = AppendURLs(params.urls, DevOrigins...)
-	}
-
-	if len(params.docURL) > 0 {
-		// if docURL is just a path => complete it with the base URL (scheme + host)
-		baseURL := params.urls[0].String()
-		if !strings.HasPrefix(params.docURL, baseURL) &&
-			!strings.Contains(params.docURL, "://") {
-			params.docURL = baseURL + params.docURL
-		}
-	}
-
-	return params.new()
-}
-
-func (params *parameters) new() (*Garcon, error) {
-	g := Garcon{
-		Namespace:      params.namespace,
-		ConnState:      nil,
-		Checker:        nil,
-		Writer:         NewWriter(params.docURL),
-		AllowedOrigins: OriginsFromURLs(params.urls),
-		Middlewares:    nil,
-	}
-
-	g.Middlewares, g.ConnState = StartMetricsServer(params.expPort, params.namespace)
-
-	g.Middlewares.Append(RejectInvalidURI)
-
-	switch params.reqLogVerbosity {
-	case 0:
-		break // do not log incoming HTTP requests
-	case 1:
-		g.Middlewares = g.Middlewares.Append(LogRequest)
-	case 2:
-		g.Middlewares = g.Middlewares.Append(LogRequestFingerprint)
-	}
-
-	if params.reqMinute > 0 {
-		reqLimiter := NewReqLimiter(params.reqBurst, params.reqMinute, params.devMode, g.Writer)
-		g.Middlewares = g.Middlewares.Append(reqLimiter.LimitRate)
-	}
-
-	if params.version != "" {
-		g.Middlewares = g.Middlewares.Append(ServerHeader(params.version))
-	}
-
-	if len(g.AllowedOrigins) > 0 {
-		g.Middlewares = g.Middlewares.Append(CORSHandler(g.AllowedOrigins, params.devMode))
-	}
-
-	g.setChecker(params)
-
-	// Authentication rules (Open Policy Agent)
-	if len(params.opaFilenames) > 0 {
-		policy, err := NewPolicy(params.opaFilenames, g.Writer)
-		if err != nil {
-			return &g, err
-		}
-		g.Middlewares = g.Middlewares.Append(policy.AuthOPA)
-	}
-
-	return &g, nil
-}
-
-func (g *Garcon) setChecker(params *parameters) {
-	if len(params.secretKey) == 0 {
-		return
-	}
-
-	if len(params.checkerCfg) == 3 {
-		name, ok1 := params.checkerCfg[0].(string)
-		maxAge, ok2 := params.checkerCfg[0].(int)
-		setIP, ok3 := params.checkerCfg[0].(bool)
-		if ok1 && ok2 && ok3 {
-			g.Checker = g.NewIncorruptible(name, params.urls, params.secretKey, maxAge, setIP)
-		}
-	}
-
-	if g.Checker == nil {
-		g.Checker = g.NewJWTChecker(params.urls, params.secretKey, params.checkerCfg...)
-	}
-
-	// erase the secret, no longer required
-	_, _ = rand.Read(params.secretKey)
-	params.secretKey = nil
-}
-
-type Option func(*parameters)
-
-func WithURLs(addresses ...string) Option {
-	return func(params *parameters) {
-		params.urls = ParseURLs(addresses)
-	}
-}
-
-func WithDocURL(docURL string) Option {
-	return func(params *parameters) {
-		params.docURL = docURL
-	}
-}
-
-func WithServerHeader(program string) Option {
-	return func(params *parameters) {
-		params.version = Version(program)
-	}
-}
-
-// WithJWT requires WithURLs() to set the Cookie name, secure, domain and path.
-// WithJWT is not compatible with WithTkn: use only one of them.
-func WithJWT(secretKeyHex string, planPerm ...any) Option {
-	key, err := hex.DecodeString(secretKeyHex)
-	if err != nil {
-		log.Panic("WithJWT: cannot decode the HMAC-SHA256 key, please provide hexadecimal format (64 characters) ", err)
-	}
-	if len(key) != 32 {
-		log.Panic("WithJWT: want HMAC-SHA256 key containing 32 bytes, but got ", len(key))
-	}
-
-	return func(params *parameters) {
-		params.secretKey = key
-		params.checkerCfg = planPerm
-	}
-}
-
-// WithIncorruptible uses cookies based on fast and tiny token.
-// WithIncorruptible requires WithURLs() to set the Cookie secure, domain and path.
-// WithIncorruptible is not compatible with WithJWT: use only one of the two.
-func WithIncorruptible(secretKeyHex string, maxAge int, setIP bool) Option {
-	key, err := hex.DecodeString(secretKeyHex)
-	if err != nil {
-		log.Panic("WithIncorruptible: cannot decode the 128-bit AES key, please provide hexadecimal format (32 characters)")
-	}
-	if len(key) < 16 {
-		log.Panic("WithIncorruptible: want 128-bit AES key containing 16 bytes, but got ", len(key))
-	}
-
-	const cookieName = ""
-
-	return func(params *parameters) {
-		params.secretKey = key
-		params.checkerCfg = []any{cookieName, maxAge, setIP}
-	}
-}
-
-func WithOPA(opaFilenames ...string) Option {
-	return func(params *parameters) {
-		params.opaFilenames = opaFilenames
-	}
-}
-
-func WithReqLogs(verbosity ...int) Option {
-	v := 1
-	if len(verbosity) > 0 {
-		if len(verbosity) >= 2 {
-			log.Panic("garcon.WithReqLogs() must be called with zero or one argument")
-		}
-		v = verbosity[0]
-		if v < 0 || v > 2 {
-			log.Panicf("garcon.WithReqLogs(verbosity=%v) currently accepts values [0, 1, 2] only", v)
-		}
-	}
-
-	return func(params *parameters) { params.reqLogVerbosity = v }
-}
-
-func WithLimiter(values ...int) Option {
-	var burst, perMinute int
-
-	switch len(values) {
-	case 0:
-		burst = 20
-		perMinute = 4 * burst
-	case 1:
-		burst = values[0]
-		perMinute = 4 * burst
-	case 2:
-		burst = values[0]
-		perMinute = values[1]
-	default:
-		log.Panic("garcon.WithLimiter() must be called with less than three arguments")
-	}
-
-	return func(params *parameters) {
-		params.reqBurst = burst
-		params.reqMinute = perMinute
-	}
-}
-
-func WithPProf(port int) Option {
-	return func(params *parameters) {
-		params.pprofPort = port
-	}
-}
-
-func WithNamespace(namespace string) Option {
-	return func(params *parameters) {
-		oldNS := params.namespace
-		newNS := NewNamespace(namespace)
-		if oldNS != "" && params.namespace != newNS {
-			log.Panicf("WithProm(namespace=%q) overrides namespace=%q", newNS, oldNS)
-		}
-		params.namespace = newNS
-	}
-}
-
-func WithProm(port int, namespace string) Option {
-	setNamespace := WithNamespace(namespace)
-
-	return func(params *parameters) {
-		params.expPort = port
-		setNamespace(params)
-	}
-}
-
-func WithDev(enable ...bool) Option {
-	devMode := true
-	if len(enable) > 0 {
-		devMode = enable[0]
-
-		if len(enable) >= 2 {
-			log.Panic("garcon.WithDev() must be called with zero or one argument")
-		}
-	}
-
-	return func(params *parameters) {
-		params.devMode = devMode
-	}
-}
-
-// Run runs the HTTP server(s) in foreground.
-// Optionally it also starts a metrics server in background (if export port > 0).
-// The metrics server is for use with Prometheus or another compatible monitoring tool.
-func (g *Garcon) Run(h http.Handler, port int) error {
-	// main garcon: REST API or other web servers
-	server := http.Server{
-		Addr:              ":" + strconv.Itoa(port),
-		Handler:           g.Middlewares.Then(h),
-		TLSConfig:         nil,
-		ReadTimeout:       1 * time.Second,
-		ReadHeaderTimeout: 1 * time.Second,
-		WriteTimeout:      1 * time.Second,
-		IdleTimeout:       1 * time.Second,
-		MaxHeaderBytes:    444, // 444 bytes should be enough
-		TLSNextProto:      nil,
-		ConnState:         g.ConnState,
-		ErrorLog:          log.Default(),
-		BaseContext:       nil,
-		ConnContext:       nil,
-	}
-
-	log.Print("Server listening on http://localhost", server.Addr)
-
-	err := server.ListenAndServe()
-
-	log.Print("ERR: Install ncat and ss: sudo apt install ncat iproute2")
-	log.Printf("ERR: Try to listen port %v: sudo ncat -l %v", port, port)
-	log.Printf("ERR: Get the process using port %v: sudo ss -pan | grep %v", port, port)
-
-	return err
-}
-
-func (g *Garcon) NewIncorruptible(name string, urls []*url.URL, secretKey []byte, maxAge int, setIP bool) *incorruptible.Incorruptible {
 	if name == "" {
 		name = string(g.Namespace)
 	}
-	return incorruptible.New(name, urls, secretKey, maxAge, setIP, g.Writer.WriteErr)
+
+	if ok1 && ok2 && ok3 {
+		return incorruptible.New(name, g.urls, g.secretKey, maxAge, setIP, g.Writer.WriteErr)
+	}
+
+	return nil
 }
 
-func (g *Garcon) NewJWTChecker(urls []*url.URL, secretKey []byte, planPerm ...any) *JWTChecker {
-	return NewJWTChecker(urls, g.Writer, secretKey, planPerm...)
+func (g *Garcon) NewJWTChecker() *JWTChecker {
+	return NewJWTChecker(g.urls, g.Writer, g.secretKey, g.checkerCfg...)
+}
+
+// OverwriteBufferContent is to erase secrets when they are no longer required.
+func OverwriteBufferContent(b []byte) {
+	_, _ = rand.Read(b)
+}
+
+// EraseSecretKey should be called as soon as secretKey is no longer required.
+func (g *Garcon) EraseSecretKey() {
+	OverwriteBufferContent(g.secretKey)
+	g.secretKey = nil
 }
 
 // ServerHeader sets the Server HTTP header in the response.
