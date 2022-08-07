@@ -192,7 +192,7 @@ const html = `<!DOCTYPE html>
 </html>`
 
 // ServeVersion send HTML or JSON depending on Accept header.
-func (g *Garcon) ServeVersion() func(w http.ResponseWriter, r *http.Request) {
+func ServeVersion() func(w http.ResponseWriter, r *http.Request) {
 	t, err := template.New("version").Parse(html)
 	if err != nil {
 		log.Panic("ServeVersion template.New:", err)
