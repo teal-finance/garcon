@@ -44,7 +44,7 @@ func (gw Writer) InvalidPath(w http.ResponseWriter, r *http.Request) {
 }
 
 func WriteErr(w http.ResponseWriter, r *http.Request, statusCode int, a ...any) {
-	Writer("").WriteErr(w, r, statusCode, a)
+	Writer("").WriteErr(w, r, statusCode, a...)
 }
 
 func WriteErrSafe(w http.ResponseWriter, r *http.Request, statusCode int, a ...any) {
@@ -52,7 +52,7 @@ func WriteErrSafe(w http.ResponseWriter, r *http.Request, statusCode int, a ...a
 }
 
 func WriteOK(w http.ResponseWriter, a ...any) {
-	Writer("").WriteOK(w, a)
+	Writer("").WriteOK(w, a...)
 }
 
 // msg is only used by SafeWrite to generate a fast JSON marshaler.
