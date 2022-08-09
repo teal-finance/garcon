@@ -207,8 +207,8 @@ func (g *Garcon) NewIncorruptible() *incorruptible.Incorruptible {
 	}
 
 	name, ok1 := g.checkerCfg[0].(string)
-	maxAge, ok2 := g.checkerCfg[0].(int)
-	setIP, ok3 := g.checkerCfg[0].(bool)
+	maxAge, ok2 := g.checkerCfg[1].(int)
+	setIP, ok3 := g.checkerCfg[2].(bool)
 
 	if name == "" {
 		name = string(g.Namespace)
@@ -218,6 +218,7 @@ func (g *Garcon) NewIncorruptible() *incorruptible.Incorruptible {
 		return incorruptible.New(name, g.urls, g.secretKey, maxAge, setIP, g.Writer.WriteErr)
 	}
 
+	log.Panic("Cannot decode Incorruptible parameters ", ok1, ok2, ok3)
 	return nil
 }
 
