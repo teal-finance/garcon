@@ -135,6 +135,32 @@ func RejectInvalidURI(next http.Handler) http.Handler {
 		})
 }
 
+// SecureHeaderSetter is a middleware adding recommended HTTP response headers to secure the web application.
+func SecureHeaderSetter(secure bool) func(next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		log.Print("Middleware sets the secure HTTP headers")
+
+		return http.HandlerFunc(
+			func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("X-Content-Type-Options", "nosniff")
+
+				// secure must be false for http://localhost
+				if secure {
+					w.Header().Set("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload")
+				}
+
+				if false {
+					w.Header().Set("Content-Security-Policy", "TODO")
+					// or
+					w.Header().Set("Content-Security-Policy-Report-Only", "TODO")
+
+					w.Header().Set("Referrer-Policy", "TODO")
+					w.Header().Set("Forwarded", "TODO")
+				}
+			})
+	}
+}
+
 // TraversalPath returns true when path contains ".." to prevent path traversal attack.
 func TraversalPath(w http.ResponseWriter, r *http.Request) bool {
 	if strings.Contains(r.URL.Path, "..") {
