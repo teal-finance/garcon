@@ -25,7 +25,7 @@ const (
 	mainPort, pprofPort, expPort = 8080, 8093, 9093
 	burst, perMinute             = 10, 30
 
-	// the HMAC-SHA256 key to decode JWT (to be removed from source code)
+	// the HMAC-SHA256 key to decode JWT (do not put your secret keys in your code)
 	hmacSHA256 = "9d2e0a02121179a3c3de1b035ae1355b1548781c8ce8538a1dc0853a12dfb13d"
 	aes128bits = "00112233445566778899aabbccddeeff"
 )
@@ -80,26 +80,26 @@ func main() {
 // handler creates the mapping between the endpoints and the handler functions.
 func handler(g *garcon.Garcon, addr string) http.Handler {
 	r := chi.NewRouter()
-	c := g.TokenChecker()
+	ck := g.TokenChecker()
 
 	// Static website files
 	ws := garcon.NewStaticWebServer("examples/www", g.Writer)
 	r.Get("/favicon.ico", ws.ServeFile("favicon.ico", "image/x-icon"))
-	r.With(c.Set).Get("/myapp", ws.ServeFile("myapp/index.html", "text/html; charset=utf-8"))
-	r.With(c.Set).Get("/myapp/", ws.ServeFile("myapp/index.html", "text/html; charset=utf-8"))
-	r.With(c.Chk).Get("/myapp/js/*", ws.ServeDir("text/javascript; charset=utf-8"))
-	r.With(c.Chk).Get("/myapp/css/*", ws.ServeDir("text/css; charset=utf-8"))
-	r.With(c.Chk).Get("/myapp/images/*", ws.ServeImages())
-	r.With(c.Chk).Get("/myapp/version", garcon.ServeVersion())
+	r.With(ck.Set).Get("/myapp", ws.ServeFile("myapp/index.html", "text/html; charset=utf-8"))
+	r.With(ck.Set).Get("/myapp/", ws.ServeFile("myapp/index.html", "text/html; charset=utf-8"))
+	r.With(ck.Chk).Get("/myapp/js/*", ws.ServeDir("text/javascript; charset=utf-8"))
+	r.With(ck.Chk).Get("/myapp/css/*", ws.ServeDir("text/css; charset=utf-8"))
+	r.With(ck.Chk).Get("/myapp/images/*", ws.ServeImages())
+	r.With(ck.Chk).Get("/myapp/version", garcon.ServeVersion())
 
 	// Contact-form
 	wf := g.NewContactForm(addr, "")
-	r.With(c.Set).Post("/myapp", wf.NotifyWebForm())
+	r.With(ck.Set).Post("/myapp", wf.NotifyWebForm())
 
 	// API
-	r.With(c.Vet).Get("/path/not/in/cookie", items)
-	r.With(c.Vet).Get("/myapp/api/v1/items", items)
-	r.With(c.Vet).Get("/myapp/api/v1/ducks", g.Writer.NotImplemented)
+	r.With(ck.Vet).Get("/path/not/in/cookie", items)
+	r.With(ck.Vet).Get("/myapp/api/v1/items", items)
+	r.With(ck.Vet).Get("/myapp/api/v1/ducks", g.Writer.NotImplemented)
 
 	// Other endpoints
 	r.NotFound(g.Writer.InvalidPath)

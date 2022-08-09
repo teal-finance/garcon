@@ -14,9 +14,6 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	// HighwayHash mixes inputs with AVX2 multiply and permute instructions
-	// to be 5x faster than SipHash, but it has a weak collision resistance.
-	// It can be used to prevent hash-flooding attacks or authenticate short-lived messages.
 	"github.com/minio/highwayhash"
 )
 
@@ -118,7 +115,7 @@ func Printable(array ...string) int {
 	return -1
 }
 
-// RejectInvalidURI rejects HTTP requests having
+// RejectInvalidURI is a middleware rejecting HTTP requests having
 // a Carriage Return "\r" or a Line Feed "\n"
 // within the URI to prevent log injection.
 func RejectInvalidURI(next http.Handler) http.Handler {

@@ -180,7 +180,7 @@ func TestNewJWTChecker(t *testing.T) {
 			response := w.Result()
 			cookies := response.Cookies()
 			if len(cookies) != 1 {
-				t.Error("checker.Set() has not set only one cookie, but ", len(cookies))
+				t.Error("checker.Set() has not set only one cookie, but", len(cookies))
 			} else if cookies[0].Value != ck.Cookie(0).Value {
 				t.Error("checker.Set() has not used the first cookie")
 			}

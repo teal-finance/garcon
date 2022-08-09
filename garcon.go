@@ -115,7 +115,7 @@ func (g *Garcon) Server(h http.Handler, port int) http.Server {
 		TLSConfig:         nil,
 		ReadTimeout:       time.Second,
 		ReadHeaderTimeout: time.Second,
-		WriteTimeout:      time.Minute, // Garcon.Limiter delays responses, so people (attackers) who click frequently will wait longer.
+		WriteTimeout:      time.Minute, // Garcon.RateLimiter() delays responses, so people (attackers) who click frequently will wait longer.
 		IdleTimeout:       time.Second,
 		MaxHeaderBytes:    444, // 444 bytes should be enough
 		TLSNextProto:      nil,
@@ -166,7 +166,7 @@ func (g *Garcon) ChainMiddleware() (Chain, func(net.Conn, http.ConnState)) {
 }
 
 type TokenChecker interface {
-	// Cookie returns a default cookie (make testing easier).
+	// Cookie returns a default cookie to facilitate testing.
 	Cookie(i int) *http.Cookie
 
 	// Set sets a cookie in the response when the request has no valid token.

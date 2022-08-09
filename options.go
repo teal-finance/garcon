@@ -185,7 +185,7 @@ func WithJWT(secretKeyHex string, planPerm ...any) Option {
 func WithIncorruptible(secretKeyHex string, maxAge int, setIP bool) Option {
 	key, err := hex.DecodeString(secretKeyHex)
 	if err != nil {
-		log.Panic("WithIncorruptible: cannot decode the 128-bit AES key, please provide hexadecimal format (32 characters)")
+		log.Panic("WithIncorruptible: cannot decode the 128-bit AES key, please provide hexadecimal format (32 characters) ", err)
 	}
 	if len(key) < 16 {
 		log.Panic("WithIncorruptible: want 128-bit AES key containing 16 bytes, but got ", len(key))
