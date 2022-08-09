@@ -231,3 +231,16 @@ func writeHTML(w http.ResponseWriter, t *template.Template) {
 		w.WriteHeader(http.StatusNoContent)
 	}
 }
+
+// ServerHeader is the middleware setting the Server HTTP header in the response.
+func ServerHeader(version string) func(next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		log.Print("Middleware response HTTP header: Set Server ", version)
+
+		return http.HandlerFunc(
+			func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Server", version)
+				next.ServeHTTP(w, r)
+			})
+	}
+}
