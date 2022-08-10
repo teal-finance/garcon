@@ -33,7 +33,7 @@ const (
 	expPort           = 9093
 	burst, reqMinute  = 10, 30
 	// the HMAC-SHA256 key to decode JWT (to be removed from source code)
-	hmacSHA256 = "9d2e0a02121179a3c3de1b035ae1355b1548781c8ce8538a1dc0853a12dfb13d"
+	hmacSHA256Hex = "9d2e0a02121179a3c3de1b035ae1355b1548781c8ce8538a1dc0853a12dfb13d"
 )
 
 func main() {
@@ -47,12 +47,12 @@ func main() {
 
 	chain, connState, urls := setMiddlewares(gw)
 
-	key, err := hex.DecodeString(hmacSHA256)
+	key, err := hex.DecodeString(hmacSHA256Hex)
 	if err != nil {
-		log.Panic("WithJWT: cannot decode the HMAC-SHA256 key, please provide hexadecimal format (64 characters) ", err)
+		log.Panic("Cannot decode the HMAC-SHA256 key, please provide hexadecimal format (64 characters) ", err)
 	}
 	if len(key) != 32 {
-		log.Panic("WithJWT: want HMAC-SHA256 key containing 32 bytes, but got ", len(key))
+		log.Panic("Want HMAC-SHA256 key containing 32 bytes, but got ", len(key))
 	}
 
 	// Handles both REST API and static web files
