@@ -167,7 +167,7 @@ func appendMessages(buf []byte, kv []any) ([]byte, bool) {
 		return buf, true
 	}
 
-	buf = appendQuote(buf, kv[0])
+	buf = appendValue(buf, kv[0])
 
 	if len(kv) > 1 {
 		buf = appendKeyValues(buf, true, kv[1:])
@@ -187,7 +187,7 @@ func appendKeyValues(buf []byte, comma bool, kv []any) []byte {
 		} else {
 			comma = true
 		}
-		buf = appendQuote(buf, kv[i])
+		buf = appendKey(buf, kv[i])
 		buf = append(buf, ':')
 		buf = appendValue(buf, kv[i+1])
 	}
@@ -226,12 +226,26 @@ func appendValue(buf []byte, a any) []byte {
 		return strconv.AppendUint(buf, val, 10)
 	case uintptr:
 		return strconv.AppendUint(buf, uint64(val), 10)
-	default: // string []byte complex64 complex128
-		return appendQuote(buf, val)
+	case string:
+		return strconv.AppendQuoteToGraphic(buf, val)
+	case []byte:
+		return strconv.AppendQuoteToGraphic(buf, string(val))
+	case complex64, complex128:
+		return strconv.AppendQuoteToGraphic(buf, fmt.Sprint(val))
+	default:
+		return appendJSON(buf, val)
 	}
 }
 
-func appendQuote(buf []byte, a any) []byte {
+func appendJSON(buf []byte, a any) []byte {
+	b, err := json.Marshal(a)
+	if err != nil {
+		log.Printf("ERR Writer jsonify %+v %v", a, err)
+	}
+	return append(buf, b...)
+}
+
+func appendKey(buf []byte, a any) []byte {
 	switch val := a.(type) {
 	case string:
 		return strconv.AppendQuoteToGraphic(buf, val)
