@@ -27,6 +27,8 @@ func NewStaticWebServer(dir string, gw Writer) StaticWebServer {
 	return StaticWebServer{dir, gw}
 }
 
+const avifContentType = "image/avif"
+
 // ServeFile handles one specific file (and its specific Content-Type).
 func (ws *StaticWebServer) ServeFile(urlPath, contentType string) func(w http.ResponseWriter, r *http.Request) {
 	absPath := path.Join(ws.Dir, urlPath)
@@ -99,22 +101,21 @@ func (ws *StaticWebServer) ServeAssets() func(w http.ResponseWriter, r *http.Req
 
 		extPos := extIndex(r.URL.Path)
 		ext := r.URL.Path[extPos:]
-
-		w.Header().Set("Cache-Control", "public,max-age=31536000,immutable")
+		contentType := assetContentType(ext)
 
 		var absPath string
-
-		if ext == "css" {
-			w.Header().Set("Content-Type", "text/css; charset=utf-8")
-			absPath = path.Join(ws.Dir, r.URL.Path)
-		} else {
-			var contentType string
-			absPath, contentType = ws.imagePathAndType(r)
-			if contentType != "" {
-				w.Header().Set("Content-Type", contentType)
-			}
+		if contentType == "" {
+			absPath, contentType = ws.imagePathAndTypeFromExt(r, extPos, ext)
 		}
 
+		w.Header().Set("Cache-Control", "public,max-age=31536000,immutable")
+		if contentType != "" {
+			w.Header().Set("Content-Type", contentType)
+		}
+
+		if absPath == "" {
+			absPath = path.Join(ws.Dir, r.URL.Path)
+		}
 		ws.send(w, r, absPath)
 	}
 }
@@ -163,8 +164,26 @@ func (ws *StaticWebServer) send(w http.ResponseWriter, r *http.Request, absPath 
 	if n, err := io.Copy(w, file); err != nil {
 		log.Print("WRN WebServer: Copy(", absPath, ") ", err)
 	} else {
-		log.Print("WebServer sent ", absPath, " ", ConvertSize64(n))
+		log.Print("INF WebServer sent ", absPath, " ", ConvertSize64(n))
 	}
+}
+
+func (ws *StaticWebServer) avifPath(r *http.Request, extPos int) (absPath string) {
+	// Just check the first "Accept" header because missing an "image/avif" (from another "Accept" header)
+	// do not break anything: will send the image with the original requested encoding format.
+	accept := r.Header.Get("Accept")
+
+	// The search is fast but not 100% sure, hoping there is no Content-Type such as "image/avifauna".
+	if strings.Contains(accept, avifContentType) {
+		imgFile := r.URL.Path[:extPos] + "avif"
+		absPath = path.Join(ws.Dir, imgFile)
+		_, err := os.Stat(absPath)
+		if err == nil {
+			return absPath
+		}
+	}
+
+	return ""
 }
 
 // imagePathAndType returns the path/filename and the Content-Type of the image.
@@ -172,26 +191,22 @@ func (ws *StaticWebServer) send(w http.ResponseWriter, r *http.Request, absPath 
 func (ws *StaticWebServer) imagePathAndType(r *http.Request) (absPath, contentType string) {
 	extPos := extIndex(r.URL.Path)
 
-	// Just check the first "Accept" header because missing an "image/avif" (from another "Accept" header)
-	// do not break anything: will send the image with the original requested encoding format.
-	accept := r.Header.Get("Accept")
-
-	// The search is fast but not 100% sure, hoping there is no Content-Type such as "image/avifauna".
-	const avifContentType = "image/avif"
-	if strings.Contains(accept, avifContentType) {
-		imgFile := r.URL.Path[:extPos] + "avif"
-		absPath = path.Join(ws.Dir, imgFile)
-		_, err := os.Stat(absPath)
-		if err == nil {
-			return absPath, avifContentType
-		}
+	absPath = ws.avifPath(r, extPos)
+	if absPath != "" {
+		return absPath, avifContentType
 	}
 
 	absPath = path.Join(ws.Dir, r.URL.Path)
-
 	ext := r.URL.Path[extPos:]
-	contentType = imageContentType(ext)
-	return absPath, contentType
+	return absPath, imageContentType(ext)
+}
+
+func (ws *StaticWebServer) imagePathAndTypeFromExt(r *http.Request, extPos int, ext string) (absPath, contentType string) {
+	absPath = ws.avifPath(r, extPos)
+	if absPath != "" {
+		return absPath, avifContentType
+	}
+	return "", imageContentType(ext)
 }
 
 // extIndex returns the position of the extension within the the urlPath.
@@ -206,8 +221,9 @@ func extIndex(urlPath string) int {
 }
 
 // imageContentType determines the Content-Type depending on the file extension.
+// Only the image extensions used by Teal.Finance are currently supported.
+// Contact the Teal.Finance team if you need more image file extensions.
 func imageContentType(ext string) string {
-	// Only the most popular image extensions
 	switch ext {
 	case "png":
 		return "image/png"
@@ -215,12 +231,32 @@ func imageContentType(ext string) string {
 		return "image/jpeg"
 	case "svg":
 		return "image/svg+xml"
-	default:
-		log.Print("WRN WebServer does not support image extension: ", ext)
-		return ""
 	}
+	log.Print("WRN WebServer does not support image extension: ", ext)
+	return ""
 }
 
+// assetContentType currently supports only the files present in the /dist/assets/ folder at Teal.Finance.
+// We may drop ".eot", ".ttf" and ".woff" in the future.
+// Contact the Teal.Finance team if you need to keep all the current file extensions, or if you need other ones.
+func assetContentType(ext string) string {
+	switch ext {
+	case "css":
+		return "text/css; charset=utf-8"
+	case "woff2":
+		return "font/woff2"
+	case "ttf":
+		return "font/ttf"
+	case "eot":
+		return "application/vnd.ms-fontobject"
+	case "woff":
+		return "font/woff"
+	}
+	return ""
+}
+
+// https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Common_types
+//
 // Extension  MIME type
 // ---------  --------------------------------
 //  .html     text/html; charset=utf-8
@@ -232,6 +268,9 @@ func imageContentType(ext string) string {
 //  .yaml     text/x-yaml; charset=utf-8
 //  .json     application/json; charset=utf-8
 //  .pdf      application/pdf
+//  .eot      application/vnd.ms-fontobject
+//  .ttf      font/ttf
+//  .woff     font/woff
 //  .woff2    font/woff2
 //  .avif     image/avif
 //  .gif      image/gif
