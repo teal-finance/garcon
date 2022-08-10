@@ -71,8 +71,8 @@ func SafeHeader(r *http.Request, header string) string {
 }
 
 // PrintableRune returns false if rune is
-// a Carriage Return "\r", or a Line Feed "\n",
-// or another ASCII control code (except space),
+// a Carriage Return "\r", a Line Feed "\n",
+// another ASCII control code (except space),
 // or an invalid UTF-8 code.
 // PrintableRune can be used to prevent log injection.
 func PrintableRune(r rune) bool {
@@ -89,27 +89,39 @@ func PrintableRune(r rune) bool {
 	return true
 }
 
-// printable returns the position (index) of
+// printable returns the position of
 // a Carriage Return "\r", or a Line Feed "\n",
 // or any other ASCII control code (except space),
-// or, as well as, bn invalid UTF-8 code.
+// or, as well as, an invalid UTF-8 code.
 // printable returns -1 if the string
 // is safely printable preventing log injection.
 func printable(s string) int {
-	for i, r := range s {
+	for p, r := range s {
 		if !PrintableRune(r) {
-			return i
+			return p
 		}
 	}
 	return -1
 }
 
-// Printable returns -1 when all the strings are printable
+// Printable returns -1 when all the strings are safely printable
 // else returns the position of the rejected character.
+//
+// The non printable characters are:
+//
+//   - Carriage Return "\r"
+//   - Line Feed "\n"
+//   - other ASCII control codes (except space)
+//   - invalid UTF-8 codes
+//
+// Printable can be used to preventing log injection.
+//
+// When multiple strings are passed,
+// the returned position is sum with the string index multiplied by 1000.
 func Printable(array ...string) int {
-	for _, s := range array {
-		if i := printable(s); i >= 0 {
-			return i
+	for i, s := range array {
+		if p := printable(s); p >= 0 {
+			return i*1000 + p
 		}
 	}
 	return -1
