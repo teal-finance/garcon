@@ -84,20 +84,20 @@ func LogSafeDuration(next http.Handler) http.Handler {
 
 func ipMethodURL(r *http.Request) string {
 	// double space after "in" is for padding with "out" logs
-	return "in  " + r.RemoteAddr + " " + r.Method + " " + r.RequestURI
+	return "INF in  " + r.RemoteAddr + " " + r.Method + " " + r.RequestURI
 }
 
 func safeIPMethodURL(r *http.Request) string {
-	return "in  " + r.RemoteAddr + " " + r.Method + " " + Sanitize(r.RequestURI)
+	return "INF in  " + r.RemoteAddr + " " + r.Method + " " + Sanitize(r.RequestURI)
 }
 
 func ipMethodURLDuration(r *http.Request, d time.Duration) string {
-	return "out " + r.RemoteAddr + " " + r.Method + " " +
+	return "INF out " + r.RemoteAddr + " " + r.Method + " " +
 		r.RequestURI + " " + d.String()
 }
 
 func safeIPMethodURLDuration(r *http.Request, d time.Duration) string {
-	return "out " + r.RemoteAddr + " " + r.Method + " " +
+	return "INF out " + r.RemoteAddr + " " + r.Method + " " +
 		Sanitize(r.RequestURI) + " " + d.String()
 }
 
