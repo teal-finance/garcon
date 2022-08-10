@@ -183,6 +183,10 @@ func WithJWT(secretKeyHex string, planPerm ...any) Option {
 // WithIncorruptible requires WithURLs() to set the Cookie secure, domain and path.
 // WithIncorruptible is not compatible with WithJWT: use only one of the two.
 func WithIncorruptible(secretKeyHex string, maxAge int, setIP bool) Option {
+	if len(secretKeyHex) != 32 {
+		log.Panic("WithIncorruptible: want 32 hexadecimal digits, but got ", len(secretKeyHex))
+	}
+
 	key, err := hex.DecodeString(secretKeyHex)
 	if err != nil {
 		log.Panic("WithIncorruptible: cannot decode the 128-bit AES key, please provide hexadecimal format (32 characters) ", err)
