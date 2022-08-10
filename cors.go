@@ -37,7 +37,7 @@ func CORSHandler(origins []string, debug bool) func(next http.Handler) http.Hand
 		options.AllowOriginFunc = multipleOriginPrefixes(origins)
 	}
 
-	log.Printf("CORS: Methods=%v Headers=%v Credentials=%v MaxAge=%v",
+	log.Printf("INF CORS: Methods=%v Headers=%v Credentials=%v MaxAge=%v",
 		options.AllowedMethods, options.AllowedHeaders, options.AllowCredentials, options.MaxAge)
 
 	return cors.New(options).Handler

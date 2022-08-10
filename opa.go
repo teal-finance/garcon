@@ -43,7 +43,7 @@ func LoadPolicy(filenames []string) (*ast.Compiler, error) {
 	modules := map[string]string{}
 
 	for _, fn := range filenames {
-		log.Printf("OPA: load %q", fn)
+		log.Printf("INF OPA: load %q", fn)
 
 		if fn == "" {
 			return nil, ErrEmptyOPAFilename
