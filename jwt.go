@@ -7,8 +7,8 @@ package garcon
 
 import (
 	"context"
-	"crypto"
 	"crypto/hmac"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -465,7 +465,7 @@ func (ck *JWTChecker) permFromRefreshBytes(claimsJSON []byte) (Perm, error) {
 // sign return the signature of the signingString.
 // It allocates hmac.New() each time to avoid race condition.
 func (ck *JWTChecker) sign(signingString string) string {
-	h := hmac.New(crypto.SHA256.New, ck.secretKey)
+	h := hmac.New(sha256.New, ck.secretKey)
 	_, _ = h.Write([]byte(signingString))
 	return base64.RawURLEncoding.EncodeToString(h.Sum(nil))
 }
