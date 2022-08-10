@@ -62,7 +62,7 @@ func LoadPolicy(filenames []string) (*ast.Compiler, error) {
 
 // AuthOPA is the HTTP middleware to check endpoint authorization.
 func (opa Policy) AuthOPA(next http.Handler) http.Handler {
-	log.Print("Middleware OPA: ", opa.compiler.Modules)
+	log.Print("INF Middleware OPA: ", opa.compiler.Modules)
 
 	compiler := opa.compiler
 	gw := opa.gw
@@ -98,7 +98,7 @@ func (opa Policy) AuthOPA(next http.Handler) http.Handler {
 		if !allow {
 			gw.WriteErr(w, r, http.StatusUnauthorized, "No valid JWT",
 				"advice", "Provide your JWT within the 'Authorization Bearer' HTTP header")
-			log.Print("OPA: Missing or invalid Authorization header " + r.RemoteAddr + " " + r.RequestURI)
+			log.Print("INF OPA Missing or invalid Authorization header " + r.RemoteAddr + " " + r.RequestURI)
 			return
 		}
 

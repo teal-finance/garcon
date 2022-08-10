@@ -60,7 +60,7 @@ func (g *Garcon) StartMetricsServer() (Chain, func(net.Conn, http.ConnState)) {
 // StartMetricsServer creates and starts the Prometheus export server.
 func StartMetricsServer(port int, namespace Namespace) (Chain, func(net.Conn, http.ConnState)) {
 	if port <= 0 {
-		log.Print("Disable Prometheus, export port=", port)
+		log.Print("INF Disable Prometheus, export port=", port)
 		return nil, nil
 	}
 
@@ -71,7 +71,7 @@ func StartMetricsServer(port int, namespace Namespace) (Chain, func(net.Conn, ht
 		log.Fatal(err)
 	}()
 
-	log.Print("Prometheus export http://localhost" + addr + " namespace=" + namespace.String())
+	log.Print("INF Prometheus export http://localhost" + addr + " namespace=" + namespace.String())
 
 	// Add build info
 	prometheus.MustRegister(collectors.NewBuildInfoCollector())

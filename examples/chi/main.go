@@ -38,17 +38,17 @@ func main() {
 		Handler: chain.Then(router),
 	}
 
-	log.Print("Server listening on http://localhost", port)
+	log.Print("INF Server listening on http://localhost", port)
 
 	log.Fatal(server.ListenAndServe())
 }
 
 func post(w http.ResponseWriter, _ *http.Request) {
-	log.Print("router.Post()")
+	log.Print("INF router.Post()")
 	_, _ = w.Write([]byte("<html><body> router.Post() </body></html>"))
 }
 
 func others(w http.ResponseWriter, _ *http.Request) {
-	log.Print("router.NotFound()")
+	log.Print("INF router.NotFound()")
 	_, _ = w.Write([]byte("<html><body> router.MethodNotAllowed() </body></html>"))
 }

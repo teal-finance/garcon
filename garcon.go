@@ -94,13 +94,13 @@ func DevOrigins() []*url.URL {
 func (g *Garcon) ListenAndServe(h http.Handler, port int) error {
 	server := g.Server(h, port)
 
-	log.Print("Server listening on http://localhost", server.Addr)
+	log.Print("INF Server listening on http://localhost", server.Addr)
 
 	err := server.ListenAndServe()
 
-	log.Print("ERR: Install ncat and ss: sudo apt install ncat iproute2")
-	log.Printf("ERR: Try to listen port %v: sudo ncat -l %v", port, port)
-	log.Printf("ERR: Get the process using port %v: sudo ss -pan | grep %v", port, port)
+	log.Print("ERR Install ncat and ss: sudo apt install ncat iproute2")
+	log.Printf("ERR Try to listen port %v: sudo ncat -l %v", port, port)
+	log.Printf("ERR Get the process using port %v: sudo ss -pan | grep %v", port, port)
 
 	return err
 }

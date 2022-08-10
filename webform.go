@@ -98,18 +98,18 @@ func DefaultFileSettings() map[string][2]int {
 // and sends it to the Notifier.
 func (form *WebForm) NotifyWebForm() func(w http.ResponseWriter, r *http.Request) {
 	if form.Notifier == nil {
-		log.Print("Middleware WebForm: no Notifier => use the logger Notifier")
+		log.Print("INF Middleware WebForm: no Notifier => use the logger Notifier")
 		form.Notifier = logger.NewNotifier()
 	}
 
 	if form.TextLimits == nil {
 		form.TextLimits = DefaultContactSettings()
-		log.Print("Middleware WebForm: empty TextLimits => use ", form.TextLimits)
+		log.Print("INF Middleware WebForm: empty TextLimits => use ", form.TextLimits)
 	}
 
 	if form.FileLimits == nil {
 		form.FileLimits = DefaultFileSettings()
-		log.Print("Middleware WebForm: empty FileLimits => use ", form.FileLimits)
+		log.Print("INF Middleware WebForm: empty FileLimits => use ", form.FileLimits)
 	}
 
 	form.maxFieldNameLength = 0
@@ -124,7 +124,7 @@ func (form *WebForm) NotifyWebForm() func(w http.ResponseWriter, r *http.Request
 		}
 	}
 
-	log.Print("Middleware WebForm redirect=", form.Redirect)
+	log.Print("INF Middleware WebForm redirect=", form.Redirect)
 
 	return form.notify
 }

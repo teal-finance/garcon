@@ -89,7 +89,7 @@ func (db *db) list(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		db.g.Writer.WriteErr(w, r, http.StatusInternalServerError,
 			"Cannot split addr=host:port", "addr", r.RemoteAddr)
-		log.Print("Cannot split addr=host:port ", err)
+		log.Print("ERR Cannot split addr=host:port ", err)
 		return
 	}
 
@@ -112,7 +112,7 @@ func (db *db) list(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		db.g.Writer.WriteErr(w, r, http.StatusInternalServerError,
 			"Cannot JSON-marshal the keys list")
-		log.Print("Cannot JSON-marshal the keys list ", err)
+		log.Print("ERR Cannot JSON-marshal the keys list ", err)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -127,14 +127,14 @@ func (db *db) post(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		db.g.Writer.WriteErr(w, r, http.StatusInternalServerError,
 			"Cannot split addr=host:port", "addr", r.RemoteAddr)
-		log.Print("Cannot split addr=host:port ", err)
+		log.Print("ERR Cannot split addr=host:port ", err)
 	}
 
 	values, err := parseForm(r)
 	if err != nil {
 		db.g.Writer.WriteErr(w, r, http.StatusInternalServerError,
 			"Cannot parse the webform (request body)")
-		log.Print("Cannot parse the webform ", err)
+		log.Print("ERR Cannot parse the webform ", err)
 	}
 
 	if values == nil {
@@ -169,7 +169,7 @@ func (db *db) post(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		db.g.Writer.WriteErr(w, r, http.StatusInternalServerError,
 			"Cannot JSON-marshal the result")
-		log.Print("Cannot JSON-marshal ", err)
+		log.Print("ERR Cannot JSON-marshal ", err)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -182,14 +182,14 @@ func (db *db) delete(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		db.g.Writer.WriteErr(w, r, http.StatusInternalServerError,
 			"Cannot split addr=host:port", "addr", r.RemoteAddr)
-		log.Print("Cannot split addr=host:port ", err)
+		log.Print("ERR Cannot split addr=host:port ", err)
 	}
 
 	values, err := parseForm(r)
 	if err != nil {
 		db.g.Writer.WriteErr(w, r, http.StatusInternalServerError,
 			"Cannot parse the webform (request body)")
-		log.Print("Cannot parse the webform ", err)
+		log.Print("ERR Cannot parse the webform ", err)
 	}
 
 	if len(values) == 0 {

@@ -178,7 +178,7 @@ func forgeCookieName(secure bool, dns, dir string) string {
 
 func extractDevURLs(urls []*url.URL) []*url.URL {
 	if len(urls) == 1 {
-		log.Print("JWT required for single domain: ", urls)
+		log.Print("INF JWT required for single domain: ", urls)
 		return nil
 	}
 
@@ -198,7 +198,7 @@ func extractDevOrigins(urls []*url.URL) []string {
 	if len(urls) > 0 && urls[0].Scheme == "http" {
 		host, _, _ := net.SplitHostPort(urls[0].Host)
 		if host == "localhost" {
-			log.Print("JWT not required for http://localhost")
+			log.Print("INF JWT not required for http://localhost")
 			return []string{"*"}
 		}
 	}
@@ -215,7 +215,7 @@ func extractDevOrigins(urls []*url.URL) []string {
 		devOrigins = append(devOrigins, o)
 	}
 
-	log.Print("JWT not required for dev. origins: ", devOrigins)
+	log.Print("INF JWT not required for dev. origins: ", devOrigins)
 	return devOrigins
 }
 
@@ -225,7 +225,7 @@ func (ck *JWTChecker) NewCookie(name, plan, user string, secure bool, dns, dir s
 		log.Panic("Cannot create JWT: ", err)
 	}
 
-	log.Print("newCookie plan="+plan+" domain="+dns+
+	log.Print("INF JWT newCookie plan="+plan+" domain="+dns+
 		" path="+dir+" secure=", secure, " "+name+"="+JWT)
 
 	return http.Cookie{
@@ -480,7 +480,7 @@ var permKey struct{}
 func PermFromCtx(r *http.Request) Perm {
 	perm, ok := r.Context().Value(permKey).(Perm)
 	if !ok {
-		log.Print("WRN JWT: no permission in context ", r.URL.Path)
+		log.Print("WRN JWT no permission in context ", r.URL.Path)
 	}
 	return perm
 }

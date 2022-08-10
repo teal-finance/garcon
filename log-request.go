@@ -13,7 +13,7 @@ import (
 
 // LogRequest is the middleware to log the requester IP and the requested URL.
 func LogRequest(next http.Handler) http.Handler {
-	log.Print("Middleware logger: requester IP and requested URL")
+	log.Print("INF Middleware logger: requester IP and requested URL")
 
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
@@ -24,7 +24,7 @@ func LogRequest(next http.Handler) http.Handler {
 
 // LogSafeRequest is similar to LogRequest but sanitize the URL.
 func LogSafeRequest(next http.Handler) http.Handler {
-	log.Print("Middleware logger: requester IP and sanitized URL")
+	log.Print("INF Middleware logger: requester IP and sanitized URL")
 
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
@@ -36,7 +36,7 @@ func LogSafeRequest(next http.Handler) http.Handler {
 // LogRequestFingerprint is the middleware to log
 // incoming HTTP request and browser fingerprint.
 func LogRequestFingerprint(next http.Handler) http.Handler {
-	log.Print("Middleware logger: requested URL and browser fingerprint: " + FingerprintExplanation)
+	log.Print("INF Middleware logger: requested URL and browser fingerprint: " + FingerprintExplanation)
 
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
@@ -48,7 +48,7 @@ func LogRequestFingerprint(next http.Handler) http.Handler {
 
 // LogSafeRequestFingerprint is similar to LogRequestFingerprint but sanitize the URL.
 func LogSafeRequestFingerprint(next http.Handler) http.Handler {
-	log.Print("Middleware logger: sanitized URL and browser fingerprint: " + FingerprintExplanation)
+	log.Print("INF Middleware logger: sanitized URL and browser fingerprint: " + FingerprintExplanation)
 
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
@@ -60,7 +60,7 @@ func LogSafeRequestFingerprint(next http.Handler) http.Handler {
 
 // LogDuration logs the requested URL along with the time to handle it.
 func LogDuration(next http.Handler) http.Handler {
-	log.Print("Middleware logger: requester IP, requested URL and duration")
+	log.Print("INF Middleware logger: requester IP, requested URL and duration")
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
@@ -72,7 +72,7 @@ func LogDuration(next http.Handler) http.Handler {
 
 // LogSafeDuration is similar to LogDuration but also sanitizes the URL.
 func LogSafeDuration(next http.Handler) http.Handler {
-	log.Print("Middleware logger: requester IP, sanitized URL and duration")
+	log.Print("INF Middleware logger: requester IP, sanitized URL and duration")
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()

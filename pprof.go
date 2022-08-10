@@ -32,7 +32,7 @@ import (
 //
 //	go run github.com/google/pprof@latest -http=: cpu.pprof
 func ProbeCPU() interface{ Stop() } {
-	log.Print("Probing CPU. To visualize the profile: pprof -http=: cpu.pprof")
+	log.Print("INF Probing CPU. To visualize the profile: pprof -http=: cpu.pprof")
 	return profile.Start(profile.ProfilePath("."))
 }
 
@@ -73,7 +73,7 @@ func pProfHandler() http.Handler {
 }
 
 func runPProfServer(addr string, handler http.Handler) {
-	log.Print("Enable PProf endpoints: http://" + addr + "/debug/pprof")
+	log.Print("INF Enable PProf endpoints: http://" + addr + "/debug/pprof")
 	err := http.ListenAndServe(addr, handler)
 	log.Panic(err)
 }
