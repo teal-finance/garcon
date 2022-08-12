@@ -13,6 +13,13 @@ import (
 	"github.com/rs/cors"
 )
 
+func (g *Garcon) CORSHandler() Middleware {
+	if len(g.origins) == 0 {
+		return nil
+	}
+	return CORSHandler(g.origins, g.devMode)
+}
+
 // CORSHandler uses restrictive CORS values.
 func CORSHandler(origins []string, debug bool) func(next http.Handler) http.Handler {
 	options := cors.Options{

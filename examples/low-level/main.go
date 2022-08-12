@@ -72,7 +72,7 @@ func setMiddlewares(gw garcon.Writer) (chain garcon.Chain, connState func(net.Co
 	chain, connState = garcon.StartMetricsServer(expPort, "LowLevel")
 
 	// Limit the input request rate per IP
-	reqLimiter := garcon.NewReqLimiter(burst, reqMinute, *dev, gw)
+	reqLimiter := garcon.NewRateLimiter(burst, reqMinute, *dev, gw)
 
 	corsConfig := allowedProdOrigin
 	if *dev {

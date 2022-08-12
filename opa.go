@@ -60,6 +60,18 @@ func LoadPolicy(filenames []string) (*ast.Compiler, error) {
 	return ast.CompileModules(modules)
 }
 
+// OPAHandler creates the middleware for Authentication rules (Open Policy Agent).
+func (g *Garcon) OPAHandler(opaFilenames ...string) Middleware {
+	if len(opaFilenames) == 0 {
+		return nil
+	}
+	policy, err := NewPolicy(opaFilenames, g.Writer)
+	if err != nil {
+		log.Panic("WithOPA: cannot create OPA Policy: ", err)
+	}
+	return policy.AuthOPA
+}
+
 // AuthOPA is the HTTP middleware to check endpoint authorization.
 func (opa Policy) AuthOPA(next http.Handler) http.Handler {
 	log.Print("INF Middleware OPA: ", opa.compiler.Modules)

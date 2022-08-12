@@ -220,7 +220,6 @@ HTTP/1.1 401 Unauthorized
 Content-Type: application/json
 Server: MyBackendName-1.2.0
 Vary: Origin
-X-Content-Type-Options: nosniff
 Date: Thu, 02 Dec 2021 07:06:20 GMT
 Content-Length: 84
 

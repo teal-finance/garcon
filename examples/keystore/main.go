@@ -38,9 +38,6 @@ func main() {
 	g := garcon.New(
 		garcon.WithURLs(addr),
 		garcon.WithDocURL("/doc"),
-		garcon.WithServerHeader("KeyStore"),
-		garcon.WithReqLogs(),
-		garcon.WithLimiter(burst, perMinute),
 		garcon.WithPProf(pprofPort),
 		garcon.WithProm(expPort, "keystore"),
 		garcon.WithDev(!*prod),
@@ -49,7 +46,7 @@ func main() {
 	// handles both REST API and static web files
 	h := handler(g)
 
-	err := g.ListenAndServe(h, mainPort)
+	err := g.ListenAndServe(h, mainPort, "KeyStore", "", burst, perMinute)
 	log.Fatal(err)
 }
 
@@ -116,7 +113,6 @@ func (db *db) list(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Write(bytes)
 }
 
@@ -173,7 +169,6 @@ func (db *db) post(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Write(bytes)
 }
 

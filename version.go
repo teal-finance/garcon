@@ -232,6 +232,11 @@ func writeHTML(w http.ResponseWriter, t *template.Template) {
 	}
 }
 
+func (g *Garcon) ServerSetter(program string) Middleware {
+	version := Version(program)
+	return ServerHeader(version)
+}
+
 // ServerHeader is the middleware setting the Server HTTP header in the response.
 func ServerHeader(version string) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {

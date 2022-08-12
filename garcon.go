@@ -9,6 +9,7 @@
 package garcon
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -28,21 +29,14 @@ import (
 )
 
 type Garcon struct {
-	Namespace       Namespace
-	Writer          Writer
-	docURL          string
-	version         string
-	secretKey       []byte
-	checkerCfg      []any
-	opaFilenames    []string
-	urls            []*url.URL
-	origins         []string
-	pprofPort       int
-	expPort         int
-	reqLogVerbosity int
-	reqBurst        int
-	reqMinute       int
-	devMode         bool
+	Namespace Namespace
+	Writer    Writer
+	docURL    string
+	urls      []*url.URL
+	origins   []string
+	pprofPort int
+	expPort   int
+	devMode   bool
 }
 
 func New(opts ...Option) *Garcon {
@@ -75,6 +69,61 @@ func New(opts ...Option) *Garcon {
 	return &g
 }
 
+type Option func(*Garcon)
+
+func WithNamespace(namespace string) Option {
+	return func(g *Garcon) {
+		oldNS := g.Namespace
+		newNS := NewNamespace(namespace)
+		if oldNS != "" && g.Namespace != newNS {
+			log.Panicf("WithNamespace() and WithProm() must use the same namespace, but got %q and %q", oldNS, newNS)
+		}
+		g.Namespace = newNS
+	}
+}
+
+func WithProm(port int, namespace string) Option {
+	setNamespace := WithNamespace(namespace)
+
+	return func(g *Garcon) {
+		g.expPort = port
+		setNamespace(g)
+	}
+}
+
+func WithDocURL(docURL string) Option {
+	return func(g *Garcon) {
+		g.docURL = docURL
+	}
+}
+
+func WithDev(enable ...bool) Option {
+	devMode := true
+	if len(enable) > 0 {
+		devMode = enable[0]
+
+		if len(enable) >= 2 {
+			log.Panic("garcon.WithDev() must be called with zero or one argument")
+		}
+	}
+
+	return func(g *Garcon) {
+		g.devMode = devMode
+	}
+}
+
+func WithPProf(port int) Option {
+	return func(g *Garcon) {
+		g.pprofPort = port
+	}
+}
+
+func WithURLs(addresses ...string) Option {
+	return func(g *Garcon) {
+		g.urls = ParseURLs(addresses)
+	}
+}
+
 // DevOrigins provides the development origins:
 // - yarn run vite --port 3000
 // - yarn run vite preview --port 5000
@@ -91,8 +140,8 @@ func DevOrigins() []*url.URL {
 // ListenAndServe runs the HTTP server(s) in foreground.
 // Optionally it also starts a metrics server in background (if export port > 0).
 // The metrics server is for use with Prometheus or another compatible monitoring tool.
-func (g *Garcon) ListenAndServe(h http.Handler, port int) error {
-	server := g.Server(h, port)
+func (g *Garcon) ListenAndServe(h http.Handler, port int, program, opaFilename string, rateLimiterSettings ...int) error {
+	server := g.Server(h, port, program, opaFilename, rateLimiterSettings...)
 
 	log.Print("INF Server listening on http://localhost", server.Addr)
 
@@ -106,9 +155,13 @@ func (g *Garcon) ListenAndServe(h http.Handler, port int) error {
 }
 
 // Server returns a default http.Server ready to handle API endpoints, static web pages...
-func (g *Garcon) Server(h http.Handler, port int) http.Server {
-	h, connState := g.Handler(h)
+func (g *Garcon) Server(h http.Handler, port int, program, opaFilename string, rateLimiterSettings ...int) http.Server {
+	h, connState := g.Handler(h, program, opaFilename, rateLimiterSettings...)
+	return Server(h, port, connState)
+}
 
+// Server returns a default http.Server ready to handle API endpoints, static web pages...
+func Server(h http.Handler, port int, connState func(net.Conn, http.ConnState)) http.Server {
 	return http.Server{
 		Addr:              ":" + strconv.Itoa(port),
 		Handler:           h,
@@ -126,13 +179,12 @@ func (g *Garcon) Server(h http.Handler, port int) http.Server {
 	}
 }
 
-func (g *Garcon) Handler(h http.Handler) (http.Handler, func(net.Conn, http.ConnState)) {
-	chain, connState := g.ChainMiddleware()
-	g.EraseSecretKey()
+func (g *Garcon) Handler(h http.Handler, program, opaFilename string, rateLimiterSettings ...int) (http.Handler, func(net.Conn, http.ConnState)) {
+	chain, connState := g.DefaultMiddleware(program, opaFilename, rateLimiterSettings...)
 	return chain.Then(h), connState
 }
 
-func (g *Garcon) ChainMiddleware() (Chain, func(net.Conn, http.ConnState)) {
+func (g *Garcon) DefaultMiddleware(program, opaFilename string, rateLimiterSettings ...int) (Chain, func(net.Conn, http.ConnState)) {
 	chain, connState := g.StartMetricsServer()
 
 	chain = chain.Append(RejectInvalidURI)
@@ -142,12 +194,12 @@ func (g *Garcon) ChainMiddleware() (Chain, func(net.Conn, http.ConnState)) {
 		chain = chain.Append(reqLogger)
 	}
 
-	rateLimiter := g.RateLimiter()
+	rateLimiter := g.RateLimiter(rateLimiterSettings...)
 	if rateLimiter != nil {
 		chain = chain.Append(rateLimiter)
 	}
 
-	serverSetter := g.ServerSetter()
+	serverSetter := g.ServerSetter(program)
 	if serverSetter != nil {
 		chain = chain.Append(serverSetter)
 	}
@@ -157,7 +209,7 @@ func (g *Garcon) ChainMiddleware() (Chain, func(net.Conn, http.ConnState)) {
 		chain = chain.Append(cors)
 	}
 
-	opa := g.OPAHandler()
+	opa := g.OPAHandler(opaFilename)
 	if opa != nil {
 		chain = chain.Append(opa)
 	}
@@ -188,54 +240,46 @@ type TokenChecker interface {
 	Vet(next http.Handler) http.Handler
 }
 
-func (g *Garcon) TokenChecker() TokenChecker {
-	if len(g.secretKey) == 0 {
-		return nil
+// NewIncorruptible uses cookies based on fast and tiny token.
+// NewIncorruptible requires g.WithURLs() to set the Cookie secure, domain and path.
+func (g *Garcon) NewIncorruptible(secretKeyHex string, maxAge int, setIP bool) *incorruptible.Incorruptible {
+	if len(g.urls) == 0 {
+		log.Panic("Missing URLs => Set first the URLs with garcon.WithURLs()")
 	}
 
-	m := g.NewIncorruptible()
-	if m != nil {
-		return m
+	if len(secretKeyHex) != 32 {
+		log.Panic("Want AES-128 key composed by 32 hexadecimal digits, but got ", len(secretKeyHex))
+	}
+	key, err := hex.DecodeString(secretKeyHex)
+	if err != nil {
+		log.Panic("NewIncorruptible: cannot decode the 128-bit AES key, please provide 32 hexadecimal digits ", err)
 	}
 
-	return g.NewJWTChecker()
+	cookieName := string(g.Namespace)
+	return incorruptible.New(g.urls, g.Writer.WriteErr, key, cookieName, maxAge, setIP)
 }
 
-func (g *Garcon) NewIncorruptible() *incorruptible.Incorruptible {
-	if len(g.checkerCfg) != 3 {
-		return nil
+// NewJWTChecker requires WithURLs() to set the Cookie name, secure, domain and path.
+func (g *Garcon) NewJWTChecker(secretKeyHex string, planPerm ...any) *JWTChecker {
+	if len(g.urls) == 0 {
+		log.Panic("Missing URLs => Set first the URLs with garcon.WithURLs()")
 	}
 
-	name, ok1 := g.checkerCfg[0].(string)
-	maxAge, ok2 := g.checkerCfg[1].(int)
-	setIP, ok3 := g.checkerCfg[2].(bool)
-
-	if name == "" {
-		name = string(g.Namespace)
+	if len(secretKeyHex) != 64 {
+		log.Panic("Want HMAC-SHA256 key composed by 64 hexadecimal digits, but got ", len(secretKeyHex))
+	}
+	key, err := hex.DecodeString(secretKeyHex)
+	if err != nil {
+		log.Panic("Cannot decode the HMAC-SHA256 key, please provide 64 hexadecimal digits ", err)
 	}
 
-	if ok1 && ok2 && ok3 {
-		return incorruptible.New(name, g.urls, g.secretKey, maxAge, setIP, g.Writer.WriteErr)
-	}
-
-	log.Panic("Cannot decode Incorruptible parameters ", ok1, ok2, ok3)
-	return nil
+	return NewJWTChecker(g.urls, g.Writer, key, planPerm...)
 }
 
-func (g *Garcon) NewJWTChecker() *JWTChecker {
-	return NewJWTChecker(g.urls, g.Writer, g.secretKey, g.checkerCfg...)
-}
-
-// OverwriteBufferContent is to erase secrets when they are no longer required.
+// OverwriteBufferContent is to erase a secret when it is no longer required.
 func OverwriteBufferContent(b []byte) {
 	//nolint:gosec // does not matter if written bytes are not good random values
 	_, _ = rand.Read(b)
-}
-
-// EraseSecretKey should be called as soon as secretKey is no longer required.
-func (g *Garcon) EraseSecretKey() {
-	OverwriteBufferContent(g.secretKey)
-	g.secretKey = nil
 }
 
 // SplitClean splits the values and trim them.

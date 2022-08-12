@@ -21,7 +21,7 @@ import (
 
 // Garcon settings
 const (
-	authCfg                      = "examples/sample-auth.rego"
+	defaultOPAFile               = "examples/sample-auth.rego"
 	mainPort, pprofPort, expPort = 8080, 8093, 9093
 	burst, perMinute             = 10, 30
 
@@ -32,16 +32,16 @@ const (
 
 func main() {
 	garcon.SetVersionFlag()
-	auth := flag.Bool("auth", false, "Enable OPA authorization specified in file "+authCfg)
+	auth := flag.Bool("auth", false, "Enable OPA authorization specified in file "+defaultOPAFile)
 	prod := flag.Bool("prod", false, "Use settings for production")
 	jwt := flag.Bool("jwt", false, "Use JWT in lieu of the incorruptible token")
 	flag.Parse()
 
 	garcon.LogVersion()
 
-	opaFilenames := []string{}
+	opaFile := ""
 	if *auth {
-		opaFilenames = []string{authCfg}
+		opaFile = defaultOPAFile
 	}
 
 	var addr string
@@ -51,36 +51,32 @@ func main() {
 		addr = "http://localhost:" + strconv.Itoa(mainPort) + "/myapp"
 	}
 
-	tokenOption := garcon.WithIncorruptible(aes128bits, 60, true)
-	if *jwt {
-		tokenOption = garcon.WithJWT(hmacSHA256, "FreePlan", 10, "PremiumPlan", 100)
-	}
-
 	g := garcon.New(
-		tokenOption,
 		garcon.WithURLs(addr),
 		garcon.WithDocURL("/doc"),
-		garcon.WithServerHeader("MyApp"),
-		garcon.WithOPA(opaFilenames...),
-		garcon.WithReqLogs(),
-		garcon.WithLimiter(burst, perMinute),
 		garcon.WithPProf(pprofPort),
 		garcon.WithProm(expPort, "https://example.com/path/myapp/"),
 		garcon.WithDev(!*prod),
 		nil, // just to test "none" option
 	)
 
-	// handles both REST API and static web files
-	h := handler(g, addr)
+	var ck garcon.TokenChecker
+	if *jwt {
+		ck = g.NewJWTChecker(hmacSHA256, "FreePlan", 10, "PremiumPlan", 100)
+	} else {
+		ck = g.NewIncorruptible(aes128bits, 60, true)
+	}
 
-	err := g.ListenAndServe(h, mainPort)
+	// handles both REST API and static web files
+	h := handler(g, addr, ck)
+
+	err := g.ListenAndServe(h, mainPort, "MyApp", opaFile, burst, perMinute)
 	log.Fatal(err)
 }
 
 // handler creates the mapping between the endpoints and the handler functions.
-func handler(g *garcon.Garcon, addr string) http.Handler {
+func handler(g *garcon.Garcon, addr string, ck garcon.TokenChecker) http.Handler {
 	r := chi.NewRouter()
-	ck := g.TokenChecker()
 
 	// Static website files
 	ws := garcon.NewStaticWebServer("examples/www", g.Writer)

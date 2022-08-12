@@ -88,7 +88,6 @@ func (gw Writer) WriteErrSafe(w http.ResponseWriter, r *http.Request, statusCode
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.WriteHeader(statusCode)
 	_, _ = w.Write(buf)
 }
@@ -119,7 +118,6 @@ func (gw Writer) WriteErr(w http.ResponseWriter, r *http.Request, statusCode int
 	buf = append(buf, '}')
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.WriteHeader(statusCode)
 	_, _ = w.Write(buf)
 }
@@ -136,24 +134,24 @@ func (gw Writer) WriteOK(w http.ResponseWriter, kv ...any) {
 	case len(kv) == 1:
 		buf, err = json.Marshal(kv)
 		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
+			gw.WriteErr(w, nil, http.StatusInternalServerError,
+				"Cannot serialize success JSON response", "error", err)
 			return
 		}
 
 	default:
-		buf = make([]byte, 0, 1024)
+		buf = make([]byte, 0, 1024) // 1024 = max bytes of most of the JSON responses
 		buf = append(buf, '{')
 		buf = appendKeyValues(buf, false, kv)
 		buf = append(buf, '}')
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(buf)
 }
 
-func appendMessages(buf []byte, kv []any) ([]byte, bool) {
+func appendMessages(buf []byte, kv []any) (_ []byte, comma bool) {
 	if len(kv) == 0 {
 		return buf, false
 	}
@@ -232,6 +230,8 @@ func appendValue(buf []byte, a any) []byte {
 		return strconv.AppendQuoteToGraphic(buf, string(val))
 	case complex64, complex128:
 		return strconv.AppendQuoteToGraphic(buf, fmt.Sprint(val))
+	case error:
+		return strconv.AppendQuoteToGraphic(buf, val.Error())
 	default:
 		return appendJSON(buf, val)
 	}

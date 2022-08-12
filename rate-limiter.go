@@ -27,10 +27,31 @@ type visitor struct {
 	limiter  *rate.Limiter
 }
 
-func NewReqLimiter(maxReqBurst, maxReqPerMinute int, devMode bool, gw Writer) ReqLimiter {
+func (g *Garcon) RateLimiter(settings ...int) Middleware {
+	var maxReqBurst, maxReqPerMinute int
+
+	switch len(settings) {
+	case 0: // default settings
+		maxReqBurst = 20
+		maxReqPerMinute = 4 * maxReqBurst
+	case 1:
+		maxReqBurst = settings[0]
+		maxReqPerMinute = 4 * maxReqBurst
+	case 2:
+		maxReqBurst = settings[0]
+		maxReqPerMinute = settings[1]
+	default:
+		log.Panic("garcon.RateLimiter() accept up to two arguments, got ", len(settings))
+	}
+
+	reqLimiter := NewRateLimiter(maxReqBurst, maxReqPerMinute, g.devMode, g.Writer)
+	return reqLimiter.LimitRate
+}
+
+func NewRateLimiter(maxReqBurst, maxReqPerMinute int, devMode bool, gw Writer) ReqLimiter {
 	if devMode {
-		maxReqBurst *= 10
-		maxReqPerMinute *= 10
+		maxReqBurst *= 2
+		maxReqPerMinute *= 2
 	}
 
 	ratePerSecond := float64(maxReqPerMinute) / 60

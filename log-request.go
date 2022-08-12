@@ -11,6 +11,27 @@ import (
 	"time"
 )
 
+func (g *Garcon) RequestLogger(verbosity ...int) Middleware {
+	if len(verbosity) >= 2 {
+		log.Panic("garcon.WithReqLogs() must be called with zero or one argument")
+	}
+
+	v := 1
+	if len(verbosity) > 0 {
+		v = verbosity[0]
+		if v < 0 || v > 2 {
+			log.Panicf("g.RequestLogger() got verbosity=%v but currently accepts values 1 and 2 only", v)
+		}
+	}
+
+	switch v {
+	case 1:
+		return LogRequest
+	default:
+		return LogRequestFingerprint
+	}
+}
+
 // LogRequest is the middleware to log the requester IP and the requested URL.
 func LogRequest(next http.Handler) http.Handler {
 	log.Print("INF Middleware logger: requester IP and requested URL")
