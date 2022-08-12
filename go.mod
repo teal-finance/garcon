@@ -16,7 +16,7 @@ require (
 	github.com/rs/cors v1.8.2
 	github.com/teal-finance/incorruptible v0.0.0-20220810125748-148287e743af
 	github.com/teal-finance/notifier v1.1.1
-	github.com/teal-finance/quid v0.0.0-20220810150609-2a60d4690527
+	github.com/teal-finance/quid v0.0.0-20220812051911-c2c51729165a
 	github.com/zhangyunhao116/fastrand v0.3.0
 	golang.org/x/time v0.0.0-20220722155302-e5dcc9cfc0b9
 )
@@ -53,8 +53,8 @@ require (
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 	github.com/yashtewari/glob-intersection v0.1.0 // indirect
-	golang.org/x/net v0.0.0-20220809184613-07c6da5e1ced // indirect
-	golang.org/x/sys v0.0.0-20220808155132-1c4a2a72c664 // indirect
+	golang.org/x/net v0.0.0-20220812165438-1d4ff48094d1 // indirect
+	golang.org/x/sys v0.0.0-20220811171246-fbc7d0a398ab // indirect
 	golang.org/x/tools v0.1.12 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
