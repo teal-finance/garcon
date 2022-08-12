@@ -53,8 +53,8 @@ func (ns Namespace) String() string {
 }
 
 // StartMetricsServer creates and starts the Prometheus export server.
-func (g *Garcon) StartMetricsServer() (Chain, func(net.Conn, http.ConnState)) {
-	return StartMetricsServer(g.expPort, g.Namespace)
+func (g *Garcon) StartMetricsServer(expPort int) (Chain, func(net.Conn, http.ConnState)) {
+	return StartMetricsServer(expPort, g.Namespace)
 }
 
 // StartMetricsServer creates and starts the Prometheus export server.

@@ -35,7 +35,6 @@ type Garcon struct {
 	urls      []*url.URL
 	origins   []string
 	pprofPort int
-	expPort   int
 	devMode   bool
 }
 
@@ -73,21 +72,7 @@ type Option func(*Garcon)
 
 func WithNamespace(namespace string) Option {
 	return func(g *Garcon) {
-		oldNS := g.Namespace
-		newNS := NewNamespace(namespace)
-		if oldNS != "" && g.Namespace != newNS {
-			log.Panicf("WithNamespace() and WithProm() must use the same namespace, but got %q and %q", oldNS, newNS)
-		}
-		g.Namespace = newNS
-	}
-}
-
-func WithProm(port int, namespace string) Option {
-	setNamespace := WithNamespace(namespace)
-
-	return func(g *Garcon) {
-		g.expPort = port
-		setNamespace(g)
+		g.Namespace = NewNamespace(namespace)
 	}
 }
 
@@ -140,24 +125,19 @@ func DevOrigins() []*url.URL {
 // ListenAndServe runs the HTTP server(s) in foreground.
 // Optionally it also starts a metrics server in background (if export port > 0).
 // The metrics server is for use with Prometheus or another compatible monitoring tool.
-func (g *Garcon) ListenAndServe(h http.Handler, port int, program, opaFilename string, rateLimiterSettings ...int) error {
-	server := g.Server(h, port, program, opaFilename, rateLimiterSettings...)
-
+func ListenAndServe(server *http.Server) error {
 	log.Print("INF Server listening on http://localhost", server.Addr)
 
 	err := server.ListenAndServe()
 
-	log.Print("ERR Install ncat and ss: sudo apt install ncat iproute2")
-	log.Printf("ERR Try to listen port %v: sudo ncat -l %v", port, port)
-	log.Printf("ERR Get the process using port %v: sudo ss -pan | grep %v", port, port)
+	_, port, e := net.SplitHostPort(server.Addr)
+	if e == nil {
+		log.Print("ERR Install ncat and ss: sudo apt install ncat iproute2")
+		log.Printf("ERR Try to listen port %v: sudo ncat -l %v", port, port)
+		log.Printf("ERR Get the process using port %v: sudo ss -pan | grep %v", port, port)
+	}
 
 	return err
-}
-
-// Server returns a default http.Server ready to handle API endpoints, static web pages...
-func (g *Garcon) Server(h http.Handler, port int, program, opaFilename string, rateLimiterSettings ...int) http.Server {
-	h, connState := g.Handler(h, program, opaFilename, rateLimiterSettings...)
-	return Server(h, port, connState)
 }
 
 // Server returns a default http.Server ready to handle API endpoints, static web pages...
@@ -177,44 +157,6 @@ func Server(h http.Handler, port int, connState func(net.Conn, http.ConnState)) 
 		BaseContext:       nil,
 		ConnContext:       nil,
 	}
-}
-
-func (g *Garcon) Handler(h http.Handler, program, opaFilename string, rateLimiterSettings ...int) (http.Handler, func(net.Conn, http.ConnState)) {
-	chain, connState := g.DefaultMiddleware(program, opaFilename, rateLimiterSettings...)
-	return chain.Then(h), connState
-}
-
-func (g *Garcon) DefaultMiddleware(program, opaFilename string, rateLimiterSettings ...int) (Chain, func(net.Conn, http.ConnState)) {
-	chain, connState := g.StartMetricsServer()
-
-	chain = chain.Append(RejectInvalidURI)
-
-	reqLogger := g.RequestLogger()
-	if reqLogger != nil {
-		chain = chain.Append(reqLogger)
-	}
-
-	rateLimiter := g.RateLimiter(rateLimiterSettings...)
-	if rateLimiter != nil {
-		chain = chain.Append(rateLimiter)
-	}
-
-	serverSetter := g.ServerSetter(program)
-	if serverSetter != nil {
-		chain = chain.Append(serverSetter)
-	}
-
-	cors := g.CORSHandler()
-	if cors != nil {
-		chain = chain.Append(cors)
-	}
-
-	opa := g.OPAHandler(opaFilename)
-	if opa != nil {
-		chain = chain.Append(opa)
-	}
-
-	return chain, connState
 }
 
 type TokenChecker interface {

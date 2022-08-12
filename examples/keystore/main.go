@@ -36,22 +36,31 @@ func main() {
 	addr := "http://localhost:" + strconv.Itoa(mainPort)
 
 	g := garcon.New(
+		garcon.WithNamespace("keystore"),
 		garcon.WithURLs(addr),
 		garcon.WithDocURL("/doc"),
 		garcon.WithPProf(pprofPort),
-		garcon.WithProm(expPort, "keystore"),
 		garcon.WithDev(!*prod),
 	)
 
-	// handles both REST API and static web files
-	h := handler(g)
+	chain, connState := g.StartMetricsServer(expPort)
+	chain = chain.Append(garcon.RejectInvalidURI)
+	chain = chain.Append(g.RequestLogger())
+	chain = chain.Append(g.RateLimiter(burst, perMinute))
+	chain = chain.Append(g.ServerSetter("KeyStore"))
+	chain = chain.Append(g.CORSHandler())
 
-	err := g.ListenAndServe(h, mainPort, "KeyStore", "", burst, perMinute)
+	// handles both REST API and static web files
+	r := router(g)
+	h := chain.Then(r)
+
+	server := garcon.Server(h, mainPort, connState)
+	err := garcon.ListenAndServe(&server)
 	log.Fatal(err)
 }
 
-// handler creates the mapping between the endpoints and the handler functions.
-func handler(g *garcon.Garcon) http.Handler {
+// router creates the mapping between the endpoints and the router functions.
+func router(g *garcon.Garcon) http.Handler {
 	r := chi.NewRouter()
 
 	// Static website files

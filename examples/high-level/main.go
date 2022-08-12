@@ -52,10 +52,10 @@ func main() {
 	}
 
 	g := garcon.New(
+		garcon.WithNamespace("https://example.com/path/myapp/"),
 		garcon.WithURLs(addr),
 		garcon.WithDocURL("/doc"),
 		garcon.WithPProf(pprofPort),
-		garcon.WithProm(expPort, "https://example.com/path/myapp/"),
 		garcon.WithDev(!*prod),
 		nil, // just to test "none" option
 	)
@@ -67,10 +67,20 @@ func main() {
 		ck = g.NewIncorruptible(aes128bits, 60, true)
 	}
 
-	// handles both REST API and static web files
-	h := handler(g, addr, ck)
+	chain, connState := g.StartMetricsServer(expPort)
+	chain = chain.Append(garcon.RejectInvalidURI)
+	chain = chain.Append(g.RequestLogger())
+	chain = chain.Append(g.RateLimiter(burst, perMinute))
+	chain = chain.Append(g.ServerSetter("MyApp"))
+	chain = chain.Append(g.CORSHandler())
+	chain = chain.Append(g.OPAHandler(opaFile))
 
-	err := g.ListenAndServe(h, mainPort, "MyApp", opaFile, burst, perMinute)
+	// handles both REST API and static web files
+	r := handler(g, addr, ck)
+	h := chain.Then(r)
+
+	server := garcon.Server(h, mainPort, connState)
+	err := garcon.ListenAndServe(&server)
 	log.Fatal(err)
 }
 
