@@ -80,7 +80,7 @@ func StartMetricsServer(port int, namespace ServerName) (Chain, func(net.Conn, h
 	prometheus.MustRegister(collectors.NewBuildInfoCollector())
 
 	namespace.SetPromNamingRule()
-	chain := NewChain(namespace.MiddlewareMeasureDuration)
+	chain := NewChain(namespace.MiddlewareExportTrafficMetrics)
 	counter := namespace.updateHTTPMetrics()
 	return chain, counter
 }
@@ -93,8 +93,8 @@ func metricsHandler() http.Handler {
 	return handler
 }
 
-// MiddlewareMeasureDuration measures the time to handle a request.
-func (ns ServerName) MiddlewareMeasureDuration(next http.Handler) http.Handler {
+// MiddlewareExportTrafficMetrics measures the time to handle a request.
+func (ns ServerName) MiddlewareExportTrafficMetrics(next http.Handler) http.Handler {
 	summary := ns.newSummaryVec(
 		"request_duration_seconds",
 		"Time to handle a client request",
