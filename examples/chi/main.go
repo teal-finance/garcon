@@ -24,7 +24,7 @@ func main() {
 	endpoint := flag.String("post-endpoint", "/", "The endpoint for the POST request.")
 	flag.Parse()
 
-	g := garcon.New(garcon.WithNamespace("ChiServer"))
+	g := garcon.New(garcon.WithServerName("ChiExample"))
 
 	middleware := garcon.NewChain(
 		g.MiddlewareLogRequest("safe"),

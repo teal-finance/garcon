@@ -76,9 +76,9 @@ func New(opts ...Option) *Garcon {
 
 type Option func(*Garcon)
 
-func WithNamespace(namespace string) Option {
+func WithServerName(str string) Option {
 	return func(g *Garcon) {
-		g.ServerName = ExtractName(namespace)
+		g.ServerName = ExtractName(str)
 	}
 }
 

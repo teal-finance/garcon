@@ -36,7 +36,7 @@ func main() {
 	addr := "http://localhost:" + strconv.Itoa(mainPort)
 
 	g := garcon.New(
-		garcon.WithNamespace("keystore"),
+		garcon.WithServerName("KeyStore"),
 		garcon.WithURLs(addr),
 		garcon.WithDocURL("/doc"),
 		garcon.WithPProf(pprofPort),
