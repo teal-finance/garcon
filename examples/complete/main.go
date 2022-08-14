@@ -21,7 +21,7 @@ import (
 
 // Garcon settings
 const (
-	opaFile               = "examples/sample-auth.rego"
+	opaFile                      = "examples/sample-auth.rego"
 	mainPort, pprofPort, expPort = 8080, 8093, 9093
 	burst, perMinute             = 10, 30
 
@@ -79,7 +79,7 @@ func main() {
 	h := chain.Then(r)
 
 	server := garcon.Server(h, mainPort, connState)
-	
+
 	log.Print("-------------- Open http://localhost:8080/myapp --------------")
 	err := garcon.ListenAndServe(&server)
 	log.Fatal(err)
