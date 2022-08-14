@@ -113,11 +113,9 @@ func (form *WebForm) init() {
 	log.Print("INF Middleware WebForm redirect=", form.Redirect)
 }
 
-// Notify registers a web-form middleware
-// that structures the filled form into markdown format
-// and sends it to the Notifier.
-// notify converts the received web-form into markdown format
-// and sends it to the registered Notifier.
+// Notify returns a handler that
+// converts the received web-form into markdown format
+// and sends it to the notifierURL.
 func (form *WebForm) Notify(notifierURL string) func(w http.ResponseWriter, r *http.Request) {
 	form.init()
 
