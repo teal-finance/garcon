@@ -1,29 +1,48 @@
 # Teal.Finance/Garcon
 
-| ![logo](examples/www/myapp/images/garcon.png) | API and static website server respecting the Go HTTP standards with middleware as rate-limiter, JWT cookies, CORS, traffic logs, OPA… and other common app tools to retrieve version, to export metrics (Prometheus) and to debug with PProf.<br>[![Go Reference](examples/www/myapp/images/go-ref.svg "Go documentation for Garcon")](https://pkg.go.dev/github.com/teal-finance/garcon) [![Go Report Card](https://goreportcard.com/badge/github.com/teal-finance/garcon)](https://goreportcard.com/report/github.com/teal-finance/garcon) |
+| ![logo](examples/www/myapp/images/garcon.png) | Garcon works with all HTTP routers ans middleware respecting the Go HTTP standards. Garcon provides the batteries: static website server, contact-form backend, API helpers, debugging helpers (PProf), Git version, metrics server (Prometheus), URI sanitization and middleware: rate-limiter, JWT cookies, CORS, traffic logs, OPA…<br>[![Go Reference](examples/www/myapp/images/go-ref.svg "Go documentation for Garcon")](https://pkg.go.dev/github.com/teal-finance/garcon) [![Go Report Card](https://goreportcard.com/badge/github.com/teal-finance/garcon)](https://goreportcard.com/report/github.com/teal-finance/garcon) |
 | --------------------------------------------- |:--------- |
+
+## Motivation
+
+Many projects often start with one of the many nice HTTP routers and middleware already available and develop their own middleware, debugging server, API helpers... At Teal.Finance, we decided to share in one place (here) all our stuff in the idea to let other projects go faster.
 
 ## Middleware
 
-Easy to setup, respecting the Go standards, compatible with dozens of HTTP routers and other middleware:
+Our Middleware are very easy to setup. They respect the Go standards. Thus you can easily use them with the HTTP router of your choice and chained them with other middleware:
 
-- Logging of incoming requests (with or without browser fingerprint)
-- Web traffic metrics with Prometheus export
-- Rate-limiter to prevent requests flooding
-- JWT management using HttpOnly cookie or Authorization header
-- Session cookie with [Incorruptible](https://github.com/teal-finance/incorruptible) token
-- Cross-Origin Resource Sharing (CORS)
-- Authentication rules based on Datalog/Rego files using [Open Policy Agent](https://www.openpolicyagent.org)
+- `MiddlewareLogRequest` Log incoming requests (with or without browser fingerprint)
+- `MiddlewareLogDuration` Log processing time
+- `MiddlewareExportTrafficMetrics` Export web traffic metrics
+- `MiddlewareRejectUnprintableURI` Reject request with unwanted characters
+- `MiddlewareRateLimiter` Limit incoming request to prevent flooding
+- `MiddlewareServerHeader` Add the "Server" HTTP header in the response
+- `JWTChecker` JWT management using HttpOnly cookie or Authorization header
+- `IncorruptibleChecker` Session cookie with [Incorruptible](https://github.com/teal-finance/incorruptible) token
+- `MiddlewareCORS` Cross-Origin Resource Sharing (CORS)
+- `MiddlewareOPA` Authenticate from Datalog/Rego files using [Open Policy Agent](https://www.openpolicyagent.org)
+
+```go
+g := garcon.New()
+middleware = garcon.NewChain(
+    g.MiddlewareRejectUnprintableURI(),
+    g.MiddlewareLogRequest(),
+    g.MiddlewareRateLimiter())
+router  := ... you choose
+handler := middleware.Then(router)
+server  := http.Server{Addr: ":8080", Handler: handler}
+server.ListenAndServe()
+```
 
 ## Other features
 
-- HTTP/REST server for API endpoints (compatible with any Go-standard HTTP handlers)
-- File server intended for static web files supporting Brotli and AVIF data
+- Static web files server supporting Brotli and AVIF
 - Metrics server exporting data to Prometheus (or other compatible monitoring tool)
 - PProf server for debugging purpose
-- Success and error responses in JSON format
+- Serialize JSON responses, including the error messages
 - Chained middleware (fork of [justinas/alice](https://github.com/justinas/alice))
-- Retrieve version info from build flags and Go module information
+- Chained round trip handlers
+- Retrieve Git version, branch and commit from build flags and Go module information
 
 ## Basic example
 
@@ -40,25 +59,22 @@ middleware = garcon.NewChain(
 router := chi.NewRouter()
 
 // static website, automatically sends the Brotli-compressed file if present and supported by the browser
-ws := g.NewStaticWebServer("/var/www/myapp")
-router.Get("/myapp", ws.ServeFile("myapp/index.html", "text/html; charset=utf-8"))
+ws := g.NewStaticWebServer("/var/www")
+router.Get("/", ws.ServeFile("index.html", "text/html; charset=utf-8"))
 router.Get("/favicon.ico", ws.ServeFile("favicon.ico", "image/x-icon"))
-router.Get("/myapp/js/*", ws.ServeDir("text/javascript; charset=utf-8"))
-router.Get("/myapp/css/*", ws.ServeDir("text/css; charset=utf-8"))
-router.Get("/myapp/images/*", ws.ServeImages()) // automatically sends AVIF if present and supported by the browser
+router.Get("/js/*", ws.ServeDir("text/javascript; charset=utf-8"))
+router.Get("/css/*", ws.ServeDir("text/css; charset=utf-8"))
+router.Get("/images/*", ws.ServeImages()) // automatically sends AVIF if present and supported by the browser
 
-// provide Git version and last commit date
-router.Get("/myapp/version", garcon.ServeVersion())
+// receive contact-forms on your chat channel on the fly
+cf := g.NewContactForm("/")
+router.Post("/", cf.Notify("https://mattermost.com/hooks/qite178czotd5"))
 
-// receive contact-forms on your chat channel in real-time
-cf := g.NewContactForm("/myapp")
-router.Post("/myapp", cf.Notify("https://mattermost.com/hooks/qite178czotd5"))
+// Git version and last commit date (HTML or JSON depending on the "Accept" header)
+router.Get("/version", garcon.ServeVersion())
 
-// API endpoints
-router.Get("/myapp/api/items", myFunctionHandler)
-router.Get("/myapp/api/reserved", g.Writer.NotImplemented)
-
-// other endpoints
+// return a JSON message
+router.Get("/reserved", g.Writer.NotImplemented)
 router.NotFound(g.Writer.InvalidPath)
 
 handler := chain.Then(router)
@@ -78,7 +94,7 @@ import "github.com/teal-finance/garcon"
 
 func main() {
     g, _ := garcon.New(
-        garcon.WithURLs("https://my-company.com/myapp"),
+        garcon.WithURLs("https://my-company.com"),
         garcon.WithDev())
 
     aes128Key = "00112233445566778899aabbccddeeff"
@@ -89,17 +105,17 @@ func main() {
     router := chi.NewRouter()
 
     // website with static files directory
-    ws := g.NewStaticWebServer("examples/www")
+    ws := g.NewStaticWebServer("/var/www")
 
-    // ck.Set => set the cookie when visiting /myapp
-    router.With(ck.Set).Get("/myapp", ws.ServeFile("myapp/index.html", "text/html; charset=utf-8"))
+    // ck.Set => set the cookie when visiting /
+    router.With(ck.Set).Get("/", ws.ServeFile("index.html", "text/html; charset=utf-8"))
 
     // ck.Chk => reject request with invalid JWT cookie
-    router.With(ck.Chk).Get("/myapp/js/*", ws.ServeDir("text/javascript; charset=utf-8"))
-    router.With(ck.Chk).Get("/myapp/assets/*", ws.ServeAssets())
+    router.With(ck.Chk).Get("/js/*", ws.ServeDir("text/javascript; charset=utf-8"))
+    router.With(ck.Chk).Get("/assets/*", ws.ServeAssets())
 
     // ck.Vet => accepts valid JWT in either the cookie or the Authorization header
-    router.With(ck.Vet).Post("/myapp/api/items", myFunctionHandler)
+    router.With(ck.Vet).Post("/api/items", myFunctionHandler)
 
     server := http.Server{Addr: ":8080", Handler: router}
     server.ListenAndServe()
@@ -118,7 +134,7 @@ import "github.com/teal-finance/garcon"
 
 func main() {
     g, _ := garcon.New(
-        garcon.WithURLs("https://my-company.com/myapp"),
+        garcon.WithURLs("https://my-company.com"),
         garcon.WithDev())
 
     hmacSHA256Key := "9d2e0a02121179a3c3de1b035ae1355b1548781c8ce8538a1dc0853a12dfb13d"
@@ -127,17 +143,17 @@ func main() {
     router := chi.NewRouter()
 
     // website with static files directory
-    ws := g.NewStaticWebServer("examples/www")
+    ws := g.NewStaticWebServer("/var/www")
 
-    // ck.Set => set the cookie when visiting /myapp
-    router.With(ck.Set).Get("/myapp", ws.ServeFile("myapp/index.html", "text/html; charset=utf-8"))
+    // ck.Set => set the cookie when visiting /
+    router.With(ck.Set).Get("/", ws.ServeFile("index.html", "text/html; charset=utf-8"))
 
     // ck.Chk => reject request with invalid JWT cookie
-    router.With(ck.Chk).Get("/myapp/js/*", ws.ServeDir("text/javascript; charset=utf-8"))
-    router.With(ck.Chk).Get("/myapp/assets/*", ws.ServeAssets())
+    router.With(ck.Chk).Get("/js/*", ws.ServeDir("text/javascript; charset=utf-8"))
+    router.With(ck.Chk).Get("/assets/*", ws.ServeAssets())
 
     // ck.Vet => accepts valid JWT in either the cookie or the Authorization header
-    router.With(ck.Vet).Post("/myapp/api/items", myFunctionHandler)
+    router.With(ck.Vet).Post("/api/items", myFunctionHandler)
 
     server := http.Server{Addr: ":8080", Handler: router}
     server.ListenAndServe()
@@ -199,7 +215,7 @@ func main() {
     flag.Parse()
 
     g := garcon.New(
-        garcon.WithURLs("https://my-dns.co/myapp"),
+        garcon.WithURLs("https://my-company.co"),
         garcon.WithDocURL("/doc"),
         garcon.WithPProf(8093))
 
@@ -219,16 +235,16 @@ func main() {
     router := chi.NewRouter()
 
     // website with static files directory
-    ws := g.NewStaticWebServer("examples/www")
-    router.With(ic.Set).With(jc.Set).Get("/myapp", ws.ServeFile("myapp/index.html", "text/html; charset=utf-8"))
-    router.With(ic.Chk).Get("/myapp/assets/*", ws.ServeAssets())
+    ws := g.NewStaticWebServer("/var/www")
+    router.With(ic.Set).With(jc.Set).Get("/", ws.ServeFile("index.html", "text/html; charset=utf-8"))
+    router.With(ic.Chk).Get("/assets/*", ws.ServeAssets())
 
     // Contact-form
-    cf := g.NewContactForm("/myapp")
-    router.Post("/myapp", cf.Notify("https://mattermost.com/hooks/qite178czotd5"))
+    cf := g.NewContactForm("/")
+    router.Post("/", cf.Notify("https://mattermost.com/hooks/qite178czotd5"))
 
     // API
-    router.With(jc.Vet).Post("/myapp/api/items", myFunctionHandler)
+    router.With(jc.Vet).Post("/api/items", myFunctionHandler)
 
     handler := chain.Then(router)
     server := garcon.Server(handler, 8080, connState)
@@ -545,7 +561,7 @@ func handler(gw garcon.Writer) http.Handler {
     r := chi.NewRouter()
 
     // Website with static files
-    ws := g.NewStaticWebServer("examples/www")
+    ws := g.NewStaticWebServer("/var/www")
     r.Get("/", ws.ServeFile("index.html", "text/html; charset=utf-8"))
     r.Get("/js/*", ws.ServeDir("text/javascript; charset=utf-8"))
     r.Get("/css/*", ws.ServeDir("text/css; charset=utf-8"))
