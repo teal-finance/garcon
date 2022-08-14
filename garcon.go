@@ -29,13 +29,13 @@ import (
 )
 
 type Garcon struct {
-	Namespace Namespace
-	Writer    Writer
-	docURL    string
-	urls      []*url.URL
-	origins   []string
-	pprofPort int
-	devMode   bool
+	ServerName ServerName
+	Writer     Writer
+	docURL     string
+	urls       []*url.URL
+	origins    []string
+	pprofPort  int
+	devMode    bool
 }
 
 func New(opts ...Option) *Garcon {
@@ -48,7 +48,13 @@ func New(opts ...Option) *Garcon {
 
 	StartPProfServer(g.pprofPort)
 
-	if g.urls == nil {
+	// namespace fallback = retrieve it from first URL
+	if g.ServerName == "" && len(g.urls) > 0 {
+		g.ServerName = ExtractName(g.urls[0].String())
+	}
+
+	// set CORS origins
+	if len(g.urls) == 0 {
 		g.urls = DevOrigins()
 	} else if g.devMode {
 		g.urls = AppendURLs(g.urls, DevOrigins()...)
@@ -72,7 +78,7 @@ type Option func(*Garcon)
 
 func WithNamespace(namespace string) Option {
 	return func(g *Garcon) {
-		g.Namespace = NewNamespace(namespace)
+		g.ServerName = ExtractName(namespace)
 	}
 }
 
@@ -141,50 +147,57 @@ func ListenAndServe(server *http.Server) error {
 }
 
 // Server returns a default http.Server ready to handle API endpoints, static web pages...
-func Server(h http.Handler, port int, connState func(net.Conn, http.ConnState)) http.Server {
+func Server(h http.Handler, port int, connState ...func(net.Conn, http.ConnState)) http.Server {
+	if len(connState) == 0 {
+		connState = []func(net.Conn, http.ConnState){nil}
+	}
+
 	return http.Server{
 		Addr:              ":" + strconv.Itoa(port),
 		Handler:           h,
 		TLSConfig:         nil,
 		ReadTimeout:       time.Second,
 		ReadHeaderTimeout: time.Second,
-		WriteTimeout:      time.Minute, // Garcon.RateLimiter() delays responses, so people (attackers) who click frequently will wait longer.
+		WriteTimeout:      time.Minute, // Garcon.MiddlewareRateLimiter() delays responses, so people (attackers) who click frequently will wait longer.
 		IdleTimeout:       time.Second,
 		MaxHeaderBytes:    444, // 444 bytes should be enough
 		TLSNextProto:      nil,
-		ConnState:         connState,
+		ConnState:         connState[0],
 		ErrorLog:          log.Default(),
 		BaseContext:       nil,
 		ConnContext:       nil,
 	}
 }
 
+// TokenChecker is the common interface to Incorruptible and JWTChecker.
 type TokenChecker interface {
-	// Cookie returns a default cookie to facilitate testing.
-	Cookie(i int) *http.Cookie
-
-	// Set sets a cookie in the response when the request has no valid token.
+	// Set is a middleware setting a cookie in the response when the request has no valid token.
 	// Set searches the token in a cookie and in the first "Authorization" header.
-	// Finally, Set stores the token attributes in the request context.
+	// Finally, Set stores the decoded token fields within the request context.
 	Set(next http.Handler) http.Handler
 
-	// Chk accepts requests only if it has a valid cookie.
+	// Chk is a middleware accepting requests only if it has a valid cookie:
+	// other requests are rejected with http.StatusUnauthorized.
 	// Chk does not verify the "Authorization" header.
-	// See the Vet() function to also verify the "Authorization" header.
-	// Chk also stores the token attributes in the request context.
-	// In dev. testing, Chk accepts any request but does not store invalid tokens.
+	// See also the Vet() function if the token should also be verified in the "Authorization" header.
+	// Finally, Chk stores the decoded token fields within the request context.
+	// In dev. mode, Chk accepts any request but does not store invalid tokens.
 	Chk(next http.Handler) http.Handler
 
-	// Vet accepts requests having a valid token either in
-	// the cookie or in the first "Authorization" header.
+	// Vet is a middleware accepting accepting requests having a valid token
+	// either in the cookie or in the first "Authorization" header:
+	// other requests are rejected with http.StatusUnauthorized.
 	// Vet also stores the decoded token in the request context.
-	// In dev. testing, Vet accepts any request but does not store invalid tokens.
+	// In dev. mode, Vet accepts any request but does not store invalid tokens.
 	Vet(next http.Handler) http.Handler
+
+	// Cookie returns a default cookie to facilitate testing.
+	Cookie(i int) *http.Cookie
 }
 
-// NewIncorruptible uses cookies based on fast and tiny token.
-// NewIncorruptible requires g.WithURLs() to set the Cookie secure, domain and path.
-func (g *Garcon) NewIncorruptible(secretKeyHex string, maxAge int, setIP bool) *incorruptible.Incorruptible {
+// IncorruptibleChecker uses cookies based the fast and tiny Incorruptible token.
+// IncorruptibleChecker requires g.WithURLs() to set the Cookie secure, domain and path.
+func (g *Garcon) IncorruptibleChecker(secretKeyHex string, maxAge int, setIP bool) *incorruptible.Incorruptible {
 	if len(g.urls) == 0 {
 		log.Panic("Missing URLs => Set first the URLs with garcon.WithURLs()")
 	}
@@ -194,15 +207,15 @@ func (g *Garcon) NewIncorruptible(secretKeyHex string, maxAge int, setIP bool) *
 	}
 	key, err := hex.DecodeString(secretKeyHex)
 	if err != nil {
-		log.Panic("NewIncorruptible: cannot decode the 128-bit AES key, please provide 32 hexadecimal digits ", err)
+		log.Panic("Cannot decode the 128-bit AES key, please provide 32 hexadecimal digits: ", err)
 	}
 
-	cookieName := string(g.Namespace)
-	return incorruptible.New(g.urls, g.Writer.WriteErr, key, cookieName, maxAge, setIP)
+	cookieName := string(g.ServerName)
+	return incorruptible.New(g.Writer.WriteErr, g.urls, key, cookieName, maxAge, setIP)
 }
 
-// NewJWTChecker requires WithURLs() to set the Cookie name, secure, domain and path.
-func (g *Garcon) NewJWTChecker(secretKeyHex string, planPerm ...any) *JWTChecker {
+// JWTChecker requires WithURLs() to set the Cookie name, secure, domain and path.
+func (g *Garcon) JWTChecker(secretKeyHex string, planPerm ...any) *JWTChecker {
 	if len(g.urls) == 0 {
 		log.Panic("Missing URLs => Set first the URLs with garcon.WithURLs()")
 	}
@@ -212,10 +225,10 @@ func (g *Garcon) NewJWTChecker(secretKeyHex string, planPerm ...any) *JWTChecker
 	}
 	key, err := hex.DecodeString(secretKeyHex)
 	if err != nil {
-		log.Panic("Cannot decode the HMAC-SHA256 key, please provide 64 hexadecimal digits ", err)
+		log.Panic("Cannot decode the HMAC-SHA256 key, please provide 64 hexadecimal digits: ", err)
 	}
 
-	return NewJWTChecker(g.urls, g.Writer, key, planPerm...)
+	return NewJWTChecker(g.Writer, g.urls, key, planPerm...)
 }
 
 // OverwriteBufferContent is to erase a secret when it is no longer required.

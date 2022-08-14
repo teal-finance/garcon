@@ -11,30 +11,49 @@ import (
 	"time"
 )
 
-func (g *Garcon) RequestLogger(verbosity ...int) Middleware {
-	if len(verbosity) >= 2 {
-		log.Panic("garcon.WithReqLogs() must be called with zero or one argument")
-	}
+// MiddlewareLogRequest logs the incoming request URL.
+// If one of its optional parameter is "fingerprint", this middleware also logs the browser fingerprint.
+// If the other optional parameter is "safe", this middleware sanitizes the URL before printing it.
+func (g *Garcon) MiddlewareLogRequest(settings ...string) Middleware {
+	logFingerprint := false
+	logSafe := false
 
-	v := 1
-	if len(verbosity) > 0 {
-		v = verbosity[0]
-		if v < 0 || v > 2 {
-			log.Panicf("g.RequestLogger() got verbosity=%v but currently accepts values 1 and 2 only", v)
+	for _, s := range settings {
+		switch s {
+		case "fingerprint":
+			logFingerprint = true
+		case "safe":
+			logSafe = true
+		default:
+			log.Panicf(`g.MiddlewareLogRequests() accepts only "fingerprint" and "safe" but got: %q`, s)
 		}
 	}
 
-	switch v {
-	case 1:
-		return LogRequest
-	default:
-		return LogRequestFingerprint
+	if logFingerprint {
+		if logSafe {
+			return MiddlewareLogFingerprintSafe
+		}
+		return MiddlewareLogFingerprint
 	}
+
+	if logSafe {
+		return MiddlewareLogRequestSafe
+	}
+	return MiddlewareLogRequest
 }
 
-// LogRequest is the middleware to log the requester IP and the requested URL.
-func LogRequest(next http.Handler) http.Handler {
-	log.Print("INF Middleware logger: requester IP and requested URL")
+// MiddlewareLogDuration logs the requested URL along with its handling time.
+// When the optional parameter safe is true, this middleware sanitizes the URL before printing it.
+func (g *Garcon) MiddlewareLogDuration(safe ...bool) Middleware {
+	if len(safe) > 0 && safe[0] {
+		return MiddlewareLogDurationSafe
+	}
+	return MiddlewareLogDuration
+}
+
+// MiddlewareLogRequest is the middleware to log the requester IP and the requested URL.
+func MiddlewareLogRequest(next http.Handler) http.Handler {
+	log.Print("INF Middleware logs requester IP and requested URL")
 
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
@@ -43,9 +62,9 @@ func LogRequest(next http.Handler) http.Handler {
 		})
 }
 
-// LogSafeRequest is similar to LogRequest but sanitize the URL.
-func LogSafeRequest(next http.Handler) http.Handler {
-	log.Print("INF Middleware logger: requester IP and sanitized URL")
+// MiddlewareLogRequestSafe is similar to LogRequest but sanitize the URL.
+func MiddlewareLogRequestSafe(next http.Handler) http.Handler {
+	log.Print("INF Middleware logs requester IP and sanitized URL")
 
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
@@ -54,10 +73,10 @@ func LogSafeRequest(next http.Handler) http.Handler {
 		})
 }
 
-// LogRequestFingerprint is the middleware to log
+// MiddlewareLogFingerprint is the middleware to log
 // incoming HTTP request and browser fingerprint.
-func LogRequestFingerprint(next http.Handler) http.Handler {
-	log.Print("INF Middleware logger: requested URL and browser fingerprint: " + FingerprintExplanation)
+func MiddlewareLogFingerprint(next http.Handler) http.Handler {
+	log.Print("INF Middleware logs requested URL and browser fingerprint: " + FingerprintExplanation)
 
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
@@ -67,9 +86,9 @@ func LogRequestFingerprint(next http.Handler) http.Handler {
 		})
 }
 
-// LogSafeRequestFingerprint is similar to LogRequestFingerprint but sanitize the URL.
-func LogSafeRequestFingerprint(next http.Handler) http.Handler {
-	log.Print("INF Middleware logger: sanitized URL and browser fingerprint: " + FingerprintExplanation)
+// MiddlewareLogFingerprintSafe is similar to MiddlewareLogFingerprints but sanitize the URL.
+func MiddlewareLogFingerprintSafe(next http.Handler) http.Handler {
+	log.Print("INF Middleware logs sanitized URL and browser fingerprint: " + FingerprintExplanation)
 
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
@@ -79,9 +98,9 @@ func LogSafeRequestFingerprint(next http.Handler) http.Handler {
 		})
 }
 
-// LogDuration logs the requested URL along with the time to handle it.
-func LogDuration(next http.Handler) http.Handler {
-	log.Print("INF Middleware logger: requester IP, requested URL and duration")
+// MiddlewareLogDuration logs the requested URL along with the time to handle it.
+func MiddlewareLogDuration(next http.Handler) http.Handler {
+	log.Print("INF Middleware logs requester IP, requested URL and duration")
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
@@ -91,9 +110,9 @@ func LogDuration(next http.Handler) http.Handler {
 	})
 }
 
-// LogSafeDuration is similar to LogDuration but also sanitizes the URL.
-func LogSafeDuration(next http.Handler) http.Handler {
-	log.Print("INF Middleware logger: requester IP, sanitized URL and duration")
+// MiddlewareLogDurationSafe is similar to MiddlewareLogDurations but also sanitizes the URL.
+func MiddlewareLogDurationSafe(next http.Handler) http.Handler {
+	log.Print("INF Middleware logs requester IP, sanitized URL and duration")
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()

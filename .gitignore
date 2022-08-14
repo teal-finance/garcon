@@ -6,6 +6,8 @@
 /cpu.pprof
 /dev
 /go.work*
-/high-level
+/complete
+/chi
+/httprouter
 /keystore
 /low-level

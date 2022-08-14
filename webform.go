@@ -46,12 +46,12 @@ type WebForm struct {
 	maxFieldNameLength int
 }
 
-func (g *Garcon) NewContactForm(redirectURL, notifierURL string) WebForm {
-	return NewContactForm(redirectURL, notifierURL, g.Writer)
+func (g *Garcon) NewContactForm(redirectURL string) WebForm {
+	return NewContactForm(g.Writer, redirectURL)
 }
 
 // NewContactForm initializes a new WebForm with the default contact-form settings.
-func NewContactForm(redirectURL, notifierURL string, gw Writer) WebForm {
+func NewContactForm(gw Writer, redirectURL string) WebForm {
 	form := WebForm{
 		Writer:             gw,
 		Notifier:           nil,
@@ -60,12 +60,6 @@ func NewContactForm(redirectURL, notifierURL string, gw Writer) WebForm {
 		FileLimits:         DefaultFileSettings(),
 		MaxTotalLength:     0,
 		maxFieldNameLength: 0,
-	}
-
-	if notifierURL == "" {
-		form.Notifier = logger.NewNotifier()
-	} else {
-		form.Notifier = mattermost.NewNotifier(notifierURL)
 	}
 
 	form.MaxTotalLength = 2000
@@ -93,15 +87,7 @@ func DefaultFileSettings() map[string][2]int {
 	}
 }
 
-// NotifyWebForm registers a web-form middleware
-// that structures the filled form into markdown format
-// and sends it to the Notifier.
-func (form *WebForm) NotifyWebForm() func(w http.ResponseWriter, r *http.Request) {
-	if form.Notifier == nil {
-		log.Print("INF Middleware WebForm: no Notifier => use the logger Notifier")
-		form.Notifier = logger.NewNotifier()
-	}
-
+func (form *WebForm) init() {
 	if form.TextLimits == nil {
 		form.TextLimits = DefaultContactSettings()
 		log.Print("INF Middleware WebForm: empty TextLimits => use ", form.TextLimits)
@@ -125,43 +111,48 @@ func (form *WebForm) NotifyWebForm() func(w http.ResponseWriter, r *http.Request
 	}
 
 	log.Print("INF Middleware WebForm redirect=", form.Redirect)
-
-	return form.notify
 }
 
+// Notify registers a web-form middleware
+// that structures the filled form into markdown format
+// and sends it to the Notifier.
 // notify converts the received web-form into markdown format
 // and sends it to the registered Notifier.
-func (form *WebForm) notify(w http.ResponseWriter, r *http.Request) {
-	err := r.ParseForm()
-	if err != nil {
-		log.Print("WRN WebForm ParseForm:", err)
-		form.Writer.WriteErr(w, r, http.StatusInternalServerError, "Cannot parse the webform")
-		return
+func (form *WebForm) Notify(notifierURL string) func(w http.ResponseWriter, r *http.Request) {
+	form.init()
+
+	var n notifier.Notifier
+	if notifierURL == "" {
+		log.Print("INF Middleware WebForm: no Notifier => use the logger Notifier")
+		n = logger.NewNotifier()
+	} else {
+		n = mattermost.NewNotifier(notifierURL)
 	}
 
-	md := form.messageMD(r) + FingerprintMD(r)
+	return func(w http.ResponseWriter, r *http.Request) {
+		err := r.ParseForm()
+		if err != nil {
+			log.Print("WRN WebForm ParseForm: ", err)
+			form.Writer.WriteErr(w, r, http.StatusInternalServerError, "Cannot parse the webform")
+			return
+		}
 
-	if len(md) > form.MaxTotalLength && form.MaxTotalLength > 0 {
-		md = md[:form.MaxTotalLength] +
-			"\n\n(cut because len=" + strconv.Itoa(len(md)) +
-			" > max=" + strconv.Itoa(form.MaxTotalLength) + ")"
+		md := form.toMarkdown(r)
+		err = n.Notify(md)
+		if err != nil {
+			log.Print("WRN WebForm Notify: ", err)
+			form.Writer.WriteErr(w, r, http.StatusInternalServerError, "Cannot store webform data")
+			return
+		}
+
+		http.Redirect(w, r, form.Redirect, http.StatusFound)
 	}
-
-	err = form.Notifier.Notify(md)
-	if err != nil {
-		log.Print("WRN WebForm Notify: ", err)
-		form.Writer.WriteErr(w, r, http.StatusInternalServerError, "Cannot store webform data")
-		return
-	}
-
-	http.Redirect(w, r, form.Redirect, http.StatusFound)
 }
 
-func (form *WebForm) messageMD(r *http.Request) string {
+func (form *WebForm) toMarkdown(r *http.Request) string {
 	log.Printf("WebForm with %d input fields", len(r.Form))
 
 	md := ""
-
 	for name, values := range r.Form {
 		if !form.valid(name, values) {
 			continue
@@ -190,6 +181,14 @@ func (form *WebForm) messageMD(r *http.Request) string {
 		}
 
 		md += "* " + name + ": " + form.valueMD(values[0], maxBreaks)
+	}
+
+	md += FingerprintMD(r)
+
+	if len(md) > form.MaxTotalLength && form.MaxTotalLength > 0 {
+		md = md[:form.MaxTotalLength] +
+			"\n\n(cut because len=" + strconv.Itoa(len(md)) +
+			" > max=" + strconv.Itoa(form.MaxTotalLength) + ")"
 	}
 
 	return md

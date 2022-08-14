@@ -110,7 +110,7 @@ func TestNewJWTChecker(t *testing.T) {
 				defer func() { _ = recover() }()
 			}
 
-			ck := garcon.NewJWTChecker(urls, c.gw, secretKey, c.permissions...)
+			ck := garcon.NewJWTChecker(c.gw, urls, secretKey, c.permissions...)
 
 			if c.shouldPanic {
 				t.Errorf("NewChecker() did not panic")

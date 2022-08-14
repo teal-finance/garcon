@@ -1,69 +1,75 @@
 # Teal.Finance/Garcon
 
-| ![logo](examples/www/myapp/images/garcon.png) | Opinionated boilerplate all-in-one HTTP server with rate-limiter, Cookies, JWT, CORS, OPA, web traffic, Prometheus export, PProf… for API and static website.<br>[![Go Reference](examples/www/myapp/images/go-ref.svg "Go documentation for Garcon")](https://pkg.go.dev/github.com/teal-finance/garcon) [![Go Report Card](https://goreportcard.com/badge/github.com/teal-finance/garcon)](https://goreportcard.com/report/github.com/teal-finance/garcon) |
+| ![logo](examples/www/myapp/images/garcon.png) | API and static website server respecting the Go HTTP standards with middleware as rate-limiter, JWT cookies, CORS, traffic logs, OPA… and other common app tools to retrieve version, to export metrics (Prometheus) and to debug with PProf.<br>[![Go Reference](examples/www/myapp/images/go-ref.svg "Go documentation for Garcon")](https://pkg.go.dev/github.com/teal-finance/garcon) [![Go Report Card](https://goreportcard.com/badge/github.com/teal-finance/garcon)](https://goreportcard.com/report/github.com/teal-finance/garcon) |
 | --------------------------------------------- |:--------- |
 
-This library is used by
-[Rainbow](https://github.com/teal-finance/rainbow)
-and other internal projects at Teal.Finance.
+## Middleware
 
-Please propose a [Pull Request](https://github.com/teal-finance/garcon/pulls) to add here your project that also uses Garcon.
+Easy to setup, respecting the Go standards, compatible with dozens of HTTP routers and other middleware:
 
-## Features
+- Logging of incoming requests (with or without browser fingerprint)
+- Web traffic metrics with Prometheus export
+- Rate-limiter to prevent requests flooding
+- JWT management using HttpOnly cookie or Authorization header
+- Session cookie with [Incorruptible](https://github.com/teal-finance/incorruptible) token
+- Cross-Origin Resource Sharing (CORS)
+- Authentication rules based on Datalog/Rego files using [Open Policy Agent](https://www.openpolicyagent.org)
 
-Garcon includes the following middleware pieces:
+## Other features
 
-- Logging of incoming requests ;
-- Rate-limiter to prevent requests flooding ;
-- JWT management using HttpOnly cookie or Authorization header ;
-- Cross-Origin Resource Sharing (CORS) ;
-- Authentication rules based on Datalog/Rego files using [Open Policy Agent](https://www.openpolicyagent.org) ;
-- Web traffic metrics.
+- HTTP/REST server for API endpoints (compatible with any Go-standard HTTP handlers)
+- File server intended for static web files supporting Brotli and AVIF data
+- Metrics server exporting data to Prometheus (or other compatible monitoring tool)
+- PProf server for debugging purpose
+- Success and error responses in JSON format
+- Chained middleware (fork of [justinas/alice](https://github.com/justinas/alice))
+- Retrieve version info from build flags and Go module information
 
-Garcon also provides the following features:
-
-- HTTP/REST server for API endpoints (compatible with any Go-standard HTTP handlers) ;
-- File server intended for static web files supporting Brotli and AVIF data ;
-- Metrics server exporting data to Prometheus (or other compatible monitoring tool) ;
-- PProf server for debugging purpose ;
-- Error response in JSON format ;
-- Chained middleware (fork of [justinas/alice](https://github.com/justinas/alice)).
-
-## CPU profiling
-
-Moreover, Garcon provides a helper feature `defer ProbeCPU.Stop()`
-to investigate CPU consumption issues
-thanks to <https://github.com/pkg/profile>.
-
-In you code, add `defer ProbeCPU.Stop()` that will write the `cpu.pprof` file.
+## Basic example
 
 ```go
-import "github.com/teal-finance/garcon/pprof"
+g := garcon.New()
 
-func myFunctionConsumingLotsOfCPU() {
-    defer pprof.ProbeCPU.Stop()
+// chain some middleware
+middleware = garcon.NewChain(
+    g.MiddlewareRejectUnprintableURI(),
+    g.MiddlewareLogRequests(),
+    g.MiddlewareRateLimiter())
 
-    // ... lots of sub-functions
-}
+// use the HTTP router library of your choice, here we use Chi 
+router := chi.NewRouter()
+
+// static website, automatically sends the Brotli-compressed file if present and supported by the browser
+ws := g.NewStaticWebServer("/var/www/myapp")
+router.Get("/myapp", ws.ServeFile("myapp/index.html", "text/html; charset=utf-8"))
+router.Get("/favicon.ico", ws.ServeFile("favicon.ico", "image/x-icon"))
+router.Get("/myapp/js/*", ws.ServeDir("text/javascript; charset=utf-8"))
+router.Get("/myapp/css/*", ws.ServeDir("text/css; charset=utf-8"))
+router.Get("/myapp/images/*", ws.ServeImages()) // automatically sends AVIF if present and supported by the browser
+
+// provide Git version and last commit date
+router.Get("/myapp/version", garcon.ServeVersion())
+
+// receive contact-forms on your chat channel in real-time
+cf := g.NewContactForm("/myapp")
+router.Post("/myapp", cf.Notify("https://mattermost.com/hooks/qite178czotd5"))
+
+// API endpoints
+router.Get("/myapp/api/items", myFunctionHandler)
+router.Get("/myapp/api/reserved", g.Writer.NotImplemented)
+
+// other endpoints
+router.NotFound(g.Writer.InvalidPath)
+
+handler := chain.Then(router)
+server := http.Server{Addr: ":8080", Handler: handler}
+server.ListenAndServe()
 ```
 
-Install `pprof` and browse your `cpu.pprof` file:
+## Incorruptible middleware
 
-```sh
-cd ~/go
-go get -u github.com/google/pprof
-cd -
-pprof -http=: cpu.pprof
-```
-
-## Examples
-
-See also a complete real example in the repo
-[github.com/teal-finance/rainbow](https://github.com/teal-finance/rainbow/blob/main/cmd/server/main.go).
-
-## High-level example
-
-The following code uses the high-level function `Garcon.RunServer()`.
+Garcon uses the [Incorruptible](https://github.com/teal-finance/incorruptible) package
+to create/verify session cookie.
 
 ```go
 package main
@@ -72,27 +78,169 @@ import "github.com/teal-finance/garcon"
 
 func main() {
     g, _ := garcon.New(
-        garcon.WithURLs("http://localhost:8080/myapp"),
-        garcon.WithDocURL("/doc"), // URL --> http://localhost:8080/myapp/doc
-        garcon.WithServerHeader("MyBackendName"),
-        garcon.WithJWT(hmacSHA256, "FreePlan", 10, "PremiumPlan", 100),
-        garcon.WithOPA("auth.rego"),
-        garcon.WithLimiter(10, 30),
-        garcon.WithPProf(8093),
-        garcon.WithProm(9093),
-        garcon.WithDev(),
-    )
+        garcon.WithURLs("https://my-company.com/myapp"),
+        garcon.WithDev())
 
-    h := handler(g.Writer, g.Checker)
+    aes128Key = "00112233445566778899aabbccddeeff"
+    maxAge := 3600
+    setIP := true
+    ck := g.IncorruptibleChecker(aes128Key, maxAge, setIP)
 
-    g.Run(h, 8080)
+    router := chi.NewRouter()
+
+    // website with static files directory
+    ws := g.NewStaticWebServer("examples/www")
+
+    // ck.Set => set the cookie when visiting /myapp
+    router.With(ck.Set).Get("/myapp", ws.ServeFile("myapp/index.html", "text/html; charset=utf-8"))
+
+    // ck.Chk => reject request with invalid JWT cookie
+    router.With(ck.Chk).Get("/myapp/js/*", ws.ServeDir("text/javascript; charset=utf-8"))
+    router.With(ck.Chk).Get("/myapp/assets/*", ws.ServeAssets())
+
+    // ck.Vet => accepts valid JWT in either the cookie or the Authorization header
+    router.With(ck.Vet).Post("/myapp/api/items", myFunctionHandler)
+
+    server := http.Server{Addr: ":8080", Handler: router}
+    server.ListenAndServe()
 }
 ```
 
-### 1. Run the [high-level example](examples/high-level/main.go)
+## JWT middleware
+
+The JWT and Incorruptible checkers share a common interface,
+`TokenChecker`, providing the same middleware: `Set()`, `Chk()` and `Vet()`.
+
+```go
+package main
+
+import "github.com/teal-finance/garcon"
+
+func main() {
+    g, _ := garcon.New(
+        garcon.WithURLs("https://my-company.com/myapp"),
+        garcon.WithDev())
+
+    hmacSHA256Key := "9d2e0a02121179a3c3de1b035ae1355b1548781c8ce8538a1dc0853a12dfb13d"
+    ck := g.JWTChecker(hmacSHA256Key, "FreePlan", 10, "PremiumPlan", 100)
+
+    router := chi.NewRouter()
+
+    // website with static files directory
+    ws := g.NewStaticWebServer("examples/www")
+
+    // ck.Set => set the cookie when visiting /myapp
+    router.With(ck.Set).Get("/myapp", ws.ServeFile("myapp/index.html", "text/html; charset=utf-8"))
+
+    // ck.Chk => reject request with invalid JWT cookie
+    router.With(ck.Chk).Get("/myapp/js/*", ws.ServeDir("text/javascript; charset=utf-8"))
+    router.With(ck.Chk).Get("/myapp/assets/*", ws.ServeAssets())
+
+    // ck.Vet => accepts valid JWT in either the cookie or the Authorization header
+    router.With(ck.Vet).Post("/myapp/api/items", myFunctionHandler)
+
+    server := http.Server{Addr: ":8080", Handler: router}
+    server.ListenAndServe()
+}
+```
+
+## Who use Garcon
+
+In production, this library is used by
+[Rainbow](https://github.com/teal-finance/rainbow),
+[Quid](https://github.com/teal-finance/quid)
+and other internal projects at Teal.Finance.
+
+Please propose a [Pull Request](https://github.com/teal-finance/garcon/pulls) to add here your project that also uses Garcon.
+
+See a complete real example in the repo
+[github.com/teal-finance/rainbow](https://github.com/teal-finance/rainbow/blob/main/cmd/server/main.go).
+
+## CPU profiling
+
+Moreover, Garcon simplifies investigation on CPU and memory consumption issues
+thanks to <https://github.com/pkg/profile>.
+
+In your code, add `defer garcon.ProbeCPU.Stop()` that will write the `cpu.pprof` file.
+
+```go
+import "github.com/teal-finance/garcon"
+
+func myFunctionConsumingLotsOfCPU() {
+    defer garcon.ProbeCPU.Stop()
+
+    // ... lots of sub-functions
+}
+```
+
+Run `pprof` and browse your `cpu.pprof` file:
 
 ```sh
-go build -race ./examples/high-level && ./high-level
+go run github.com/google/pprof@latest -http=: cpu.pprof
+```
+
+## Complete example
+
+See the [complete example](examples/complete)
+enabling almost of the Garcon features.
+Below is a simplified extract:
+
+```go
+package main
+
+import "github.com/teal-finance/garcon"
+
+func main() {
+    defer garcon.ProbeCPU().Stop() // collects the CPU-profile and writes it in the file "cpu.pprof"
+    
+    garcon.LogVersion()     // log the Git version
+    garcon.SetVersionFlag() // the -version flag prints the Git version
+    jwt := flag.Bool("jwt", false, "Use JWT in lieu of the Incorruptible token")
+    flag.Parse()
+
+    g := garcon.New(
+        garcon.WithURLs("https://my-dns.co/myapp"),
+        garcon.WithDocURL("/doc"),
+        garcon.WithPProf(8093))
+
+    ic := g.IncorruptibleChecker(aes128Key, 60, true)
+    jc := g.JWTChecker(hmacSHA256Key, "FreePlan", 10, "PremiumPlan", 100)
+
+    chain, connState := g.StartMetricsServer(9093)
+    chain = chain.Append(
+        g.MiddlewareRejectUnprintableURI(),
+        g.MiddlewareLogRequests("fingerprint"),
+        g.MiddlewareRateLimiter(10, 30),
+        g.MiddlewareServerHeader("MyApp"),
+        g.MiddlewareCORS(),
+        g.MiddlewareOPA("auth.rego"),
+        g.MiddlewareLogDuration(true()))
+
+    router := chi.NewRouter()
+
+    // website with static files directory
+    ws := g.NewStaticWebServer("examples/www")
+    router.With(ic.Set).With(jc.Set).Get("/myapp", ws.ServeFile("myapp/index.html", "text/html; charset=utf-8"))
+    router.With(ic.Chk).Get("/myapp/assets/*", ws.ServeAssets())
+
+    // Contact-form
+    cf := g.NewContactForm("/myapp")
+    router.Post("/myapp", cf.Notify("https://mattermost.com/hooks/qite178czotd5"))
+
+    // API
+    router.With(jc.Vet).Post("/myapp/api/items", myFunctionHandler)
+
+    handler := chain.Then(router)
+    server := garcon.Server(handler, 8080, connState)
+    garcon.ListenAndServe(&server)
+}
+```
+
+### 1. Run the [complete example](examples/complete/main.go)
+
+```sh
+cd garcon
+go build -race ./examples/complete && ./complete
 ```
 
 ```log
@@ -104,7 +252,7 @@ go build -race ./examples/high-level && ./high-level
 2022/01/29 17:31:26 Create cookie plan=PremiumPlan domain=localhost secure=false myapp=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuIjoiUHJlbWl1bVBsYW4iLCJleHAiOjE2NzUwMDk4ODZ9.iP587iHjhLmX_8yMhuQfKu9q7qLbLE7UX-UgkL_VYhE
 2022/01/29 17:31:26 JWT not required for dev. origins: [http://localhost:8080 http://localhost: http://192.168.1.]
 2022/01/29 17:31:26 Middleware response HTTP header: Set Server MyApp-1.2.0
-2022/01/29 17:31:26 Middleware RateLimiter: burst=100 rate=5/s
+2022/01/29 17:31:26 Middleware MiddlewareRateLimiter: burst=100 rate=5/s
 2022/01/29 17:31:26 Middleware logger: requester IP and requested URL
 2022/01/29 17:31:26 Server listening on http://localhost:8080
 ```
@@ -146,19 +294,21 @@ The export port <http://localhost:9093/metrics> is for the monitoring tools like
 
 ### 4. Static website server
 
-The [high-level example](examples/high-level/main.go) is running.
+:warning: **WARNING: This section is outdated!** :warning:
+
+The [complete example](examples/complete/main.go) is running.
 
 Open <http://localhost:8080/myapp> with your browser, and play with the API endpoints.
 
 The resources and API endpoints are protected with a HttpOnly cookie.
-The [high-level example](examples/high-level/main.go) sets the cookie to browsers visiting the `index.html`.
+The [complete example](examples/complete/main.go) sets the cookie to browsers visiting the `index.html`.
 
 ```go
 func handler(gw garcon.Writer, jc *jwtperm.Checker) http.Handler {
     r := chi.NewRouter()
 
     // Static website files
-    ws := webserver.WebServer{Dir: "examples/www", Writer: gw}
+    ws := garcon.WebServer{Dir: "examples/www", Writer: gw}
     r.With(jc.SetCookie).Get("/", ws.ServeFile("index.html", "text/html; charset=utf-8"))
     r.With(jc.SetCookie).Get("/favicon.ico", ws.ServeFile("favicon.ico", "image/x-icon"))
     r.With(jc.ChkCookie).Get("/js/*", ws.ServeDir("text/javascript; charset=utf-8"))
@@ -178,13 +328,15 @@ func handler(gw garcon.Writer, jc *jwtperm.Checker) http.Handler {
 
 ### 5. Enable Authentication
 
-Restart again the [high-level example](examples/high-level/main.go) with authentication enabled.
+:warning: **WARNING: This section is outdated!** :warning:
+
+Restart again the [complete example](examples/complete/main.go) with authentication enabled.
 
 Attention, in this example we use two redundant middleware pieces using the same JWT: `jwtperm` and `opa`.
 This is just an example, don't be confused.
 
 ```sh
-go build -race ./examples/high-level && ./high-level -auth
+go build -race ./examples/complete && ./complete -auth
 ```
 
 ```log
@@ -202,7 +354,7 @@ default allow = false
 tokens := {"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuIjoiRnJlZVBsYW4iLCJleHAiOjE2Njk5NjQ0ODh9.elDm_t4vezVgEmS8UFFo_spLJTts7JWybzbyO_aYV3Y"} { true }
 allow = true { __local0__ = input.token; data.auth.tokens[__local0__] }]
 2021/12/02 08:09:47 Middleware response HTTP header: Set Server MyBackendName-1.2.0
-2021/12/02 08:09:47 Middleware RateLimiter: burst=100 rate=5/s
+2021/12/02 08:09:47 Middleware MiddlewareRateLimiter: burst=100 rate=5/s
 2021/12/02 08:09:47 Middleware logger: requester IP and requested URL
 2021/12/02 08:09:47 Server listening on http://localhost:8080
 ```
@@ -274,12 +426,12 @@ The corresponding garcon logs:
 
 ## Low-level example
 
-:warning: **WARNING: This chapter is outdated!** :warning:
+:warning: **WARNING: This section is outdated!** :warning:
 
 See the [low-level example](examples/low-level/main.go).
 
 The following code is a bit different to the stuff done
-by the high-level function `Garcon.Run()` presented in the previous chapter.
+by the complete function `Garcon.Run()` presented in the previous chapter.
 The following code is intended to show
 Garcon can be customized to meet your specific requirements.
 
@@ -334,7 +486,7 @@ func setMiddlewares(gw garcon.Writer) (chain garcon.Chain, connState func(net.Co
     chain, connState = garcon.StartMetricsServer(expPort, devMode)
 
     // Limit the input request rate per IP
-    reqLimiter := garcon.NewReqLimiter(burst, reqMinute, devMode, gw)
+    reqLimiter := garcon.NewReqLimiter(gw, burst, reqMinute, devMode)
 
     corsConfig := allowedProdOrigin
     if devMode {
@@ -351,7 +503,7 @@ func setMiddlewares(gw garcon.Writer) (chain garcon.Chain, connState func(net.Co
 
     // Endpoint authentication rules (Open Policy Agent)
     files := garcon.SplitClean(authCfg)
-    policy, err := garcon.NewPolicy(files, gw)
+    policy, err := garcon.NewPolicy(gw, files)
     if err != nil {
         log.Fatal(err)
     }
@@ -393,7 +545,7 @@ func handler(gw garcon.Writer) http.Handler {
     r := chi.NewRouter()
 
     // Website with static files
-    ws := garcon.NewStaticWebServer("examples/www", gw)
+    ws := g.NewStaticWebServer("examples/www")
     r.Get("/", ws.ServeFile("index.html", "text/html; charset=utf-8"))
     r.Get("/js/*", ws.ServeDir("text/javascript; charset=utf-8"))
     r.Get("/css/*", ws.ServeDir("text/css; charset=utf-8"))
@@ -421,6 +573,7 @@ The example KeyStore implements a key/value datastore
 providing private storage for each client identified by its unique IP.
 
 ```sh
+cd garcon
 go build ./examples/keystore
 ./keystore
 ```

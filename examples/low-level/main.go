@@ -56,9 +56,10 @@ func main() {
 	}
 
 	// Handles both REST API and static web files
-	h := handler(gw, garcon.NewJWTChecker(urls, gw, key))
+	h := handler(gw, garcon.NewJWTChecker(gw, urls, key))
 	h = chain.Then(h)
 
+	log.Print("-------------- Open http://localhost:8080/myapp --------------")
 	runServer(h, connState)
 }
 
@@ -72,7 +73,7 @@ func setMiddlewares(gw garcon.Writer) (chain garcon.Chain, connState func(net.Co
 	chain, connState = garcon.StartMetricsServer(expPort, "LowLevel")
 
 	// Limit the input request rate per IP
-	reqLimiter := garcon.NewRateLimiter(burst, reqMinute, *dev, gw)
+	reqLimiter := garcon.NewRateLimiter(gw, burst, reqMinute, *dev)
 
 	corsConfig := allowedProdOrigin
 	if *dev {
@@ -83,19 +84,19 @@ func setMiddlewares(gw garcon.Writer) (chain garcon.Chain, connState func(net.Co
 	urls = garcon.ParseURLs(allowedOrigins)
 
 	chain = chain.Append(
-		reqLimiter.LimitRate,
-		garcon.ServerHeader(serverHeader),
-		garcon.CORSHandler(allowedOrigins, *dev),
+		reqLimiter.MiddlewareRateLimiter,
+		garcon.MiddlewareServerHeader(serverHeader),
+		garcon.MiddlewareCORS(allowedOrigins, *dev),
 	)
 
 	// Endpoint authentication rules (Open Policy Agent)
 	if *auth {
 		files := garcon.SplitClean(authCfg)
-		policy, err := garcon.NewPolicy(files, gw)
+		policy, err := garcon.NewPolicy(gw, files)
 		if err != nil {
 			log.Fatal(err)
 		}
-		chain = chain.Append(policy.AuthOPA)
+		chain = chain.Append(policy.MiddlewareOPA)
 	}
 
 	return chain, connState, urls

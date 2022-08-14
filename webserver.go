@@ -18,13 +18,18 @@ import (
 // StaticWebServer is a webserver serving static files
 // among HTML, CSS, JS and popular image formats.
 type StaticWebServer struct {
-	Dir    string
 	Writer Writer
+	Dir    string
 }
 
 // NewStaticWebServer creates a StaticWebServer.
-func NewStaticWebServer(dir string, gw Writer) StaticWebServer {
-	return StaticWebServer{dir, gw}
+func (g *Garcon) NewStaticWebServer(dir string) StaticWebServer {
+	return NewStaticWebServer(g.Writer, dir)
+}
+
+// NewStaticWebServer creates a StaticWebServer.
+func NewStaticWebServer(gw Writer, dir string) StaticWebServer {
+	return StaticWebServer{gw, dir}
 }
 
 const avifContentType = "image/avif"

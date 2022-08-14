@@ -16,10 +16,10 @@ import (
 )
 
 type ReqLimiter struct {
+	gw          Writer
 	visitors    map[string]*visitor
 	initLimiter *rate.Limiter
 	mu          sync.Mutex
-	gw          Writer
 }
 
 type visitor struct {
@@ -27,7 +27,7 @@ type visitor struct {
 	limiter  *rate.Limiter
 }
 
-func (g *Garcon) RateLimiter(settings ...int) Middleware {
+func (g *Garcon) MiddlewareRateLimiter(settings ...int) Middleware {
 	var maxReqBurst, maxReqPerMinute int
 
 	switch len(settings) {
@@ -41,14 +41,14 @@ func (g *Garcon) RateLimiter(settings ...int) Middleware {
 		maxReqBurst = settings[0]
 		maxReqPerMinute = settings[1]
 	default:
-		log.Panic("garcon.RateLimiter() accept up to two arguments, got ", len(settings))
+		log.Panic("garcon.MiddlewareRateLimiter() accept up to two arguments, got ", len(settings))
 	}
 
-	reqLimiter := NewRateLimiter(maxReqBurst, maxReqPerMinute, g.devMode, g.Writer)
-	return reqLimiter.LimitRate
+	reqLimiter := NewRateLimiter(g.Writer, maxReqBurst, maxReqPerMinute, g.devMode)
+	return reqLimiter.MiddlewareRateLimiter
 }
 
-func NewRateLimiter(maxReqBurst, maxReqPerMinute int, devMode bool, gw Writer) ReqLimiter {
+func NewRateLimiter(gw Writer, maxReqBurst, maxReqPerMinute int, devMode bool) ReqLimiter {
 	if devMode {
 		maxReqBurst *= 2
 		maxReqPerMinute *= 2
@@ -57,15 +57,15 @@ func NewRateLimiter(maxReqBurst, maxReqPerMinute int, devMode bool, gw Writer) R
 	ratePerSecond := float64(maxReqPerMinute) / 60
 
 	return ReqLimiter{
+		gw:          gw,
 		visitors:    make(map[string]*visitor),
 		initLimiter: rate.NewLimiter(rate.Limit(ratePerSecond), maxReqBurst),
 		mu:          sync.Mutex{},
-		gw:          gw,
 	}
 }
 
-func (rl *ReqLimiter) LimitRate(next http.Handler) http.Handler {
-	log.Printf("INF Middleware RateLimiter: burst=%v rate=%v/s",
+func (rl *ReqLimiter) MiddlewareRateLimiter(next http.Handler) http.Handler {
+	log.Printf("INF Middleware MiddlewareRateLimiter: burst=%v rate=%v/s",
 		rl.initLimiter.Burst(), rl.initLimiter.Limit())
 
 	go rl.removeOldVisitors()

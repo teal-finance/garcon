@@ -127,10 +127,17 @@ func Printable(array ...string) int {
 	return -1
 }
 
-// RejectInvalidURI is a middleware rejecting HTTP requests having
+// MiddlewareRejectUnprintableURI is a middleware rejecting HTTP requests having
 // a Carriage Return "\r" or a Line Feed "\n"
 // within the URI to prevent log injection.
-func RejectInvalidURI(next http.Handler) http.Handler {
+func (Garcon) MiddlewareRejectUnprintableURI() Middleware {
+	return MiddlewareRejectUnprintableURI
+}
+
+// MiddlewareRejectUnprintableURI is a middleware rejecting HTTP requests having
+// a Carriage Return "\r" or a Line Feed "\n"
+// within the URI to prevent log injection.
+func MiddlewareRejectUnprintableURI(next http.Handler) http.Handler {
 	log.Print("INF Middleware security: RejectLineBreakInURI")
 
 	return http.HandlerFunc(
@@ -147,8 +154,8 @@ func RejectInvalidURI(next http.Handler) http.Handler {
 		})
 }
 
-// SecureHeaderSetter is a middleware adding recommended HTTP response headers to secure the web application.
-func SecureHeaderSetter(secure bool) func(next http.Handler) http.Handler {
+// MiddlewareSecureHTTPHeader is a middleware adding recommended HTTP response headers to secure the web application.
+func MiddlewareSecureHTTPHeader(secure bool) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		log.Print("INF Middleware sets the secure HTTP headers")
 

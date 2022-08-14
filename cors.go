@@ -13,15 +13,16 @@ import (
 	"github.com/rs/cors"
 )
 
-func (g *Garcon) CORSHandler() Middleware {
+// MiddlewareCORS is a middleware to handle Cross-Origin Resource Sharing (CORS).
+func (g *Garcon) MiddlewareCORS() Middleware {
 	if len(g.origins) == 0 {
-		return nil
+		log.Panic("Missing Origins: Please call garcon.WithURLs() before using MiddlewareCORS()")
 	}
-	return CORSHandler(g.origins, g.devMode)
+	return MiddlewareCORS(g.origins, g.devMode)
 }
 
-// CORSHandler uses restrictive CORS values.
-func CORSHandler(origins []string, debug bool) func(next http.Handler) http.Handler {
+// MiddlewareCORS uses restrictive CORS values.
+func MiddlewareCORS(origins []string, debug bool) func(next http.Handler) http.Handler {
 	options := cors.Options{
 		AllowedOrigins:         nil,
 		AllowOriginFunc:        nil,
@@ -29,7 +30,7 @@ func CORSHandler(origins []string, debug bool) func(next http.Handler) http.Hand
 		AllowedMethods:         []string{http.MethodGet, http.MethodPost},
 		AllowedHeaders:         []string{"Origin", "Accept", "Content-Type", "Authorization", "Cookie"},
 		ExposedHeaders:         nil,
-		MaxAge:                 24 * 3600, // https://developer.mozilla.org/docs/Web/HTTP/Headers/Access-Control-Max-Age
+		MaxAge:                 3600 * 24, // https://developer.mozilla.org/docs/Web/HTTP/Headers/Access-Control-Max-Age
 		AllowCredentials:       true,
 		OptionsPassthrough:     false,
 		OptionsSuccessStatus:   http.StatusNoContent,

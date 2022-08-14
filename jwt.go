@@ -66,7 +66,7 @@ type JWTChecker struct {
 	devOrigins []string
 }
 
-func NewJWTChecker(urls []*url.URL, gw Writer, secretKey []byte, permissions ...any) *JWTChecker {
+func NewJWTChecker(gw Writer, urls []*url.URL, secretKey []byte, permissions ...any) *JWTChecker {
 	plans, perms := checkParameters(secretKey, permissions...)
 
 	ck := &JWTChecker{
@@ -85,6 +85,93 @@ func NewJWTChecker(urls []*url.URL, gw Writer, secretKey []byte, permissions ...
 	}
 
 	return ck
+}
+
+func (ck *JWTChecker) NewCookie(name, plan, user string, secure bool, dns, dir string) http.Cookie {
+	JWT, err := tokens.GenRefreshToken("1y", "1y", plan, user, ck.secretKey)
+	if err != nil || JWT == "" {
+		log.Panic("Cannot create JWT: ", err)
+	}
+
+	log.Print("INF JWT newCookie plan="+plan+" domain="+dns+
+		" path="+dir+" secure=", secure, " "+name+"="+JWT)
+
+	return http.Cookie{
+		Name:       name,
+		Value:      JWT,
+		Path:       dir,
+		Domain:     dns,
+		Expires:    time.Time{},
+		RawExpires: "",
+		MaxAge:     timex.YearSec,
+		Secure:     secure,
+		HttpOnly:   true,
+		SameSite:   http.SameSiteStrictMode,
+		Raw:        "",
+		Unparsed:   nil,
+	}
+}
+
+// Cookie returns a default cookie to facilitate testing.
+func (ck *JWTChecker) Cookie(i int) *http.Cookie {
+	if (i < 0) || (i >= len(ck.cookies)) {
+		return nil
+	}
+	return &ck.cookies[i]
+}
+
+// Set is a middleware putting a HttpOnly cookie in the HTTP response header
+// when no valid cookie is present.
+// The new cookie conveys the JWT of the first plan.
+// Set also puts the permission from the JWT in the request context.
+func (ck *JWTChecker) Set(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		perm, a := ck.PermFromCookie(r)
+		if a != nil {
+			perm = ck.perms[0]
+			ck.cookies[0].Expires = time.Now().Add(timex.YearNs)
+			http.SetCookie(w, &ck.cookies[0])
+		}
+
+		next.ServeHTTP(w, perm.PutInCtx(r))
+	})
+}
+
+// Chk is a middleware to accept only HTTP requests having a valid cookie.
+// Then, Chk puts the permission (of the JWT) in the request context.
+func (ck *JWTChecker) Chk(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		perm, a := ck.PermFromCookie(r)
+		if a != nil {
+			if ck.isDevOrigin(r) {
+				perm = ck.perms[0]
+			} else {
+				ck.gw.WriteErr(w, r, http.StatusUnauthorized, a...)
+				return
+			}
+		}
+
+		next.ServeHTTP(w, perm.PutInCtx(r))
+	})
+}
+
+// Vet is a middleware to accept only the HTTP request having a valid JWT.
+// The JWT can be either in the cookie or in the first "Authorization" header.
+// Then, Vet puts the permission (of the JWT) in the request context.
+func (ck *JWTChecker) Vet(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		perm, a := ck.PermFromBearerOrCookie(r)
+		if a != nil {
+			if ck.isDevOrigin(r) {
+				perm = ck.perms[0]
+			} else {
+				ck.gw.WriteErr(w, r, http.StatusUnauthorized, a...)
+				return
+			}
+		}
+
+		next.ServeHTTP(w, perm.PutInCtx(r))
+	})
 }
 
 func checkParameters(secretKey []byte, permissions ...any) ([]string, []Perm) {
@@ -217,93 +304,6 @@ func extractDevOrigins(urls []*url.URL) []string {
 
 	log.Print("INF JWT not required for dev. origins: ", devOrigins)
 	return devOrigins
-}
-
-func (ck *JWTChecker) NewCookie(name, plan, user string, secure bool, dns, dir string) http.Cookie {
-	JWT, err := tokens.GenRefreshToken("1y", "1y", plan, user, ck.secretKey)
-	if err != nil || JWT == "" {
-		log.Panic("Cannot create JWT: ", err)
-	}
-
-	log.Print("INF JWT newCookie plan="+plan+" domain="+dns+
-		" path="+dir+" secure=", secure, " "+name+"="+JWT)
-
-	return http.Cookie{
-		Name:       name,
-		Value:      JWT,
-		Path:       dir,
-		Domain:     dns,
-		Expires:    time.Time{},
-		RawExpires: "",
-		MaxAge:     timex.YearSec,
-		Secure:     secure,
-		HttpOnly:   true,
-		SameSite:   http.SameSiteStrictMode,
-		Raw:        "",
-		Unparsed:   nil,
-	}
-}
-
-// Cookie returns a default cookie to facilitate testing.
-func (ck *JWTChecker) Cookie(i int) *http.Cookie {
-	if (i < 0) || (i >= len(ck.cookies)) {
-		return nil
-	}
-	return &ck.cookies[i]
-}
-
-// Set puts a HttpOnly cookie in the HTTP response header
-// when no valid cookie is present.
-// The new cookie conveys the JWT of the first plan.
-// Set also puts the permission from the JWT in the request context.
-func (ck *JWTChecker) Set(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		perm, a := ck.PermFromCookie(r)
-		if a != nil {
-			perm = ck.perms[0]
-			ck.cookies[0].Expires = time.Now().Add(timex.YearNs)
-			http.SetCookie(w, &ck.cookies[0])
-		}
-
-		next.ServeHTTP(w, perm.PutInCtx(r))
-	})
-}
-
-// Chk only accepts HTTP requests having a valid cookie.
-// Then, Chk puts the permission (of the JWT) in the request context.
-func (ck *JWTChecker) Chk(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		perm, err := ck.PermFromCookie(r)
-		if err != nil {
-			if ck.isDevOrigin(r) {
-				perm = ck.perms[0]
-			} else {
-				ck.gw.WriteErr(w, r, http.StatusUnauthorized, err...)
-				return
-			}
-		}
-
-		next.ServeHTTP(w, perm.PutInCtx(r))
-	})
-}
-
-// Vet only accepts the HTTP request having a valid JWT.
-// The JWT can be either in the cookie or in the first "Authorization" header.
-// Then, Vet puts the permission (of the JWT) in the request context.
-func (ck *JWTChecker) Vet(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		perm, err := ck.PermFromBearerOrCookie(r)
-		if err != nil {
-			if ck.isDevOrigin(r) {
-				perm = ck.perms[0]
-			} else {
-				ck.gw.WriteErr(w, r, http.StatusUnauthorized, err...)
-				return
-			}
-		}
-
-		next.ServeHTTP(w, perm.PutInCtx(r))
-	})
 }
 
 func (ck *JWTChecker) isDevOrigin(r *http.Request) bool {

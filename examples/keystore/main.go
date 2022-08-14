@@ -44,11 +44,11 @@ func main() {
 	)
 
 	chain, connState := g.StartMetricsServer(expPort)
-	chain = chain.Append(garcon.RejectInvalidURI)
-	chain = chain.Append(g.RequestLogger())
-	chain = chain.Append(g.RateLimiter(burst, perMinute))
-	chain = chain.Append(g.ServerSetter("KeyStore"))
-	chain = chain.Append(g.CORSHandler())
+	chain = chain.Append(g.MiddlewareRejectUnprintableURI())
+	chain = chain.Append(g.MiddlewareLogRequest())
+	chain = chain.Append(g.MiddlewareRateLimiter(burst, perMinute))
+	chain = chain.Append(g.MiddlewareServerHeader("KeyStore"))
+	chain = chain.Append(g.MiddlewareCORS())
 
 	// handles both REST API and static web files
 	r := router(g)

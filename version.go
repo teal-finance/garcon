@@ -43,7 +43,7 @@ var V string
 // Version format is "Program-1.2.3".
 // If the program argument is empty, the format is "v1.2.3".
 // If V is empty, Version uses the main module version.
-func Version(program string) string {
+func Version(serverName string) string {
 	if V == "" {
 		V = versioninfo.Short()
 		if V == "" {
@@ -51,17 +51,17 @@ func Version(program string) string {
 		}
 	}
 
-	if program == "" {
+	if serverName == "" {
 		return V
 	}
 
-	program += "-"
+	serverName += "-"
 
 	if len(V) > 1 && V[0] == 'v' {
-		return program + V[1:] // Skip the prefix "v"
+		return serverName + V[1:] // Skip the prefix "v"
 	}
 
-	return program + V
+	return serverName + V
 }
 
 // SetVersionFlag defines -version flag to print the version stored in V.
@@ -232,13 +232,19 @@ func writeHTML(w http.ResponseWriter, t *template.Template) {
 	}
 }
 
-func (g *Garcon) ServerSetter(program string) Middleware {
-	version := Version(program)
-	return ServerHeader(version)
+func (g *Garcon) MiddlewareServerHeader(serverName ...string) Middleware {
+	name := g.ServerName.String()
+	if len(serverName) > 0 && serverName[0] != "" {
+		name = serverName[0]
+	}
+
+	version := Version(name)
+
+	return MiddlewareServerHeader(version)
 }
 
-// ServerHeader is the middleware setting the Server HTTP header in the response.
-func ServerHeader(version string) func(next http.Handler) http.Handler {
+// MiddlewareServerHeader is the middleware setting the Server HTTP header in the response.
+func MiddlewareServerHeader(version string) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		log.Print("INF Middleware response HTTP header: Set Server ", version)
 

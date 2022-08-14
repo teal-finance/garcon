@@ -21,7 +21,7 @@ import (
 
 // Garcon settings
 const (
-	defaultOPAFile               = "examples/sample-auth.rego"
+	opaFile               = "examples/sample-auth.rego"
 	mainPort, pprofPort, expPort = 8080, 8093, 9093
 	burst, perMinute             = 10, 30
 
@@ -31,18 +31,14 @@ const (
 )
 
 func main() {
-	garcon.SetVersionFlag()
-	auth := flag.Bool("auth", false, "Enable OPA authorization specified in file "+defaultOPAFile)
-	prod := flag.Bool("prod", false, "Use settings for production")
-	jwt := flag.Bool("jwt", false, "Use JWT in lieu of the incorruptible token")
-	flag.Parse()
+	defer garcon.ProbeCPU().Stop() // collects the CPU-profile and writes it in the file "cpu.pprof"
 
 	garcon.LogVersion()
-
-	opaFile := ""
-	if *auth {
-		opaFile = defaultOPAFile
-	}
+	garcon.SetVersionFlag()
+	auth := flag.Bool("auth", false, "Enable OPA authorization specified in file "+opaFile)
+	prod := flag.Bool("prod", false, "Use settings for production")
+	jwt := flag.Bool("jwt", false, "Use JWT in lieu of the Incorruptible token")
+	flag.Parse()
 
 	var addr string
 	if *prod {
@@ -52,7 +48,6 @@ func main() {
 	}
 
 	g := garcon.New(
-		garcon.WithNamespace("https://example.com/path/myapp/"),
 		garcon.WithURLs(addr),
 		garcon.WithDocURL("/doc"),
 		garcon.WithPProf(pprofPort),
@@ -62,24 +57,30 @@ func main() {
 
 	var ck garcon.TokenChecker
 	if *jwt {
-		ck = g.NewJWTChecker(hmacSHA256, "FreePlan", 10, "PremiumPlan", 100)
+		ck = g.JWTChecker(hmacSHA256, "FreePlan", 10, "PremiumPlan", 100)
 	} else {
-		ck = g.NewIncorruptible(aes128bits, 60, true)
+		ck = g.IncorruptibleChecker(aes128bits, 60, true)
 	}
 
 	chain, connState := g.StartMetricsServer(expPort)
-	chain = chain.Append(garcon.RejectInvalidURI)
-	chain = chain.Append(g.RequestLogger())
-	chain = chain.Append(g.RateLimiter(burst, perMinute))
-	chain = chain.Append(g.ServerSetter("MyApp"))
-	chain = chain.Append(g.CORSHandler())
-	chain = chain.Append(g.OPAHandler(opaFile))
+	chain = chain.Append(g.MiddlewareRejectUnprintableURI())
+	chain = chain.Append(g.MiddlewareLogRequest("fingerprint"))
+	chain = chain.Append(g.MiddlewareRateLimiter(burst, perMinute))
+	chain = chain.Append(g.MiddlewareServerHeader("MyApp"))
+	chain = chain.Append(g.MiddlewareCORS())
+	chain = chain.Append(g.MiddlewareLogDuration(true))
+
+	if *auth {
+		chain = chain.Append(g.MiddlewareOPA(opaFile))
+	}
 
 	// handles both REST API and static web files
 	r := handler(g, addr, ck)
 	h := chain.Then(r)
 
 	server := garcon.Server(h, mainPort, connState)
+	
+	log.Print("-------------- Open http://localhost:8080/myapp --------------")
 	err := garcon.ListenAndServe(&server)
 	log.Fatal(err)
 }
@@ -89,7 +90,7 @@ func handler(g *garcon.Garcon, addr string, ck garcon.TokenChecker) http.Handler
 	r := chi.NewRouter()
 
 	// Static website files
-	ws := garcon.NewStaticWebServer("examples/www", g.Writer)
+	ws := g.NewStaticWebServer("examples/www")
 	r.Get("/favicon.ico", ws.ServeFile("favicon.ico", "image/x-icon"))
 	r.With(ck.Set).Get("/myapp", ws.ServeFile("myapp/index.html", "text/html; charset=utf-8"))
 	r.With(ck.Set).Get("/myapp/", ws.ServeFile("myapp/index.html", "text/html; charset=utf-8"))
@@ -99,8 +100,8 @@ func handler(g *garcon.Garcon, addr string, ck garcon.TokenChecker) http.Handler
 	r.With(ck.Chk).Get("/myapp/version", garcon.ServeVersion())
 
 	// Contact-form
-	wf := g.NewContactForm(addr, "")
-	r.With(ck.Set).Post("/myapp", wf.NotifyWebForm())
+	wf := g.NewContactForm(addr)
+	r.With(ck.Set).Post("/myapp", wf.Notify(""))
 
 	// API
 	r.With(ck.Vet).Get("/path/not/in/cookie", items)

@@ -22,43 +22,46 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-// Namespace holds the Prometheus namespace.
-type Namespace string
+// ServerName is used in multiple parts in Garcon:
+// - the HTTP Server header,
+// - the Prometheus namespace.
+type ServerName string
 
-// NewNamespace extract the wider "[a-zA-Z0-9_]+" string from the end of str.
+// ExtractName extracts the wider "[a-zA-Z0-9_]+" string from the end of str.
 // If str is a path or an URL, keep the last basename.
 // Example: keep "myapp" from "https://example.com/path/myapp/"
-func NewNamespace(str string) Namespace {
+// ExtractName also removes all punctuation characters except "_".
+func ExtractName(str string) ServerName {
 	str = strings.Trim(str, "/")
 	if i := strings.LastIndex(str, "/"); i >= 0 {
 		str = str[i+1:]
 	}
 	re := regexp.MustCompile(`[^a-zA-Z0-9_]`)
 	str = re.ReplaceAllLiteralString(str, "")
-	return Namespace(str)
+	return ServerName(str)
 }
 
 // SetPromNamingRule verifies Prom naming rules for namespace and fixes it if necessary.
 // valid namespace = [a-zA-Z][a-zA-Z0-9_]*
 // https://prometheus.io/docs/concepts/data_model/#metric-names-and-labels
-func (ns *Namespace) SetPromNamingRule() {
+func (ns *ServerName) SetPromNamingRule() {
 	str := ns.String()
 	if !unicode.IsLetter(rune(str[0])) {
-		*ns = Namespace("a" + str)
+		*ns = ServerName("a" + str)
 	}
 }
 
-func (ns Namespace) String() string {
+func (ns ServerName) String() string {
 	return string(ns)
 }
 
 // StartMetricsServer creates and starts the Prometheus export server.
 func (g *Garcon) StartMetricsServer(expPort int) (Chain, func(net.Conn, http.ConnState)) {
-	return StartMetricsServer(expPort, g.Namespace)
+	return StartMetricsServer(expPort, g.ServerName)
 }
 
 // StartMetricsServer creates and starts the Prometheus export server.
-func StartMetricsServer(port int, namespace Namespace) (Chain, func(net.Conn, http.ConnState)) {
+func StartMetricsServer(port int, namespace ServerName) (Chain, func(net.Conn, http.ConnState)) {
 	if port <= 0 {
 		log.Print("INF Disable Prometheus, export port=", port)
 		return nil, nil
@@ -77,7 +80,7 @@ func StartMetricsServer(port int, namespace Namespace) (Chain, func(net.Conn, ht
 	prometheus.MustRegister(collectors.NewBuildInfoCollector())
 
 	namespace.SetPromNamingRule()
-	chain := NewChain(namespace.measureDuration)
+	chain := NewChain(namespace.MiddlewareMeasureDuration)
 	counter := namespace.updateHTTPMetrics()
 	return chain, counter
 }
@@ -90,8 +93,8 @@ func metricsHandler() http.Handler {
 	return handler
 }
 
-// measureDuration measures the time to handle a request.
-func (ns Namespace) measureDuration(next http.Handler) http.Handler {
+// MiddlewareMeasureDuration measures the time to handle a request.
+func (ns ServerName) MiddlewareMeasureDuration(next http.Handler) http.Handler {
 	summary := ns.newSummaryVec(
 		"request_duration_seconds",
 		"Time to handle a client request",
@@ -110,7 +113,7 @@ func (ns Namespace) measureDuration(next http.Handler) http.Handler {
 
 // updateHTTPMetrics counts the connections and update web traffic metrics
 // depending on incoming requests and outgoing responses.
-func (ns Namespace) updateHTTPMetrics() func(net.Conn, http.ConnState) {
+func (ns ServerName) updateHTTPMetrics() func(net.Conn, http.ConnState) {
 	connGauge := ns.newGauge("in_flight_connections", "Number of current active connections")
 	iniCounter := ns.newCounter("conn_new_total", "Total initiated connections since startup")
 	reqCounter := ns.newCounter("conn_req_total", "Total requested connections since startup")
@@ -161,7 +164,7 @@ func (r *statusRecorder) WriteHeader(status int) {
 	r.ResponseWriter.WriteHeader(status)
 }
 
-func (ns Namespace) newSummaryVec(name, help string, labels ...string) *prometheus.SummaryVec {
+func (ns ServerName) newSummaryVec(name, help string, labels ...string) *prometheus.SummaryVec {
 	return promauto.NewSummaryVec(prometheus.SummaryOpts{
 		Namespace:   string(ns),
 		Subsystem:   "http",
@@ -175,7 +178,7 @@ func (ns Namespace) newSummaryVec(name, help string, labels ...string) *promethe
 	}, labels)
 }
 
-func (ns Namespace) newGauge(name, help string) prometheus.Gauge {
+func (ns ServerName) newGauge(name, help string) prometheus.Gauge {
 	return promauto.NewGauge(prometheus.GaugeOpts{
 		Namespace:   string(ns),
 		Subsystem:   "http",
@@ -185,7 +188,7 @@ func (ns Namespace) newGauge(name, help string) prometheus.Gauge {
 	})
 }
 
-func (ns Namespace) newCounter(name, help string) prometheus.Counter {
+func (ns ServerName) newCounter(name, help string) prometheus.Counter {
 	return promauto.NewCounter(prometheus.CounterOpts{
 		Namespace:   string(ns),
 		Subsystem:   "http",

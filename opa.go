@@ -22,16 +22,16 @@ import (
 // Policy manages the Open Policy Agent (OPA).
 // see https://www.openpolicyagent.org/docs/edge/integration/#integrating-with-the-go-api
 type Policy struct {
-	compiler *ast.Compiler
 	gw       Writer
+	compiler *ast.Compiler
 }
 
 var ErrEmptyOPAFilename = errors.New("OPA: missing filename")
 
 // NewPolicy creates a new Policy by loading rego files.
-func NewPolicy(filenames []string, gw Writer) (Policy, error) {
+func NewPolicy(gw Writer, filenames []string) (Policy, error) {
 	compiler, err := LoadPolicy(filenames)
-	return Policy{compiler, gw}, err
+	return Policy{gw, compiler}, err
 }
 
 // LoadPolicy checks the Rego filenames and loads them to build the OPA compiler.
@@ -60,20 +60,20 @@ func LoadPolicy(filenames []string) (*ast.Compiler, error) {
 	return ast.CompileModules(modules)
 }
 
-// OPAHandler creates the middleware for Authentication rules (Open Policy Agent).
-func (g *Garcon) OPAHandler(opaFilenames ...string) Middleware {
+// MiddlewareOPA creates the middleware for Authentication rules (Open Policy Agent).
+func (g *Garcon) MiddlewareOPA(opaFilenames ...string) Middleware {
 	if len(opaFilenames) == 0 {
 		return nil
 	}
-	policy, err := NewPolicy(opaFilenames, g.Writer)
+	policy, err := NewPolicy(g.Writer, opaFilenames)
 	if err != nil {
 		log.Panic("WithOPA: cannot create OPA Policy: ", err)
 	}
-	return policy.AuthOPA
+	return policy.MiddlewareOPA
 }
 
-// AuthOPA is the HTTP middleware to check endpoint authorization.
-func (opa Policy) AuthOPA(next http.Handler) http.Handler {
+// MiddlewareOPA is the HTTP middleware to check endpoint authorization.
+func (opa Policy) MiddlewareOPA(next http.Handler) http.Handler {
 	log.Print("INF Middleware OPA: ", opa.compiler.Modules)
 
 	compiler := opa.compiler
