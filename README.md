@@ -21,6 +21,7 @@ Our Middleware are very easy to setup. They respect the Go standards. Thus you c
 - `IncorruptibleChecker` Session cookie with [Incorruptible](https://github.com/teal-finance/incorruptible) token
 - `MiddlewareCORS` Cross-Origin Resource Sharing (CORS)
 - `MiddlewareOPA` Authenticate from Datalog/Rego files using [Open Policy Agent](https://www.openpolicyagent.org)
+- `MiddlewareSecureHTTPHeader` Set some HTTP header to increase the web security
 
 ```go
 g := garcon.New()
