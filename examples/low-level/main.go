@@ -45,7 +45,7 @@ func main() {
 	// Uniformize error responses with API doc
 	gw := garcon.NewWriter(apiDoc)
 
-	chain, connState, urls := setMiddlewares(gw)
+	middleware, connState, urls := setMiddlewares(gw)
 
 	key, err := hex.DecodeString(hmacSHA256Hex)
 	if err != nil {
@@ -57,20 +57,20 @@ func main() {
 
 	// Handles both REST API and static web files
 	h := handler(gw, garcon.NewJWTChecker(gw, urls, key))
-	h = chain.Then(h)
+	h = middleware.Then(h)
 
 	log.Print("-------------- Open http://localhost:8080/myapp --------------")
 	runServer(h, connState)
 }
 
-func setMiddlewares(gw garcon.Writer) (chain garcon.Chain, connState func(net.Conn, http.ConnState), urls []*url.URL) {
+func setMiddlewares(gw garcon.Writer) (_ garcon.Chain, connState func(net.Conn, http.ConnState), _ []*url.URL) {
 	auth := flag.Bool("auth", false, "Enable OPA authorization specified in file "+authCfg)
 	dev := flag.Bool("dev", true, "Use development or production settings")
 	flag.Parse()
 
 	// Start a metrics server in background if export port > 0.
 	// The metrics server is for use with Prometheus or another compatible monitoring tool.
-	chain, connState = garcon.StartMetricsServer(expPort, "LowLevel")
+	middleware, connState := garcon.StartMetricsServer(expPort, "LowLevel")
 
 	// Limit the input request rate per IP
 	reqLimiter := garcon.NewRateLimiter(gw, burst, reqMinute, *dev)
@@ -81,9 +81,9 @@ func setMiddlewares(gw garcon.Writer) (chain garcon.Chain, connState func(net.Co
 	}
 
 	allowedOrigins := garcon.SplitClean(corsConfig)
-	urls = garcon.ParseURLs(allowedOrigins)
+	urls := garcon.ParseURLs(allowedOrigins)
 
-	chain = chain.Append(
+	middleware = middleware.Append(
 		reqLimiter.MiddlewareRateLimiter,
 		garcon.MiddlewareServerHeader(serverHeader),
 		garcon.MiddlewareCORS(allowedOrigins, *dev),
@@ -96,10 +96,10 @@ func setMiddlewares(gw garcon.Writer) (chain garcon.Chain, connState func(net.Co
 		if err != nil {
 			log.Fatal(err)
 		}
-		chain = chain.Append(policy.MiddlewareOPA)
+		middleware = middleware.Append(policy.MiddlewareOPA)
 	}
 
-	return chain, connState, urls
+	return middleware, connState, urls
 }
 
 // runServer runs in foreground the main server.

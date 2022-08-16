@@ -78,7 +78,7 @@ router.Get("/version", garcon.ServeVersion())
 router.Get("/reserved", g.Writer.NotImplemented)
 router.NotFound(g.Writer.InvalidPath)
 
-handler := chain.Then(router)
+handler := middleware.Then(router)
 server := http.Server{Addr: ":8080", Handler: handler}
 server.ListenAndServe()
 ```
@@ -223,8 +223,8 @@ func main() {
     ic := g.IncorruptibleChecker(aes128Key, 60, true)
     jc := g.JWTChecker(hmacSHA256Key, "FreePlan", 10, "PremiumPlan", 100)
 
-    chain, connState := g.StartMetricsServer(9093)
-    chain = chain.Append(
+    middleware, connState := g.StartMetricsServer(9093)
+    middleware = middleware.Append(
         g.MiddlewareRejectUnprintableURI(),
         g.MiddlewareLogRequests("fingerprint"),
         g.MiddlewareRateLimiter(10, 30),
@@ -247,7 +247,7 @@ func main() {
     // API
     router.With(jc.Vet).Post("/api/items", myFunctionHandler)
 
-    handler := chain.Then(router)
+    handler := middleware.Then(router)
     server := garcon.Server(handler, 8080, connState)
     garcon.ListenAndServe(&server)
 }
@@ -487,20 +487,20 @@ func main() {
     // Uniformize error responses with API doc
     gw := garcon.NewWriter(apiDoc)
 
-    chain, connState := setMiddlewares(gw)
+    middleware, connState := setMiddlewares(gw)
 
     // Handles both REST API and static web files
     h := handler(gw)
-    h = chain.Then(h)
+    h = middleware.Then(h)
 
     runServer(h, connState)
 }
 
-func setMiddlewares(gw garcon.Writer) (chain garcon.Chain, connState func(net.Conn, http.ConnState)) {
+func setMiddlewares(gw garcon.Writer) (middleware garcon.Chain, connState func(net.Conn, http.ConnState)) {
     // Start a metrics server in background if export port > 0.
     // The metrics server is for use with Prometheus or another compatible monitoring tool.
     metrics := garcon.Metrics{}
-    chain, connState = garcon.StartMetricsServer(expPort, devMode)
+    middleware, connState = garcon.StartMetricsServer(expPort, devMode)
 
     // Limit the input request rate per IP
     reqLimiter := garcon.NewReqLimiter(gw, burst, reqMinute, devMode)
@@ -512,7 +512,7 @@ func setMiddlewares(gw garcon.Writer) (chain garcon.Chain, connState func(net.Co
 
     allowedOrigins := garcon.SplitClean(corsConfig)
 
-    chain = chain.Append(
+    middleware = middleware.Append(
         reqLimiter.Limit,
         garcon.ServerHeader(serverHeader),
         cors.Handler(allowedOrigins, devMode),
@@ -526,10 +526,10 @@ func setMiddlewares(gw garcon.Writer) (chain garcon.Chain, connState func(net.Co
     }
 
     if policy.Ready() {
-        chain = chain.Append(policy.Auth)
+        middleware = middleware.Append(policy.Auth)
     }
 
-    return chain, connState
+    return middleware, connState
 }
 
 // runServer runs in foreground the main server.

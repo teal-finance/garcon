@@ -62,21 +62,21 @@ func main() {
 		ck = g.IncorruptibleChecker(aes128bits, 60, true)
 	}
 
-	chain, connState := g.StartMetricsServer(expPort)
-	chain = chain.Append(g.MiddlewareRejectUnprintableURI())
-	chain = chain.Append(g.MiddlewareLogRequest("fingerprint"))
-	chain = chain.Append(g.MiddlewareRateLimiter(burst, perMinute))
-	chain = chain.Append(g.MiddlewareServerHeader("MyApp"))
-	chain = chain.Append(g.MiddlewareCORS())
-	chain = chain.Append(g.MiddlewareLogDuration(true))
+	middleware, connState := g.StartMetricsServer(expPort)
+	middleware = middleware.Append(g.MiddlewareRejectUnprintableURI())
+	middleware = middleware.Append(g.MiddlewareLogRequest("fingerprint"))
+	middleware = middleware.Append(g.MiddlewareRateLimiter(burst, perMinute))
+	middleware = middleware.Append(g.MiddlewareServerHeader("MyApp"))
+	middleware = middleware.Append(g.MiddlewareCORS())
+	middleware = middleware.Append(g.MiddlewareLogDuration(true))
 
 	if *auth {
-		chain = chain.Append(g.MiddlewareOPA(opaFile))
+		middleware = middleware.Append(g.MiddlewareOPA(opaFile))
 	}
 
 	// handles both REST API and static web files
 	r := handler(g, addr, ck)
-	h := chain.Then(r)
+	h := middleware.Then(r)
 
 	server := garcon.Server(h, mainPort, connState)
 

@@ -43,16 +43,17 @@ func main() {
 		garcon.WithDev(!*prod),
 	)
 
-	chain, connState := g.StartMetricsServer(expPort)
-	chain = chain.Append(g.MiddlewareRejectUnprintableURI())
-	chain = chain.Append(g.MiddlewareLogRequest())
-	chain = chain.Append(g.MiddlewareRateLimiter(burst, perMinute))
-	chain = chain.Append(g.MiddlewareServerHeader("KeyStore"))
-	chain = chain.Append(g.MiddlewareCORS())
+	middleware, connState := g.StartMetricsServer(expPort)
+	middleware = middleware.Append(
+		g.MiddlewareRejectUnprintableURI(),
+		g.MiddlewareLogRequest(),
+		g.MiddlewareRateLimiter(burst, perMinute),
+		g.MiddlewareServerHeader("KeyStore"),
+		g.MiddlewareCORS())
 
 	// handles both REST API and static web files
 	r := router(g)
-	h := chain.Then(r)
+	h := middleware.Then(r)
 
 	server := garcon.Server(h, mainPort, connState)
 	err := garcon.ListenAndServe(&server)
