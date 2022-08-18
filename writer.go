@@ -43,16 +43,16 @@ func (gw Writer) InvalidPath(w http.ResponseWriter, r *http.Request) {
 	gw.WriteErr(w, r, http.StatusBadRequest, pathInvalid)
 }
 
-func WriteErr(w http.ResponseWriter, r *http.Request, statusCode int, a ...any) {
-	Writer("").WriteErr(w, r, statusCode, a...)
+func WriteErr(w http.ResponseWriter, r *http.Request, statusCode int, kv ...any) {
+	Writer("").WriteErr(w, r, statusCode, kv...)
 }
 
-func WriteErrSafe(w http.ResponseWriter, r *http.Request, statusCode int, a ...any) {
-	Writer("").WriteErrSafe(w, r, statusCode, a...)
+func WriteErrSafe(w http.ResponseWriter, r *http.Request, statusCode int, kv ...any) {
+	Writer("").WriteErrSafe(w, r, statusCode, kv...)
 }
 
-func WriteOK(w http.ResponseWriter, a ...any) {
-	Writer("").WriteOK(w, a...)
+func WriteOK(w http.ResponseWriter, kv ...any) {
+	Writer("").WriteOK(w, kv...)
 }
 
 // msg is only used by SafeWrite to generate a fast JSON marshaler.
@@ -237,22 +237,22 @@ func appendValue(buf []byte, a any) []byte {
 	}
 }
 
-func appendJSON(buf []byte, a any) []byte {
-	b, err := json.Marshal(a)
+func appendJSON(buf []byte, obj any) []byte {
+	b, err := json.Marshal(obj)
 	if err != nil {
-		log.Printf("ERR Writer jsonify %+v %v", a, err)
+		log.Printf("ERR Writer jsonify %+v %v", obj, err)
 	}
 	return append(buf, b...)
 }
 
-func appendKey(buf []byte, a any) []byte {
-	switch val := a.(type) {
+func appendKey(buf []byte, key any) []byte {
+	switch k := key.(type) {
 	case string:
-		return strconv.AppendQuoteToGraphic(buf, val)
+		return strconv.AppendQuoteToGraphic(buf, k)
 	case []byte:
-		return strconv.AppendQuoteToGraphic(buf, string(val))
+		return strconv.AppendQuoteToGraphic(buf, string(k))
 	default:
-		return strconv.AppendQuoteToGraphic(buf, fmt.Sprint(val))
+		return strconv.AppendQuoteToGraphic(buf, fmt.Sprint(k))
 	}
 }
 
