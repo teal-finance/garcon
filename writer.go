@@ -132,7 +132,7 @@ func (gw Writer) WriteOK(w http.ResponseWriter, kv ...any) {
 		buf = []byte("{}")
 
 	case len(kv) == 1:
-		buf, err = json.Marshal(kv)
+		buf, err = json.Marshal(kv[0])
 		if err != nil {
 			gw.WriteErr(w, nil, http.StatusInternalServerError,
 				"Cannot serialize success JSON response", "error", err)
