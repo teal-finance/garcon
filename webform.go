@@ -119,13 +119,7 @@ func (form *WebForm) init() {
 func (form *WebForm) Notify(notifierURL string) func(w http.ResponseWriter, r *http.Request) {
 	form.init()
 
-	var n notifier.Notifier
-	if notifierURL == "" {
-		log.Print("INF Middleware WebForm: no Notifier => use the logger Notifier")
-		n = logger.NewNotifier()
-	} else {
-		n = mattermost.NewNotifier(notifierURL)
-	}
+	n := newNotifier(notifierURL)
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		err := r.ParseForm()
@@ -145,6 +139,14 @@ func (form *WebForm) Notify(notifierURL string) func(w http.ResponseWriter, r *h
 
 		http.Redirect(w, r, form.Redirect, http.StatusFound)
 	}
+}
+
+func newNotifier(url string) notifier.Notifier {
+	if url == "" {
+		log.Print("INF Middleware WebForm: no Notifier => use the logger Notifier")
+		return logger.NewNotifier()
+	}
+	return mattermost.NewNotifier(url)
 }
 
 func (form *WebForm) toMarkdown(r *http.Request) string {
