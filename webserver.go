@@ -169,7 +169,7 @@ func (ws *StaticWebServer) send(w http.ResponseWriter, r *http.Request, absPath 
 	if n, err := io.Copy(w, file); err != nil {
 		log.Print("WRN WebServer: Copy(", absPath, ") ", err)
 	} else {
-		log.Print("INF WebServer sent ", absPath, " ", ConvertSize64(n))
+		log.Print("INF out "+r.RemoteAddr+" "+r.Method+" "+absPath+" ", ConvertSize64(n))
 	}
 }
 

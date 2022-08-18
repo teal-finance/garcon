@@ -23,6 +23,20 @@ func (g *Garcon) MiddlewareCORS() Middleware {
 
 // MiddlewareCORS uses restrictive CORS values.
 func MiddlewareCORS(origins []string, debug bool) func(next http.Handler) http.Handler {
+	c := newCORS(origins, debug)
+	if c.Log != nil {
+		c.Log = corsLogger{}
+	}
+	return c.Handler
+}
+
+type corsLogger struct{}
+
+func (corsLogger) Printf(fmt string, a ...any) {
+	log.Printf("INF CORS "+fmt, a...)
+}
+
+func newCORS(origins []string, debug bool) *cors.Cors {
 	options := cors.Options{
 		AllowedOrigins:         nil,
 		AllowOriginFunc:        nil,
@@ -48,7 +62,7 @@ func MiddlewareCORS(origins []string, debug bool) func(next http.Handler) http.H
 	log.Printf("INF CORS: Methods=%v Headers=%v Credentials=%v MaxAge=%v",
 		options.AllowedMethods, options.AllowedHeaders, options.AllowCredentials, options.MaxAge)
 
-	return cors.New(options).Handler
+	return cors.New(options)
 }
 
 // InsertSchema inserts "http://" when HTTP schema is missing.
