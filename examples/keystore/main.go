@@ -115,15 +115,7 @@ func (db *db) list(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	bytes, err := json.Marshal(keyNames)
-	if err != nil {
-		db.g.Writer.WriteErr(w, r, http.StatusInternalServerError,
-			"Cannot JSON-marshal the keys list")
-		log.Print("ERR Cannot JSON-marshal the keys list ", err)
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(bytes)
+	db.g.Writer.WriteOK(w, keyNames)
 }
 
 // post writes to DB the keys but also responds keys values from DB
@@ -171,15 +163,7 @@ func (db *db) post(w http.ResponseWriter, r *http.Request) {
 
 	db.KeysByIP[ip] = keys
 
-	bytes, err := json.Marshal(result)
-	if err != nil {
-		db.g.Writer.WriteErr(w, r, http.StatusInternalServerError,
-			"Cannot JSON-marshal the result")
-		log.Print("ERR Cannot JSON-marshal ", err)
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(bytes)
+	db.g.Writer.WriteOK(w, result)
 }
 
 func (db *db) delete(w http.ResponseWriter, r *http.Request) {
