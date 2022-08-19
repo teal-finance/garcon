@@ -86,7 +86,7 @@ func setMiddlewares(gw garcon.Writer) (_ garcon.Chain, connState func(net.Conn, 
 	middleware = middleware.Append(
 		reqLimiter.MiddlewareRateLimiter,
 		garcon.MiddlewareServerHeader(serverHeader),
-		garcon.MiddlewareCORS(allowedOrigins, *dev),
+		garcon.MiddlewareCORS(allowedOrigins, nil, nil, *dev),
 	)
 
 	// Endpoint authentication rules (Open Policy Agent)

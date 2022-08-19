@@ -9,7 +9,6 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
 	"io"
 	"log"
