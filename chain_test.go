@@ -421,9 +421,9 @@ func appendTag(tag string, r *http.Request) error {
 
 func bodyAsString(r *http.Request) (string, error) {
 	body, err := io.ReadAll(r.Body)
-	r.Body.Close()
 	if err != nil {
 		return "", err
 	}
+	r.Body.Close()
 	return string(body), nil
 }

@@ -207,6 +207,7 @@ func parseForm(r *http.Request) (url.Values, error) {
 	if err != nil {
 		return nil, err
 	}
+	r.Body.Close()
 
 	return url.ParseQuery(string(bytes))
 }
