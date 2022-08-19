@@ -173,7 +173,7 @@ func TestChain_Then_OrdersRoundTrippersCorrectly(t *testing.T) {
 		t.Fatal(err)
 	}
 	if res.Body != nil {
-		res.Body.Close()
+		defer res.Body.Close()
 	}
 
 	body, err := bodyAsString(r)
@@ -234,7 +234,7 @@ func TestRTChain_Append_AddsRoundTrippersCorrectly1(t *testing.T) {
 		t.Fatal(err)
 	}
 	if res.Body != nil {
-		res.Body.Close()
+		defer res.Body.Close()
 	}
 
 	body, err := bodyAsString(r)
@@ -303,7 +303,7 @@ func TestRTChain_Append_AddsRoundTrippersCorrectly2(t *testing.T) {
 		t.Fatal(err)
 	}
 	if res.Body != nil {
-		res.Body.Close()
+		defer res.Body.Close()
 	}
 
 	body, err := bodyAsString(r)
@@ -412,7 +412,6 @@ func appendTag(tag string, r *http.Request) error {
 		if err != nil {
 			return err
 		}
-		r.Body.Close()
 		body = append(body, []byte(tag)...)
 	}
 	r.Body = io.NopCloser(bytes.NewBuffer(body))
@@ -424,6 +423,5 @@ func bodyAsString(r *http.Request) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	r.Body.Close()
 	return string(body), nil
 }
