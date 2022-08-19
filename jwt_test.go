@@ -177,8 +177,8 @@ func TestNewJWTChecker(t *testing.T) {
 			handler = ck.Set(next)
 			handler.ServeHTTP(w, r)
 
-			response := w.Result()
-			cookies := response.Cookies()
+			resp := w.Result()
+			cookies := resp.Cookies()
 			if len(cookies) != 1 {
 				t.Error("checker.Set() has not set only one cookie, but", len(cookies))
 			} else if cookies[0].Value != ck.Cookie(0).Value {
@@ -198,7 +198,7 @@ func TestNewJWTChecker(t *testing.T) {
 				t.Errorf("checker.Set() request ctx perm got=%d want=%d "+
 					"len(permissions)=%d", next.perm, c.perm, len(c.permissions))
 			}
-			response.Body.Close()
+			resp.Body.Close()
 		})
 	}
 }
