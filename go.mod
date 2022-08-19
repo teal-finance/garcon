@@ -3,6 +3,7 @@ module github.com/teal-finance/garcon
 go 1.18
 
 require (
+	github.com/JohannesKaufmann/html-to-markdown v1.3.5
 	github.com/carlmjohnson/flagx v0.22.2
 	github.com/carlmjohnson/versioninfo v0.22.4
 	github.com/go-chi/chi/v5 v5.0.7
@@ -23,8 +24,10 @@ require (
 
 require (
 	github.com/OneOfOne/xxhash v1.2.8 // indirect
+	github.com/PuerkitoBio/goquery v1.5.1 // indirect
 	github.com/acmacalister/skittles v0.0.0-20160609003031-7423546701e1 // indirect
 	github.com/agnivade/levenshtein v1.1.1 // indirect
+	github.com/andybalholm/cascadia v1.1.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bytecodealliance/wasmtime-go v0.39.0 // indirect
 	github.com/carlmjohnson/be v0.22.4 // indirect
@@ -53,6 +56,7 @@ require (
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 	github.com/yashtewari/glob-intersection v0.1.0 // indirect
+	github.com/yuin/goldmark v1.4.13 // indirect
 	golang.org/x/net v0.0.0-20220812174116-3211cb980234 // indirect
 	golang.org/x/sys v0.0.0-20220811171246-fbc7d0a398ab // indirect
 	golang.org/x/tools v0.1.12 // indirect

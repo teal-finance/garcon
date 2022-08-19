@@ -23,6 +23,7 @@ import (
 	"strings"
 	"time"
 
+	md "github.com/JohannesKaufmann/html-to-markdown"
 	"github.com/go-chi/chi/v5"
 
 	"github.com/teal-finance/incorruptible"
@@ -382,20 +383,124 @@ func Values(r *http.Request, key string) ([]string, error) {
 }
 
 // DecodeJSONBody unmarshals the JSON from the request body.
+//
+// Deprecated: Please use garcon.UnmarshalJSONRequest(w, r, msg) instead.
 func DecodeJSONBody[T json.Unmarshaler](r *http.Request, msg T) error {
-	if r.Body == nil {
-		return io.EOF // empty body
+	return UnmarshalJSONRequest(nil, r, msg)
+}
+
+// UnmarshalJSONRequest unmarshals the JSON from the request body.
+func UnmarshalJSONRequest[T json.Unmarshaler](w http.ResponseWriter, r *http.Request, msg T, maxBytes ...int64) error {
+	r.Body = maxBytesReader(w, r.Body, maxBytes)
+	return unmarshalJSON(r.Body, r.Header, msg)
+}
+
+// UnmarshalJSONResponse unmarshals the JSON from the request body.
+func UnmarshalJSONResponse[T json.Unmarshaler](resp *http.Response, msg T, maxBytes ...int64) error {
+	resp.Body = maxBytesReader(nil, resp.Body, maxBytes)
+	if 200 <= resp.StatusCode && resp.StatusCode <= 299 {
+		return unmarshalJSON(resp.Body, resp.Header, msg)
+	}
+	return fmt.Errorf("%s %w", resp.Status, errorFromBody(resp.Body, resp.Header))
+}
+
+// DecodeJSONRequest decodes the JSON from the request body.
+func DecodeJSONRequest(w http.ResponseWriter, r *http.Request, msg any, maxBytes ...int64) error {
+	r.Body = maxBytesReader(w, r.Body, maxBytes)
+	return decodeJSON(r.Body, r.Header, msg)
+}
+
+// DecodeJSONResponse decodes the JSON from the request body.
+func DecodeJSONResponse(resp *http.Response, msg any, maxBytes ...int64) error {
+	resp.Body = maxBytesReader(nil, resp.Body, maxBytes)
+	if 200 <= resp.StatusCode && resp.StatusCode <= 299 {
+		return decodeJSON(resp.Body, resp.Header, msg)
+	}
+	return fmt.Errorf("%s %w", resp.Status, errorFromBody(resp.Body, resp.Header))
+}
+
+const defaultMaxBytes int64 = 80_000 // 80 KB should be enough for most of the cases
+
+func maxBytesReader(w http.ResponseWriter, body io.ReadCloser, maxBytes []int64) io.ReadCloser {
+	max := defaultMaxBytes
+	if len(maxBytes) > 0 {
+		max = maxBytes[0]
 	}
 
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		return fmt.Errorf("cannot read body %w", err)
+	if max > 0 {
+		body = http.MaxBytesReader(w, body, max)
 	}
 
-	err = msg.UnmarshalJSON(body)
+	return body
+}
+
+// unmarshalJSON unmarshals the JSON body of either a request or a response.
+func unmarshalJSON[T json.Unmarshaler](body io.ReadCloser, header http.Header, msg T) error {
+	buf, err := io.ReadAll(body)
 	if err != nil {
-		return fmt.Errorf("bad JSON %w", err)
+		return fmt.Errorf("cannot read body: %w", err)
+	}
+
+	err = msg.UnmarshalJSON(buf)
+	if err != nil {
+		return fmt.Errorf("bad JSON %w got: %s", err, extractReadable(header, buf))
 	}
 
 	return nil
+}
+
+// decodeJSON decodes the JSON body of either a request or a response.
+// decodeJSON does not use son.NewDecoder(body).Decode(msg)
+// because we want to read again the body in case of error.
+func decodeJSON(body io.ReadCloser, header http.Header, msg any) error {
+	buf, err := io.ReadAll(body)
+	if err != nil {
+		return fmt.Errorf("cannot read body: %w", err)
+	}
+
+	err = json.Unmarshal(buf, msg)
+	if err != nil {
+		return fmt.Errorf("bad JSON %w got: %s", err, extractReadable(header, buf))
+	}
+
+	return nil
+}
+
+func errorFromBody(body io.ReadCloser, header http.Header) error {
+	buf, err := io.ReadAll(body)
+	if err != nil {
+		return fmt.Errorf("(cannot read body: %w)", err)
+	}
+
+	if len(buf) == 0 {
+		return errors.New("(empty body)")
+	}
+
+	str := fmt.Sprintf("read %d bytes: ", len(buf))
+	return errors.New(str + extractReadable(header, buf))
+}
+
+func extractReadable(header http.Header, buf []byte) string {
+	// convert HTML body to markdown
+	if buf[0] == byte('<') || isHTML(header) {
+		converter := md.NewConverter("", true, nil)
+		markdown, e := converter.ConvertBytes(buf)
+		if e != nil {
+			buf = append([]byte("html->md: "), markdown...)
+		}
+	}
+
+	safe := Sanitize(string(buf))
+
+	if len(safe) > 500 {
+		safe = safe[:400] + " (cut)"
+	}
+
+	return safe
+}
+
+func isHTML(header http.Header) bool {
+	const textHTML = "text/html"
+	ct := header.Get("Content-Type")
+	return (len(ct) >= len(textHTML) && ct[:len(textHTML)] == textHTML)
 }
