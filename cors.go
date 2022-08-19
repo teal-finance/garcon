@@ -8,6 +8,7 @@ package garcon
 import (
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/rs/cors"
@@ -15,15 +16,17 @@ import (
 
 // MiddlewareCORS is a middleware to handle Cross-Origin Resource Sharing (CORS).
 func (g *Garcon) MiddlewareCORS() Middleware {
-	if len(g.origins) == 0 {
-		log.Panic("Missing Origins: Please call garcon.WithURLs() before using MiddlewareCORS()")
-	}
-	return MiddlewareCORS(g.origins, g.devMode)
+	return g.MiddlewareCORSWithMethodsHeaders(nil, nil)
+}
+
+// MiddlewareCORSWithMethodsHeaders is a middleware to handle Cross-Origin Resource Sharing (CORS).
+func (g *Garcon) MiddlewareCORSWithMethodsHeaders(methods, headers []string) Middleware {
+	return MiddlewareCORS(g.origins, methods, headers, g.devMode)
 }
 
 // MiddlewareCORS uses restrictive CORS values.
-func MiddlewareCORS(origins []string, debug bool) func(next http.Handler) http.Handler {
-	c := newCORS(origins, debug)
+func MiddlewareCORS(origins, methods, headers []string, debug bool) func(next http.Handler) http.Handler {
+	c := newCORS(origins, methods, headers, debug)
 	if c.Log != nil {
 		c.Log = corsLogger{}
 	}
@@ -36,13 +39,35 @@ func (corsLogger) Printf(fmt string, a ...any) {
 	log.Printf("INF CORS "+fmt, a...)
 }
 
-func newCORS(origins []string, debug bool) *cors.Cors {
+// DevOrigins provides the development origins:
+// - yarn run vite --port 3000
+// - yarn run vite preview --port 5000
+// - localhost:8085 on multi devices: web auto-reload using https://github.com/synw/fwr
+// - flutter run --web-port=8080
+// - 192.168.1.x + any port on tablet: mobile app using fast builtin auto-reload.
+func DevOrigins() []*url.URL {
+	return []*url.URL{
+		{Scheme: "http", Host: "localhost:"},
+		{Scheme: "http", Host: "192.168.1."},
+	}
+}
+
+func newCORS(origins, methods, headers []string, debug bool) *cors.Cors {
+	if len(methods) == 0 {
+		// original default: http.MethodGet, http.MethodPost, http.MethodHead
+		methods = []string{http.MethodGet, http.MethodPost, http.MethodDelete}
+	}
+	if len(headers) == 0 {
+		// original default: "Origin", "Accept", "Content-Type", "X-Requested-With"
+		headers = []string{"Origin", "Content-Type", "Authorization"}
+	}
+
 	options := cors.Options{
 		AllowedOrigins:         nil,
-		AllowOriginFunc:        nil,
+		AllowOriginFunc:        allowOriginFunc(origins),
 		AllowOriginRequestFunc: nil,
-		AllowedMethods:         []string{http.MethodGet, http.MethodPost},
-		AllowedHeaders:         []string{"Origin", "Accept", "Content-Type", "Authorization", "Cookie"},
+		AllowedMethods:         methods,
+		AllowedHeaders:         headers,
 		ExposedHeaders:         nil,
 		MaxAge:                 3600 * 24, // https://developer.mozilla.org/docs/Web/HTTP/Headers/Access-Control-Max-Age
 		AllowCredentials:       true,
@@ -51,22 +76,27 @@ func newCORS(origins []string, debug bool) *cors.Cors {
 		Debug:                  debug, // verbose logs
 	}
 
-	InsertSchema(origins)
-
-	if len(origins) == 1 {
-		options.AllowOriginFunc = oneOrigin(origins[0])
-	} else {
-		options.AllowOriginFunc = multipleOriginPrefixes(origins)
-	}
-
-	log.Printf("INF CORS: Methods=%v Headers=%v Credentials=%v MaxAge=%v",
-		options.AllowedMethods, options.AllowedHeaders, options.AllowCredentials, options.MaxAge)
+	log.Print("INF CORS: Methods: ", options.AllowedMethods)
+	log.Print("INF CORS: Headers: ", options.AllowedHeaders)
+	log.Printf("INF CORS: Credentials=%v MaxAge=%v", options.AllowCredentials, options.MaxAge)
 
 	return cors.New(options)
 }
 
-// InsertSchema inserts "http://" when HTTP schema is missing.
-func InsertSchema(urls []string) {
+func allowOriginFunc(origins []string) func(string) bool {
+	insertSchema(origins)
+	switch len(origins) {
+	case 0:
+		return allOrigins()
+	case 1:
+		return oneOrigin(origins[0])
+	default:
+		return multipleOriginPrefixes(origins)
+	}
+}
+
+// insertSchema inserts "http://" when HTTP schema is missing.
+func insertSchema(urls []string) {
 	for i, u := range urls {
 		if !strings.HasPrefix(u, "https://") &&
 			!strings.HasPrefix(u, "http://") {
@@ -75,15 +105,27 @@ func InsertSchema(urls []string) {
 	}
 }
 
-func oneOrigin(addr string) func(string) bool {
-	log.Print("INF CORS: Set one origin: ", addr)
+func allOrigins() func(string) bool {
+	log.Print("INF CORS: Allow all origins")
 	return func(origin string) bool {
-		return origin == addr
+		return true
+	}
+}
+
+func oneOrigin(allowedOrigin string) func(string) bool {
+	log.Print("INF CORS: Allow one origin: ", allowedOrigin)
+	return func(origin string) bool {
+		if origin == allowedOrigin {
+			return true
+		}
+
+		log.Print("INF CORS: Refuse " + origin + " is not " + allowedOrigin)
+		return false
 	}
 }
 
 func multipleOriginPrefixes(addrPrefixes []string) func(origin string) bool {
-	log.Print("INF CORS: Set origin prefixes: ", addrPrefixes)
+	log.Print("INF CORS: Allow origin prefixes: ", addrPrefixes)
 
 	return func(origin string) bool {
 		for _, prefix := range addrPrefixes {
@@ -92,7 +134,7 @@ func multipleOriginPrefixes(addrPrefixes []string) func(origin string) bool {
 			}
 		}
 
-		log.Print("INF CORS: Refuse ", origin, " without prefixes ", addrPrefixes)
+		log.Print("INF CORS: Refuse "+origin+" without prefixes ", addrPrefixes)
 		return false
 	}
 }
