@@ -17,7 +17,7 @@ import (
 	"github.com/minio/highwayhash"
 )
 
-// Code points in the surrogate range are not valid for UTF-8.
+// The code points in the surrogate range are not valid for UTF-8.
 const (
 	surrogateMin = 0xD800
 	surrogateMax = 0xDFFF
@@ -26,24 +26,20 @@ const (
 // Sanitize replaces control codes by the tofu symbol
 // and invalid UTF-8 codes by the replacement character.
 // Sanitize can be used to prevent log injection.
+//
 // Inspired from:
-// https://wikiless.org/wiki/Replacement_character#Replacement_character
-// https://graphicdesign.stackexchange.com/q/108297
+// - https://wikiless.org/wiki/Replacement_character#Replacement_character
+// - https://graphicdesign.stackexchange.com/q/108297
 func Sanitize(str string) string {
-	return strings.Map(
-		func(r rune) rune {
-			switch {
-			case r < 32:
-			case r == 127: // The .notdef character is often represented by the empty box (tofu)
-				return '􏿮' // to indicate a valid but not rendered character.
-			case surrogateMin <= r && r <= surrogateMax:
-			case utf8.MaxRune < r:
-				return '�' // The replacement character U+FFFD indicates an invalid UTF-8 character.
-			}
-			return r
-		},
-		str,
-	)
+	return strings.Map(func(r rune) rune {
+		switch {
+		case r < 32, r == 127: // The .notdef character is often represented by the empty box (tofu)
+			return '􏿮' // to indicate a valid but not rendered character.
+		case surrogateMin <= r && r <= surrogateMax, utf8.MaxRune < r:
+			return '�' // The replacement character U+FFFD indicates an invalid UTF-8 character.
+		}
+		return r
+	}, str)
 }
 
 // SafeHeader stringifies a safe list of HTTP header values.
