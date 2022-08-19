@@ -115,19 +115,6 @@ func WithURLs(addresses ...string) Option {
 	}
 }
 
-// DevOrigins provides the development origins:
-// - yarn run vite --port 3000
-// - yarn run vite preview --port 5000
-// - localhost:8085 on multi devices: web auto-reload using https://github.com/synw/fwr
-// - flutter run --web-port=8080
-// - 192.168.1.x + any port on tablet: mobile app using fast builtin auto-reload.
-func DevOrigins() []*url.URL {
-	return []*url.URL{
-		{Scheme: "http", Host: "localhost:"},
-		{Scheme: "http", Host: "192.168.1."},
-	}
-}
-
 // ListenAndServe runs the HTTP server(s) in foreground.
 // Optionally it also starts a metrics server in background (if export port > 0).
 // The metrics server is for use with Prometheus or another compatible monitoring tool.
