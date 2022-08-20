@@ -76,9 +76,9 @@ func newCORS(origins, methods, headers []string, debug bool) *cors.Cors {
 		Debug:                  debug, // verbose logs
 	}
 
-	log.Print("INF CORS: Methods: ", options.AllowedMethods)
-	log.Print("INF CORS: Headers: ", options.AllowedHeaders)
-	log.Printf("INF CORS: Credentials=%v MaxAge=%v", options.AllowCredentials, options.MaxAge)
+	log.Print("INF CORS Methods: ", options.AllowedMethods)
+	log.Print("INF CORS Headers: ", options.AllowedHeaders)
+	log.Printf("INF CORS Credentials=%v MaxAge=%v", options.AllowCredentials, options.MaxAge)
 
 	return cors.New(options)
 }
@@ -106,26 +106,26 @@ func insertSchema(urls []string) {
 }
 
 func allOrigins() func(string) bool {
-	log.Print("INF CORS: Allow all origins")
+	log.Print("INF CORS Allow all origins")
 	return func(origin string) bool {
 		return true
 	}
 }
 
 func oneOrigin(allowedOrigin string) func(string) bool {
-	log.Print("INF CORS: Allow one origin: ", allowedOrigin)
+	log.Print("INF CORS Allow one origin: ", allowedOrigin)
 	return func(origin string) bool {
 		if origin == allowedOrigin {
 			return true
 		}
 
-		log.Print("INF CORS: Refuse " + origin + " is not " + allowedOrigin)
+		log.Print("INF CORS Refuse " + origin + " is not " + allowedOrigin)
 		return false
 	}
 }
 
 func multipleOriginPrefixes(addrPrefixes []string) func(origin string) bool {
-	log.Print("INF CORS: Allow origin prefixes: ", addrPrefixes)
+	log.Print("INF CORS Allow origin prefixes: ", addrPrefixes)
 
 	return func(origin string) bool {
 		for _, prefix := range addrPrefixes {
@@ -134,7 +134,7 @@ func multipleOriginPrefixes(addrPrefixes []string) func(origin string) bool {
 			}
 		}
 
-		log.Print("INF CORS: Refuse "+origin+" without prefixes ", addrPrefixes)
+		log.Print("INF CORS Refuse "+origin+" without prefixes ", addrPrefixes)
 		return false
 	}
 }
