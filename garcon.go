@@ -430,7 +430,7 @@ func readBody(w http.ResponseWriter, body io.ReadCloser, maxBytes []int) ([]byte
 
 	// check body limit
 	d := max - len(buf)
-	if d > max/4 {
+	if d < max/4 {
 		pct := float64(len(buf)) / float64(max)
 		log.Printf("WRN read %d bytes = %.2f of the max=%d", len(buf), pct, max)
 	} else if len(buf) > 2*defaultMaxBytes {
