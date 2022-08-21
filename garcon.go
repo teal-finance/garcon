@@ -429,15 +429,15 @@ func readBody(w http.ResponseWriter, body io.ReadCloser, maxBytes []int) ([]byte
 	}
 
 	// check limit
-	nearTheLimit := (max - len(buf)) < max/4
+	nearTheLimit := (max - len(buf)) < max/2
 	readManyBytes := len(buf) > 8*defaultMaxBytes
 	if nearTheLimit || readManyBytes {
 		percentage := 100 * len(buf) / max
-		text := "INF body: read many bytes %s but only %d%% of the limit %s"
+		text := "INF body: read many bytes %s but only %d%% of the limit %s (%d bytes)"
 		if nearTheLimit {
-			text = "WRN body: read %s = %d%% of the limit %s, increase maxBytes"
+			text = "WRN body: read %s = %d%% of the limit %s, increase maxBytes=%d"
 		}
-		log.Printf(text, ConvertSize(len(buf)), percentage, ConvertSize(max))
+		log.Printf(text, ConvertSize(len(buf)), percentage, ConvertSize(max), max)
 	}
 
 	return buf, nil
@@ -487,8 +487,8 @@ func errorFromBody(buf []byte, header http.Header) error {
 		return errors.New("(empty body)")
 	}
 
-	str := fmt.Sprintf("read %d bytes: ", len(buf))
-	return errors.New(str + extractReadable(buf, header))
+	str := "read " + ConvertSize(len(buf)) + ": " + extractReadable(buf, header)
+	return errors.New(str)
 }
 
 func extractReadable(buf []byte, header http.Header) string {
