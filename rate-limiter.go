@@ -65,7 +65,7 @@ func NewRateLimiter(gw Writer, maxReqBurst, maxReqPerMinute int, devMode bool) R
 }
 
 func (rl *ReqLimiter) MiddlewareRateLimiter(next http.Handler) http.Handler {
-	log.Printf("INF Middleware MiddlewareRateLimiter: burst=%v rate=%v/s",
+	log.Printf("INF MiddlewareRateLimiter: burst=%v rate=%f.2/s",
 		rl.initLimiter.Burst(), rl.initLimiter.Limit())
 
 	go rl.removeOldVisitors()
@@ -87,7 +87,7 @@ func (rl *ReqLimiter) MiddlewareRateLimiter(next http.Handler) http.Handler {
 					"advice", "Please contact the team support is this is annoying")
 				log.Print("WRN ", r.RemoteAddr, " ", r.Method, " ", r.RequestURI, "TooManyRequests ", err)
 			} else {
-				log.Print("WRM ", r.RemoteAddr, " ", r.Method, " ", r.RequestURI, " ", err)
+				log.Print("WRN ", r.RemoteAddr, " ", r.Method, " ", r.RequestURI, " ", err)
 			}
 			return
 		}

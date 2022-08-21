@@ -74,7 +74,7 @@ func (g *Garcon) MiddlewareOPA(opaFilenames ...string) Middleware {
 
 // MiddlewareOPA is the HTTP middleware to check endpoint authorization.
 func (opa Policy) MiddlewareOPA(next http.Handler) http.Handler {
-	log.Print("INF Middleware OPA: ", opa.compiler.Modules)
+	log.Print("INF MiddlewareOPA: ", opa.compiler.Modules)
 
 	compiler := opa.compiler
 	gw := opa.gw

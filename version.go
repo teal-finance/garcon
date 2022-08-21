@@ -246,7 +246,7 @@ func (g *Garcon) MiddlewareServerHeader(serverName ...string) Middleware {
 // MiddlewareServerHeader is the middleware setting the Server HTTP header in the response.
 func MiddlewareServerHeader(version string) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
-		log.Print("INF Middleware response HTTP header: Set Server ", version)
+		log.Print("INF MiddlewareServerHeader sets the HTTP header Server=" + version + " in the responses")
 
 		return http.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {

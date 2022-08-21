@@ -110,7 +110,7 @@ func (form *WebForm) init() {
 		}
 	}
 
-	log.Print("INF Middleware WebForm redirect=", form.Redirect)
+	log.Print("INF Middleware WebForm redirects to ", form.Redirect)
 }
 
 // Notify returns a handler that
@@ -150,7 +150,7 @@ func newNotifier(url string) notifier.Notifier {
 }
 
 func (form *WebForm) toMarkdown(r *http.Request) string {
-	log.Printf("WebForm with %d input fields", len(r.Form))
+	log.Printf("INF WebForm with %d input fields", len(r.Form))
 
 	md := ""
 	for name, values := range r.Form {

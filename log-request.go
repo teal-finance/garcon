@@ -53,7 +53,7 @@ func (g *Garcon) MiddlewareLogDuration(safe ...bool) Middleware {
 
 // MiddlewareLogRequest is the middleware to log the requester IP and the requested URL.
 func MiddlewareLogRequest(next http.Handler) http.Handler {
-	log.Print("INF Middleware logs requester IP and requested URL")
+	log.Print("INF MiddlewareLogRequest logs requester IP and request URL")
 
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
@@ -64,7 +64,7 @@ func MiddlewareLogRequest(next http.Handler) http.Handler {
 
 // MiddlewareLogRequestSafe is similar to LogRequest but sanitize the URL.
 func MiddlewareLogRequestSafe(next http.Handler) http.Handler {
-	log.Print("INF Middleware logs requester IP and sanitized URL")
+	log.Print("INF MiddlewareLogRequestSafe logs requester IP and sanitized URL")
 
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
@@ -76,7 +76,7 @@ func MiddlewareLogRequestSafe(next http.Handler) http.Handler {
 // MiddlewareLogFingerprint is the middleware to log
 // incoming HTTP request and browser fingerprint.
 func MiddlewareLogFingerprint(next http.Handler) http.Handler {
-	log.Print("INF Middleware logs requested URL and browser fingerprint: " + FingerprintExplanation)
+	log.Print("INF MiddlewareLogFingerprint: " + FingerprintExplanation)
 
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
@@ -88,7 +88,7 @@ func MiddlewareLogFingerprint(next http.Handler) http.Handler {
 
 // MiddlewareLogFingerprintSafe is similar to MiddlewareLogFingerprints but sanitize the URL.
 func MiddlewareLogFingerprintSafe(next http.Handler) http.Handler {
-	log.Print("INF Middleware logs sanitized URL and browser fingerprint: " + FingerprintExplanation)
+	log.Print("INF MiddlewareLogFingerprintSafe: " + FingerprintExplanation)
 
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
@@ -100,7 +100,7 @@ func MiddlewareLogFingerprintSafe(next http.Handler) http.Handler {
 
 // MiddlewareLogDuration logs the requested URL along with the time to handle it.
 func MiddlewareLogDuration(next http.Handler) http.Handler {
-	log.Print("INF Middleware logs requester IP, requested URL and duration")
+	log.Print("INF MiddlewareLogDuration logs requester IP, request URL and duration")
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
@@ -112,7 +112,7 @@ func MiddlewareLogDuration(next http.Handler) http.Handler {
 
 // MiddlewareLogDurationSafe is similar to MiddlewareLogDurations but also sanitizes the URL.
 func MiddlewareLogDurationSafe(next http.Handler) http.Handler {
-	log.Print("INF Middleware logs requester IP, sanitized URL and duration")
+	log.Print("INF MiddlewareLogDurationSafe: logs requester IP, sanitized URL and duration")
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
