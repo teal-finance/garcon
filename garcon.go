@@ -450,8 +450,8 @@ func unmarshalJSON[T json.Unmarshaler](w http.ResponseWriter, statusErr string, 
 		return err
 	}
 
-	if statusErr != "" {
-		return fmt.Errorf("%s %w", statusErr, errorFromBody(buf, header))
+	if statusErr != "" { // status code is always from a response
+		return errorFromResponseBody(statusErr, header, buf)
 	}
 
 	err = msg.UnmarshalJSON(buf)
@@ -470,8 +470,8 @@ func decodeJSON(w http.ResponseWriter, statusErr string, body io.ReadCloser, hea
 		return err
 	}
 
-	if statusErr != "" {
-		return fmt.Errorf("%s %w", statusErr, errorFromBody(buf, header))
+	if statusErr != "" { // status code is always from a response
+		return errorFromResponseBody(statusErr, header, buf)
 	}
 
 	err = json.Unmarshal(buf, msg)
@@ -482,12 +482,12 @@ func decodeJSON(w http.ResponseWriter, statusErr string, body io.ReadCloser, hea
 	return nil
 }
 
-func errorFromBody(buf []byte, header http.Header) error {
+func errorFromResponseBody(statusErr string, header http.Header, buf []byte) error {
 	if len(buf) == 0 {
 		return errors.New("(empty body)")
 	}
 
-	str := "read " + ConvertSize(len(buf)) + ": " + extractReadable(buf, header)
+	str := "response: " + statusErr + " (" + ConvertSize(len(buf)) + ") " + extractReadable(buf, header)
 	return errors.New(str)
 }
 
