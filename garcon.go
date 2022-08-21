@@ -428,13 +428,16 @@ func readBody(w http.ResponseWriter, body io.ReadCloser, maxBytes []int) ([]byte
 		return nil, fmt.Errorf("body (max=%s): %w", ConvertSize(max), err)
 	}
 
-	// check body limit
-	d := max - len(buf)
-	if d < max/4 {
-		pct := float64(len(buf)) / float64(max)
-		log.Printf("WRN read %d bytes = %.2f of the max=%d", len(buf), pct, max)
-	} else if len(buf) > 2*defaultMaxBytes {
-		log.Printf("INF read %d bytes", len(buf))
+	// check limit
+	nearTheLimit := (max - len(buf)) < max/4
+	readManyBytes := len(buf) > 8*defaultMaxBytes
+	if nearTheLimit || readManyBytes {
+		percentage := 100 * len(buf) / max
+		text := "INF body: read many bytes %s but only %d%% of the limit %s"
+		if nearTheLimit {
+			text = "WRN body: read %s = %d%% of the limit %s, increase maxBytes"
+		}
+		log.Printf(text, ConvertSize(len(buf)), percentage, ConvertSize(max))
 	}
 
 	return buf, nil
