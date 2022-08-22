@@ -99,7 +99,8 @@ func SetCustomVersionFlag(fs *flag.FlagSet, flagName, program string) {
 	flagx.BoolFunc(fs, flagName, "Print version and exit", f)
 }
 
-// PrintVersion prints the version and (Git) commit information.
+// PrintVersion prints the version and exits.
+// The version may also contain the (Git) commit information.
 //
 //nolint:forbidigo // must print on stdout
 func PrintVersion(program string) {
@@ -116,7 +117,7 @@ func LogVersion() {
 		if i == 0 {
 			line = "Version: " + line
 		}
-		log.Println(line)
+		log.Print(line)
 	}
 }
 
