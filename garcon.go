@@ -19,14 +19,15 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/teal-finance/incorruptible"
+
 	md "github.com/JohannesKaufmann/html-to-markdown"
 	"github.com/go-chi/chi/v5"
-
-	"github.com/teal-finance/incorruptible"
 )
 
 type Garcon struct {
@@ -514,4 +515,118 @@ func isHTML(header http.Header) bool {
 	const textHTML = "text/html"
 	ct := header.Get("Content-Type")
 	return (len(ct) >= len(textHTML) && ct[:len(textHTML)] == textHTML)
+}
+
+// ExtractWords converts comma-separated values
+// into a slice of unique words found in the dictionary.
+//
+// The search is case-insensitive and is based on common prefix:
+// the input value "foo" selects the first word in
+// the dictionary that starts with "foo" (as "food" for example).
+//
+// Moreover the special value "ALL" means all the dictionary words.
+//
+// No guarantees are made about ordering.
+// However the returned words are not duplicated.
+// Note this operation alters the content of the dictionary:
+// the found words are replaced by the last dictionary words.
+// Clone the input dictionary if it needs to be preserved:
+//
+//	d2 := append([]string{}, dictionary...)
+//	words := garcon.ExtractWords(csv, d2)
+func ExtractWords(csv string, dictionary []string) []string {
+	prefixes := strings.Split(csv, ",")
+
+	n := len(prefixes)
+	if n > len(dictionary) {
+		n = len(dictionary)
+	}
+	result := make([]string, 0, n)
+
+	for _, p := range prefixes {
+		p = strings.ToLower(p)
+		p = strings.TrimSpace(p)
+
+		switch p {
+		case "":
+			continue
+
+		case "all":
+			return append(dictionary, result...)
+
+		default:
+			for i, w := range dictionary {
+				if len(p) <= len(w) && p == strings.ToLower(w[:len(p)]) {
+					result = append(result, w)
+					// make result unique => drop dictionary[i]
+					dictionary = remove(dictionary, i)
+					break
+				}
+			}
+		}
+	}
+
+	return result
+}
+
+// remove alters the original slice.
+//
+// A one-line alternative but it also alters original slice:
+//
+//	slice = append(slice[:i], slice[i+1:]...)
+//
+// or:
+//
+//	import "golang.org/x/exp/slices"
+//	slice = slices.Delete(slice, i, i+1)
+func remove[T any](slice []T, i int) []T {
+	slice[i] = slice[len(slice)-1] // copy last element at index #i
+	return slice[:len(slice)-1]    // drop last element
+}
+
+// Deduplicate makes a slice of elements unique:
+// it returns a slice with only the unique elements in it.
+func Deduplicate[T comparable](duplicates []T) []T {
+	uniques := make([]T, 0, len(duplicates))
+
+	took := make(map[T]struct{}, len(duplicates))
+	for _, v := range duplicates {
+		if _, ok := took[v]; !ok {
+			took[v] = struct{}{} // means "v has already been taken"
+			uniques = append(uniques, v)
+		}
+	}
+
+	return uniques
+}
+
+// EnvStr searches the environment variable (envvar)
+// and returns its value if found,
+// otherwise returns the optional fallback value.
+// In absence of fallback, "" is returned.
+func EnvStr(envvar string, fallback ...string) string {
+	if value, ok := os.LookupEnv(envvar); ok {
+		return value
+	}
+	if len(fallback) > 0 {
+		return fallback[0]
+	}
+	return ""
+}
+
+// EnvInt does the same as EnvStr
+// but expects the value is an integer.
+// EnvInt panics if the envvar value cannot be parsed as an integer.
+func EnvInt(envvar string, fallback ...int) int {
+	if str, ok := os.LookupEnv(envvar); ok {
+		integer, err := strconv.Atoi(str)
+		if err != nil {
+			log.Panicf("ERR want integer but got %v=%q err: %v", envvar, str, err)
+		}
+		return integer
+	}
+	if len(fallback) > 0 {
+		return fallback[0]
+	}
+	return 0
 }
