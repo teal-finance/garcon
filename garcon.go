@@ -383,24 +383,32 @@ func Values(r *http.Request, key string) ([]string, error) {
 	return form, nil
 }
 
+func ReadRequest(w http.ResponseWriter, r *http.Request, maxBytes ...int) ([]byte, error) {
+	return readBodyAndError(w, "", r.Body, r.Header, maxBytes...)
+}
+
+func ReadResponse(r *http.Response, maxBytes ...int) ([]byte, error) {
+	return readBodyAndError(nil, statusErr(r), r.Body, r.Header, maxBytes...)
+}
+
 // UnmarshalJSONRequest unmarshals the JSON from the request body.
 func UnmarshalJSONRequest[T json.Unmarshaler](w http.ResponseWriter, r *http.Request, msg T, maxBytes ...int) error {
-	return unmarshalJSON(w, "", r.Body, r.Header, msg, maxBytes)
+	return unmarshalJSON(w, "", r.Body, r.Header, msg, maxBytes...)
 }
 
 // UnmarshalJSONResponse unmarshals the JSON from the request body.
 func UnmarshalJSONResponse[T json.Unmarshaler](r *http.Response, msg T, maxBytes ...int) error {
-	return unmarshalJSON(nil, statusErr(r), r.Body, r.Header, msg, maxBytes)
+	return unmarshalJSON(nil, statusErr(r), r.Body, r.Header, msg, maxBytes...)
 }
 
 // DecodeJSONRequest decodes the JSON from the request body.
 func DecodeJSONRequest(w http.ResponseWriter, r *http.Request, msg any, maxBytes ...int) error {
-	return decodeJSON(w, "", r.Body, r.Header, msg, maxBytes)
+	return decodeJSON(w, "", r.Body, r.Header, msg, maxBytes...)
 }
 
 // DecodeJSONResponse decodes the JSON from the request body.
 func DecodeJSONResponse(r *http.Response, msg any, maxBytes ...int) error {
-	return decodeJSON(nil, statusErr(r), r.Body, r.Header, msg, maxBytes)
+	return decodeJSON(nil, statusErr(r), r.Body, r.Header, msg, maxBytes...)
 }
 
 func statusErr(r *http.Response) string {
@@ -411,10 +419,54 @@ func statusErr(r *http.Response) string {
 	return r.Status
 }
 
+// unmarshalJSON unmarshals the JSON body of either a request or a response.
+func unmarshalJSON[T json.Unmarshaler](w http.ResponseWriter, statusErr string, body io.ReadCloser, header http.Header, msg T, maxBytes ...int) error {
+	buf, err := readBodyAndError(w, statusErr, body, header, maxBytes...)
+	if err != nil {
+		return err
+	}
+
+	err = msg.UnmarshalJSON(buf)
+	if err != nil {
+		return fmt.Errorf("unmarshalJSON %w got: %s", err, extractReadable(buf, header))
+	}
+	return nil
+}
+
+// decodeJSON decodes the JSON body of either a request or a response.
+// decodeJSON does not use son.NewDecoder(body).Decode(msg)
+// because we want to read again the body in case of error.
+func decodeJSON(w http.ResponseWriter, statusErr string, body io.ReadCloser, header http.Header, msg any, maxBytes ...int) error {
+	buf, err := readBodyAndError(w, statusErr, body, header, maxBytes...)
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(buf, msg)
+	if err != nil {
+		return fmt.Errorf("decodeJSON %w got: %s", err, extractReadable(buf, header))
+	}
+
+	return nil
+}
+
+func readBodyAndError(w http.ResponseWriter, statusErr string, body io.ReadCloser, header http.Header, maxBytes ...int) ([]byte, error) {
+	buf, err := readBody(w, body, maxBytes...)
+	if err != nil {
+		return nil, err
+	}
+
+	if statusErr != "" { // status code is always from a response
+		return buf, errorFromResponseBody(statusErr, header, buf)
+	}
+
+	return buf, nil
+}
+
 const defaultMaxBytes = 80_000 // 80 KB should be enough for most of the cases
 
 // readBody reads up to maxBytes.
-func readBody(w http.ResponseWriter, body io.ReadCloser, maxBytes []int) ([]byte, error) {
+func readBody(w http.ResponseWriter, body io.ReadCloser, maxBytes ...int) ([]byte, error) {
 	max := defaultMaxBytes // optional parameter
 	if len(maxBytes) > 0 {
 		max = maxBytes[0]
@@ -442,45 +494,6 @@ func readBody(w http.ResponseWriter, body io.ReadCloser, maxBytes []int) ([]byte
 	}
 
 	return buf, nil
-}
-
-// unmarshalJSON unmarshals the JSON body of either a request or a response.
-func unmarshalJSON[T json.Unmarshaler](w http.ResponseWriter, statusErr string, body io.ReadCloser, header http.Header, msg T, maxBytes []int) error {
-	buf, err := readBody(w, body, maxBytes)
-	if err != nil {
-		return err
-	}
-
-	if statusErr != "" { // status code is always from a response
-		return errorFromResponseBody(statusErr, header, buf)
-	}
-
-	err = msg.UnmarshalJSON(buf)
-	if err != nil {
-		return fmt.Errorf("unmarshalJSON %w got: %s", err, extractReadable(buf, header))
-	}
-	return nil
-}
-
-// decodeJSON decodes the JSON body of either a request or a response.
-// decodeJSON does not use son.NewDecoder(body).Decode(msg)
-// because we want to read again the body in case of error.
-func decodeJSON(w http.ResponseWriter, statusErr string, body io.ReadCloser, header http.Header, msg any, maxBytes []int) error {
-	buf, err := readBody(w, body, maxBytes)
-	if err != nil {
-		return err
-	}
-
-	if statusErr != "" { // status code is always from a response
-		return errorFromResponseBody(statusErr, header, buf)
-	}
-
-	err = json.Unmarshal(buf, msg)
-	if err != nil {
-		return fmt.Errorf("decodeJSON %w got: %s", err, extractReadable(buf, header))
-	}
-
-	return nil
 }
 
 func errorFromResponseBody(statusErr string, header http.Header, buf []byte) error {
