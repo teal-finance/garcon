@@ -141,6 +141,12 @@ func (ck *JWTChecker) Cookie(i int) *http.Cookie {
 // The new cookie conveys the JWT of the first plan.
 // Set also puts the permission from the JWT in the request context.
 func (ck *JWTChecker) Set(next http.Handler) http.Handler {
+	if len(ck.cookies) == 0 {
+		log.Panic("Middleware JWT requires at least one cookie")
+	}
+	log.Printf("INF Middleware JWT.Set cookie %s=%s MaxAge=%d",
+		ck.cookies[0].Name, ck.cookies[0].Value, ck.cookies[0].MaxAge)
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		perm, a := ck.PermFromCookie(r)
 		if a != nil {
@@ -156,6 +162,8 @@ func (ck *JWTChecker) Set(next http.Handler) http.Handler {
 // Chk is a middleware to accept only HTTP requests having a valid cookie.
 // Then, Chk puts the permission (of the JWT) in the request context.
 func (ck *JWTChecker) Chk(next http.Handler) http.Handler {
+	log.Print("INF Middleware JWT.Chk cookie devOrigins=", ck.devOrigins)
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		perm, a := ck.PermFromCookie(r)
 		if a != nil {
@@ -175,6 +183,8 @@ func (ck *JWTChecker) Chk(next http.Handler) http.Handler {
 // The JWT can be either in the cookie or in the first "Authorization" header.
 // Then, Vet puts the permission (of the JWT) in the request context.
 func (ck *JWTChecker) Vet(next http.Handler) http.Handler {
+	log.Print("INF Middleware JWT.Vet cookie/bearer devOrigins=", ck.devOrigins)
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		perm, a := ck.PermFromBearerOrCookie(r)
 		if a != nil {
