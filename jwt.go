@@ -15,7 +15,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"net"
 	"net/http"
 	"net/url"
 	"path"
@@ -78,7 +77,7 @@ func NewJWTChecker(gw Writer, urls []*url.URL, secretKey []byte, permissions ...
 	}
 
 	secure, dns, dir := extractCookieAttributes(urls)
-	name := forgeCookieName(secure, dns, dir)
+	dns, name := forgeCookieName(secure, dns, dir)
 	for i := range plans {
 		ck.cookies[i] = ck.NewCookie(name, plans[i], "", secure, dns, dir)
 	}
@@ -257,8 +256,8 @@ func extractCookieAttributes(urls []*url.URL) (secure bool, dns, dir string) {
 
 // forgeCookieName returns the sanitized path and
 // a nice cookie name deduced from the path basename.
-func forgeCookieName(secure bool, dns, dir string) string {
-	name := defaultCookieName
+func forgeCookieName(secure bool, dns, dir string) (domain, name string) {
+	name = defaultCookieName
 	for i := len(dir) - 2; i >= 0; i-- {
 		if dir[i] == byte('/') {
 			name = dir[i+1:]
@@ -267,60 +266,39 @@ func forgeCookieName(secure bool, dns, dir string) string {
 	}
 
 	if secure {
-		if dns == "" && dir == "/" {
+		if dir == "/" {
 			// "__Host-" is when cookie has "Secure" flag, has no "Domain", has "Path=/" and is sent from a secure origin.
 			name = "__Host-" + name
+			dns = ""
 		} else {
 			// "__Secure-" is when cookie has "Secure" flag and is sent from a secure origin
-			// "__Host-" is better than the "__Secure-" prefix.
+			// "__Host-" is safer than the "__Secure-" prefix.
 			name = "__Secure-" + name
 		}
 	}
 
-	return name
+	return dns, name
 }
 
-func extractDevURLs(urls []*url.URL) []*url.URL {
-	if len(urls) == 1 {
-		log.Print("INF JWT required for single domain: ", urls)
+func extractDevOrigins(urls []*url.URL) []string {
+	if len(urls) == 0 {
 		return nil
 	}
 
-	for i, u := range urls {
-		if u == nil {
-			log.Panic("Unexpected nil in URL slide: ", urls)
+	for _, u := range urls {
+		if u == nil || u.Scheme != "http" {
+			return nil
 		}
-		if u.Scheme == "http" {
-			return urls[i:]
+	}
+
+	for _, o := range DevOrigins() {
+		if strings.HasPrefix(urls[0].Host, o.Host) {
+			log.Print("INF JWT not required for http://" + urls[0].Host + " only")
+			return []string{"http://" + urls[0].Host}
 		}
 	}
 
 	return nil
-}
-
-func extractDevOrigins(urls []*url.URL) []string {
-	if len(urls) > 0 && urls[0].Scheme == "http" {
-		host, _, _ := net.SplitHostPort(urls[0].Host)
-		if host == "localhost" {
-			log.Print("INF JWT not required for http://localhost")
-			return []string{"*"}
-		}
-	}
-
-	devURLS := extractDevURLs(urls)
-
-	if len(devURLS) == 0 {
-		return nil
-	}
-
-	devOrigins := make([]string, 0, len(urls))
-	for _, u := range urls {
-		o := u.Scheme + "://" + u.Host
-		devOrigins = append(devOrigins, o)
-	}
-
-	log.Print("INF JWT not required for dev. origins: ", devOrigins)
-	return devOrigins
 }
 
 func (ck *JWTChecker) isDevOrigin(r *http.Request) bool {
@@ -328,16 +306,11 @@ func (ck *JWTChecker) isDevOrigin(r *http.Request) bool {
 		return false
 	}
 
-	if len(ck.devOrigins) > 0 {
-		// simple: check only the first header "Origin"
-		origin := r.Header.Get("Origin")
-		for _, prefix := range ck.devOrigins {
-			if prefix == "*" {
-				return true
-			}
-			if strings.HasPrefix(origin, prefix) {
-				return true
-			}
+	// check only the first header "Origin"
+	origin := r.Header.Get("Origin")
+	for _, prefix := range ck.devOrigins {
+		if strings.HasPrefix(origin, prefix) {
+			return true
 		}
 	}
 
