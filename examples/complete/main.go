@@ -23,7 +23,6 @@ import (
 const (
 	opaFile                      = "examples/sample-auth.rego"
 	mainPort, pprofPort, expPort = 8080, 8093, 9093
-	burst, perMinute             = 10, 30
 
 	// the HMAC-SHA256 key to decode JWT (do not put your secret keys in your code)
 	hmacSHA256 = "9d2e0a02121179a3c3de1b035ae1355b1548781c8ce8538a1dc0853a12dfb13d"
@@ -63,12 +62,13 @@ func main() {
 	}
 
 	middleware, connState := g.StartMetricsServer(expPort)
-	middleware = middleware.Append(g.MiddlewareRejectUnprintableURI())
-	middleware = middleware.Append(g.MiddlewareLogRequest("fingerprint"))
-	middleware = middleware.Append(g.MiddlewareRateLimiter(burst, perMinute))
-	middleware = middleware.Append(g.MiddlewareServerHeader("MyApp"))
-	middleware = middleware.Append(g.MiddlewareCORS())
-	middleware = middleware.Append(g.MiddlewareLogDuration(true))
+	middleware = middleware.Append(
+		g.MiddlewareRejectUnprintableURI(),
+		g.MiddlewareLogRequest("fingerprint"),
+		g.MiddlewareRateLimiter(),
+		g.MiddlewareServerHeader("MyApp"),
+		g.MiddlewareCORS(),
+		g.MiddlewareLogDuration(true))
 
 	if *auth {
 		middleware = middleware.Append(g.MiddlewareOPA(opaFile))
