@@ -17,6 +17,8 @@ func clone[T any](slice []T) []T {
 }
 
 func TestExtractWords(t *testing.T) {
+	t.Parallel()
+
 	dico := []string{"AAA", "Bbb", "ccc", "DDD"}
 
 	cases := []struct {
