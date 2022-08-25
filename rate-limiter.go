@@ -76,7 +76,7 @@ func (rl *ReqLimiter) MiddlewareRateLimiter(next http.Handler) http.Handler {
 		ip, _, err := net.SplitHostPort(r.RemoteAddr)
 		if err != nil {
 			rl.gw.WriteErr(w, r, http.StatusInternalServerError,
-				"Cannot split addr=host:port", "addr", r.RemoteAddr)
+				"Cannot split remote_addr=host:port", "remote_addr", r.RemoteAddr)
 			log.Print("ERR in  ", r.RemoteAddr, " ", r.Method, " ", r.RequestURI, " SplitHostPort ", err)
 			return
 		}
