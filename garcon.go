@@ -226,22 +226,47 @@ func OverwriteBufferContent(b []byte) {
 	_, _ = rand.Read(b)
 }
 
-// SplitClean splits the values and trim them.
-func SplitClean(values string) []string {
-	splitValues := strings.FieldsFunc(values, isSeparator)
-	cleanValues := make([]string, 0, len(splitValues))
-	for _, v := range splitValues {
+// SplitClean splits the values and sanitize them.
+func SplitClean(values string, separators ...rune) []string {
+	list := Split(values, separators...)
+	result := make([]string, 0, len(list))
+	for _, v := range list {
 		v = strings.TrimSpace(v)
+		v = Sanitize(v)
 		if v != "" {
-			cleanValues = append(cleanValues, v)
+			result = append(result, v)
 		}
 	}
-	return cleanValues
+	return result
 }
 
-func isSeparator(c rune) bool {
-	switch c {
-	case ',', ' ', '\t', '\n', '\v', '\f', '\r':
+func Split(values string, separators ...rune) []string {
+	f := separatorFunc(separators...)
+	return strings.FieldsFunc(values, f)
+}
+
+func separatorFunc(separators ...rune) func(rune) bool {
+	if len(separators) == 0 {
+		return isSeparator
+	}
+
+	return func(r rune) bool {
+		for _, s := range separators {
+			if s == r {
+				return true
+			}
+		}
+		return false
+	}
+}
+
+func isSeparator(r rune) bool {
+	switch {
+	case r <= 32, // tabulation, carriage return, line feed, space...
+		r == ',',    // COMMA
+		r == 0x007F, // DELETE
+		r == 0x0085, // NEXT LINE (NEL)
+		r == 0x00A0: // NO-BREAK SPACE
 		return true
 	}
 	return false
@@ -583,8 +608,8 @@ func ExtractWords(csv string, dictionary []string) []string {
 	result := make([]string, 0, n)
 
 	for _, p := range prefixes {
-		p = strings.ToLower(p)
 		p = strings.TrimSpace(p)
+		p = strings.ToLower(p)
 
 		switch p {
 		case "":
