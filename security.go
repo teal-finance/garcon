@@ -30,12 +30,23 @@ const (
 // Inspired from:
 // - https://wikiless.org/wiki/Replacement_character#Replacement_character
 // - https://graphicdesign.stackexchange.com/q/108297
-func Sanitize(str string) string {
+func Sanitize(slice ...string) string {
+	// most common case: one single string
+	if len(slice) == 1 {
+		return sanitize(slice[0])
+	}
+
+	// other cases: zero or multiple strings => use the slice representation
+	str := strings.Join(slice, ", ")
+	return "[" + sanitize(str) + "]"
+}
+
+func sanitize(str string) string {
 	return strings.Map(func(r rune) rune {
 		switch {
 		case r < 32, r == 127: // The .notdef character is often represented by the empty box (tofu)
 			return '􏿮' // to indicate a valid but not rendered character.
-		case surrogateMin <= r && r <= surrogateMax, utf8.MaxRune < r:
+		case surrogateMin <= r && r <= surrogateMax, r > utf8.MaxRune:
 			return '�' // The replacement character U+FFFD indicates an invalid UTF-8 character.
 		}
 		return r
