@@ -10,6 +10,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -21,8 +22,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/golang-jwt/jwt"
 
 	"github.com/teal-finance/garcon/timex"
 	"github.com/teal-finance/quid/quidlib/tokens"
@@ -45,7 +44,7 @@ const (
 )
 
 var (
-	ErrExpiredToken    = errors.New("expired or invalid refresh token")
+	ErrExpiredToken    = errors.New("expired or invalid access token")
 	ErrJWTSignature    = errors.New("JWT signature mismatch")
 	ErrNoAuthorization = errors.New("provide your JWT within the 'Authorization Bearer' HTTP header")
 	ErrNoBase64JWT     = errors.New("the token claims (second part of the JWT) is not base64-valid")
@@ -87,8 +86,26 @@ func NewJWTChecker(gw Writer, urls []*url.URL, secretKey []byte, permissions ...
 	return ck
 }
 
+func NewAccessToken(maxTTL, user string, groups, orgs []string, hexKey string) string {
+	if len(hexKey) != 64 {
+		log.Panic("Want HMAC-SHA256 key composed by 64 hexadecimal digits, but got ", len(hexKey))
+	}
+
+	binKey, err := hex.DecodeString(hexKey)
+	if err != nil {
+		log.Panic("Cannot decode the HMAC-SHA256 key, please provide 64 hexadecimal digits: ", err)
+	}
+
+	token, err := tokens.GenAccessToken(maxTTL, maxTTL, user, groups, orgs, binKey)
+	if err != nil || token == "" {
+		log.Panic("Cannot create JWT: ", err)
+	}
+
+	return token
+}
+
 func (ck *JWTChecker) NewCookie(name, plan, user string, secure bool, dns, dir string) http.Cookie {
-	JWT, err := tokens.GenRefreshToken("1y", "1y", plan, user, ck.secretKey)
+	JWT, err := tokens.GenAccessToken("1y", "1y", user, []string{plan}, nil, ck.secretKey)
 	if err != nil || JWT == "" {
 		log.Panic("Cannot create JWT: ", err)
 	}
@@ -379,7 +396,7 @@ func (ck *JWTChecker) PermFromJWT(JWT string) (Perm, []any) {
 		return Perm{}, []any{err}
 	}
 
-	perm, err := ck.permFromRefreshBytes(claimsJSON)
+	perm, err := ck.permFromAccessBytes(claimsJSON)
 	if err != nil {
 		return perm, []any{err} // TODO: ErrExpiredToken
 	}
@@ -387,21 +404,25 @@ func (ck *JWTChecker) PermFromJWT(JWT string) (Perm, []any) {
 	return perm, nil
 }
 
-func (ck *JWTChecker) permFromRefreshClaims(claims *tokens.RefreshClaims) (Perm, error) {
-	for i := range ck.plans {
-		if claims.Namespace == ck.plans[i] {
-			return ck.perms[i], nil
+func (ck *JWTChecker) permFromAccessClaims(claims *tokens.AccessClaims) (Perm, error) {
+	for i := range claims.Groups {
+		for j := range ck.plans {
+			if claims.Groups[i] == ck.plans[j] {
+				return ck.perms[j], nil
+			}
 		}
 	}
 
-	// Try to convert the Namespace into permission
-	v, err := strconv.Atoi(claims.Namespace)
-	if err != nil {
-		return Perm{}, fmt.Errorf("the JWT claims has plan '%s' but should be in %v",
-			Sanitize(claims.Namespace), ck.plans)
+	// fallback: try to convert one of the groups into a permission
+	for i := range claims.Groups {
+		v, err := strconv.Atoi(claims.Groups[i])
+		if err == nil {
+			return Perm{Value: v}, nil
+		}
 	}
 
-	return Perm{Value: v}, nil
+	return Perm{}, fmt.Errorf("cannot find any of %v within the JWT claims groups=%s, and cannot convert any group to integer",
+		Sanitize(claims.Groups...), ck.plans)
 }
 
 func (ck *JWTChecker) claimsFromJWT(JWT string) ([]byte, error) {
@@ -434,32 +455,19 @@ func (ck *JWTChecker) verifySignature(parts []string) error {
 	return nil
 }
 
-func (ck *JWTChecker) permFromRefreshBytes(claimsJSON []byte) (Perm, error) {
-	claims := tokens.RefreshClaims{
-		Namespace: "",
-		UserName:  "",
-		StandardClaims: jwt.StandardClaims{
-			Audience:  "",
-			ExpiresAt: 0,
-			Id:        "",
-			IssuedAt:  0,
-			Issuer:    "",
-			NotBefore: 0,
-			Subject:   "",
-		},
-	}
-
+func (ck *JWTChecker) permFromAccessBytes(claimsJSON []byte) (Perm, error) {
+	var claims tokens.AccessClaims
 	if err := json.Unmarshal(claimsJSON, &claims); err != nil {
-		return Perm{}, fmt.Errorf("%w while unmarshaling RefreshClaims: "+
+		return Perm{}, fmt.Errorf("%w while unmarshaling AccessClaims: "+
 			Sanitize(string(claimsJSON)), err)
 	}
 
 	if err := claims.Valid(); err != nil {
-		return Perm{}, fmt.Errorf("%w in RefreshClaims: "+
+		return Perm{}, fmt.Errorf("%w in AccessClaims: "+
 			Sanitize(string(claimsJSON)), err)
 	}
 
-	return ck.permFromRefreshClaims(&claims)
+	return ck.permFromAccessClaims(&claims)
 }
 
 // sign return the signature of the signingString.
