@@ -84,7 +84,7 @@ func newCORS(origins, methods, headers []string, debug bool) *cors.Cors {
 }
 
 func allowOriginFunc(origins []string) func(string) bool {
-	insertSchema(origins)
+	InsertSchema(origins)
 	switch len(origins) {
 	case 0:
 		return allOrigins()
@@ -95,8 +95,8 @@ func allowOriginFunc(origins []string) func(string) bool {
 	}
 }
 
-// insertSchema inserts "http://" when HTTP schema is missing.
-func insertSchema(urls []string) {
+// InsertSchema inserts "http://" when HTTP schema is missing.
+func InsertSchema(urls []string) {
 	for i, u := range urls {
 		if !strings.HasPrefix(u, "https://") &&
 			!strings.HasPrefix(u, "http://") {
