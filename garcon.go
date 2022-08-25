@@ -24,10 +24,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/teal-finance/incorruptible"
-
 	md "github.com/JohannesKaufmann/html-to-markdown"
 	"github.com/go-chi/chi/v5"
+
+	"github.com/teal-finance/incorruptible"
 )
 
 type Garcon struct {
@@ -39,6 +39,8 @@ type Garcon struct {
 	pprofPort  int
 	devMode    bool
 }
+
+func (g Garcon) IsDevMode() bool { return g.devMode }
 
 func New(opts ...Option) *Garcon {
 	var g Garcon
