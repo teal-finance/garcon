@@ -106,7 +106,7 @@ func (db *db) list(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	keyNames := map[string][]string{}
+	keyNames := make(map[string][]string, len(db.KeysByIP))
 	for h, keys := range db.KeysByIP {
 		keyNames[h] = make([]string, len(keys))
 		for name := range keys {
@@ -144,7 +144,7 @@ func (db *db) post(w http.ResponseWriter, r *http.Request) {
 		keys = Keys{}
 	}
 
-	result := Keys{}
+	result := make(Keys, len(values))
 	for name, vals := range values {
 		{
 			v, ok := keys[name]

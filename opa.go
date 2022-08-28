@@ -40,7 +40,7 @@ func LoadPolicy(filenames []string) (*ast.Compiler, error) {
 		return nil, ErrEmptyOPAFilename
 	}
 
-	modules := map[string]string{}
+	modules := make(map[string]string, len(filenames))
 
 	for _, fn := range filenames {
 		log.Printf("INF OPA: load %q", fn)
