@@ -189,20 +189,30 @@ type TokenChecker interface {
 // IncorruptibleChecker uses cookies based the fast and tiny Incorruptible token.
 // IncorruptibleChecker requires g.WithURLs() to set the Cookie secure, domain and path.
 func (g *Garcon) IncorruptibleChecker(secretKeyHex string, maxAge int, setIP bool) *incorruptible.Incorruptible {
-	if len(g.urls) == 0 {
-		log.Panic("Missing URLs => Set first the URLs with garcon.WithURLs()")
-	}
-
 	if len(secretKeyHex) != 32 {
-		log.Panic("Want AES-128 key composed by 32 hexadecimal digits, but got ", len(secretKeyHex))
+		log.Panic("Want AES-128 key composed by 32 hexadecimal digits, but got ", len(secretKeyHex), " digits")
 	}
 	key, err := hex.DecodeString(secretKeyHex)
 	if err != nil {
 		log.Panic("Cannot decode the 128-bit AES key, please provide 32 hexadecimal digits: ", err)
 	}
 
+	return g.IncorruptibleCheckerBin(key, maxAge, setIP)
+}
+
+// IncorruptibleChecker uses cookies based the fast and tiny Incorruptible token.
+// IncorruptibleChecker requires g.WithURLs() to set the Cookie secure, domain and path.
+func (g *Garcon) IncorruptibleCheckerBin(secretKeyBin []byte, maxAge int, setIP bool) *incorruptible.Incorruptible {
+	if len(secretKeyBin) != 16 {
+		log.Panic("Want AES-128 key composed by 16 bytes, but got ", len(secretKeyBin), " bytes")
+	}
+
+	if len(g.urls) == 0 {
+		log.Panic("Missing URLs => Set first the URLs with garcon.WithURLs()")
+	}
+
 	cookieName := string(g.ServerName)
-	return incorruptible.New(g.Writer.WriteErr, g.urls, key, cookieName, maxAge, setIP)
+	return incorruptible.New(g.Writer.WriteErr, g.urls, secretKeyBin, cookieName, maxAge, setIP)
 }
 
 // JWTChecker requires WithURLs() to set the Cookie name, secure, domain and path.
