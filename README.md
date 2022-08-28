@@ -499,7 +499,6 @@ func main() {
 func setMiddlewares(gw garcon.Writer) (middleware garcon.Chain, connState func(net.Conn, http.ConnState)) {
     // Start a metrics server in background if export port > 0.
     // The metrics server is for use with Prometheus or another compatible monitoring tool.
-    metrics := garcon.Metrics{}
     middleware, connState = garcon.StartMetricsServer(expPort, devMode)
 
     // Limit the input request rate per IP
