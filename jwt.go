@@ -56,24 +56,22 @@ type Perm struct {
 }
 
 type JWTChecker struct {
-	gw         Writer
-	secretKey  []byte
-	perms      []Perm
-	plans      []string
-	cookies    []http.Cookie
-	devOrigins []string
+	gw        Writer
+	secretKey []byte
+	perms     []Perm
+	plans     []string
+	cookies   []http.Cookie
 }
 
 func NewJWTChecker(gw Writer, urls []*url.URL, secretKey []byte, permissions ...any) *JWTChecker {
 	plans, perms := checkParameters(secretKey, permissions...)
 
 	ck := &JWTChecker{
-		gw:         gw,
-		secretKey:  secretKey,
-		plans:      plans,
-		perms:      perms,
-		cookies:    make([]http.Cookie, len(plans)),
-		devOrigins: extractDevOrigins(urls),
+		gw:        gw,
+		secretKey: secretKey,
+		plans:     plans,
+		perms:     perms,
+		cookies:   make([]http.Cookie, len(plans)),
 	}
 
 	secure, dns, dir := extractCookieAttributes(urls)
@@ -162,17 +160,13 @@ func (ck *JWTChecker) Set(next http.Handler) http.Handler {
 // Chk is a middleware to accept only HTTP requests having a valid cookie.
 // Then, Chk puts the permission (of the JWT) in the request context.
 func (ck *JWTChecker) Chk(next http.Handler) http.Handler {
-	log.Print("INF Middleware JWT.Chk cookie devOrigins=", ck.devOrigins)
+	log.Print("INF Middleware JWT.Chk cookie")
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		perm, a := ck.PermFromCookie(r)
 		if a != nil {
-			if ck.isDevOrigin(r) {
-				perm = ck.perms[0]
-			} else {
-				ck.gw.WriteErr(w, r, http.StatusUnauthorized, a...)
-				return
-			}
+			ck.gw.WriteErr(w, r, http.StatusUnauthorized, a...)
+			return
 		}
 
 		next.ServeHTTP(w, perm.PutInCtx(r))
@@ -183,17 +177,13 @@ func (ck *JWTChecker) Chk(next http.Handler) http.Handler {
 // The JWT can be either in the cookie or in the first "Authorization" header.
 // Then, Vet puts the permission (of the JWT) in the request context.
 func (ck *JWTChecker) Vet(next http.Handler) http.Handler {
-	log.Print("INF Middleware JWT.Vet cookie/bearer devOrigins=", ck.devOrigins)
+	log.Print("INF Middleware JWT.Vet cookie/bearer")
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		perm, a := ck.PermFromBearerOrCookie(r)
 		if a != nil {
-			if ck.isDevOrigin(r) {
-				perm = ck.perms[0]
-			} else {
-				ck.gw.WriteErr(w, r, http.StatusUnauthorized, a...)
-				return
-			}
+			ck.gw.WriteErr(w, r, http.StatusUnauthorized, a...)
+			return
 		}
 
 		next.ServeHTTP(w, perm.PutInCtx(r))
@@ -288,43 +278,6 @@ func forgeCookieName(secure bool, dns, dir string) (domain, name string) {
 	}
 
 	return dns, name
-}
-
-func extractDevOrigins(urls []*url.URL) []string {
-	if len(urls) == 0 {
-		return nil
-	}
-
-	for _, u := range urls {
-		if u == nil || u.Scheme != "http" {
-			return nil
-		}
-	}
-
-	for _, o := range DevOrigins() {
-		if strings.HasPrefix(urls[0].Host, o.Host) {
-			log.Print("INF JWT not required for http://" + urls[0].Host + " only")
-			return []string{"http://" + urls[0].Host}
-		}
-	}
-
-	return nil
-}
-
-func (ck *JWTChecker) isDevOrigin(r *http.Request) bool {
-	if len(ck.devOrigins) == 0 {
-		return false
-	}
-
-	// check only the first header "Origin"
-	origin := r.Header.Get("Origin")
-	for _, prefix := range ck.devOrigins {
-		if strings.HasPrefix(origin, prefix) {
-			return true
-		}
-	}
-
-	return false
 }
 
 func (ck *JWTChecker) PermFromBearerOrCookie(r *http.Request) (Perm, []any) {
