@@ -34,7 +34,7 @@ func main() {
 
 	garcon.LogVersion()
 	garcon.SetVersionFlag()
-	auth := flag.Bool("auth", false, "Enable OPA authorization specified in file "+opaFile)
+	// TODO disable --- auth := flag.Bool("auth", false, "Enable OPA authorization specified in file "+opaFile)
 	prod := flag.Bool("prod", false, "Use settings for production")
 	jwt := flag.Bool("jwt", false, "Use JWT in lieu of the Incorruptible token")
 	flag.Parse()
@@ -70,9 +70,9 @@ func main() {
 		g.MiddlewareCORS(),
 		g.MiddlewareLogDuration(true))
 
-	if *auth {
-		middleware = middleware.Append(g.MiddlewareOPA(opaFile))
-	}
+	// TODO disable --- if *auth {
+	// TODO disable --- 	middleware = middleware.Append(g.MiddlewareOPA(opaFile))
+	// TODO disable --- }
 
 	// handles both REST API and static web files
 	r := handler(g, addr, ck)

@@ -28,10 +28,10 @@ const (
 	allowedProdOrigin = "https://my-dns.co"
 	allowedDevOrigins = "http://localhost:  http://192.168.1."
 	serverHeader      = "MyBackendName-1.2.0"
-	authCfg           = "examples/sample-auth.rego"
-	pprofPort         = 8093
-	expPort           = 9093
-	burst, reqMinute  = 10, 30
+	// TODO disable --- authCfg           = "examples/sample-auth.rego"
+	pprofPort        = 8093
+	expPort          = 9093
+	burst, reqMinute = 10, 30
 	// the HMAC-SHA256 key to decode JWT (to be removed from source code)
 	hmacSHA256Hex = "9d2e0a02121179a3c3de1b035ae1355b1548781c8ce8538a1dc0853a12dfb13d"
 )
@@ -64,7 +64,7 @@ func main() {
 }
 
 func setMiddlewares(gw garcon.Writer) (_ garcon.Chain, connState func(net.Conn, http.ConnState), _ []*url.URL) {
-	auth := flag.Bool("auth", false, "Enable OPA authorization specified in file "+authCfg)
+	// TODO disable --- auth := flag.Bool("auth", false, "Enable OPA authorization specified in file "+authCfg)
 	dev := flag.Bool("dev", true, "Use development or production settings")
 	flag.Parse()
 
@@ -89,15 +89,15 @@ func setMiddlewares(gw garcon.Writer) (_ garcon.Chain, connState func(net.Conn, 
 		garcon.MiddlewareCORS(allowedOrigins, nil, nil, *dev),
 	)
 
-	// Endpoint authentication rules (Open Policy Agent)
-	if *auth {
-		files := garcon.SplitClean(authCfg)
-		policy, err := garcon.NewPolicy(gw, files)
-		if err != nil {
-			log.Fatal(err)
-		}
-		middleware = middleware.Append(policy.MiddlewareOPA)
-	}
+	// TODO disable --- // Endpoint authentication rules (Open Policy Agent)
+	// TODO disable --- if *auth {
+	// TODO disable --- 	files := garcon.SplitClean(authCfg)
+	// TODO disable --- 	policy, err := garcon.NewPolicy(gw, files)
+	// TODO disable --- 	if err != nil {
+	// TODO disable --- 		log.Fatal(err)
+	// TODO disable --- 	}
+	// TODO disable --- 	middleware = middleware.Append(policy.MiddlewareOPA)
+	// TODO disable --- }
 
 	return middleware, connState, urls
 }
