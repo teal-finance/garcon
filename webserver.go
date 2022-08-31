@@ -7,7 +7,6 @@ package garcon
 
 import (
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"path"

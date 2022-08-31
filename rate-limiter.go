@@ -8,7 +8,6 @@ package garcon
 import (
 	"errors"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"sync"

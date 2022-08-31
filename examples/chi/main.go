@@ -43,7 +43,7 @@ func main() {
 		Handler: handler,
 	}
 
-	log.Print("INF Server listening on http://localhost", port)
+	log.Print("INF Server listening on http://localhost"+ port)
 	log.Fatal(server.ListenAndServe())
 }
 

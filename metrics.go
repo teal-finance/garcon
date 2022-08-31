@@ -6,7 +6,6 @@
 package garcon
 
 import (
-	"log"
 	"net"
 	"net/http"
 	"regexp"

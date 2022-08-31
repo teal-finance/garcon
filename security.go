@@ -9,7 +9,6 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"hash"
-	"log"
 	"net/http"
 	"strings"
 	"unicode/utf8"

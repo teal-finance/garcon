@@ -122,7 +122,7 @@ func runServer(h http.Handler, connState func(net.Conn, http.ConnState)) {
 		ConnContext:       nil,
 	}
 
-	log.Print("INF Server listening on http://localhost", server.Addr)
+	log.Print("INF Server listening on http://localhost"+ server.Addr)
 
 	log.Fatal(server.ListenAndServe())
 }

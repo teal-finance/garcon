@@ -14,7 +14,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"math/rand"
 	"net"
 	"net/http"
@@ -27,8 +26,11 @@ import (
 	md "github.com/JohannesKaufmann/html-to-markdown"
 	"github.com/go-chi/chi/v5"
 
+	"github.com/teal-finance/emo"
 	"github.com/teal-finance/incorruptible"
 )
+
+var log = emo.NewZone("garcon")
 
 type Garcon struct {
 	ServerName ServerName
@@ -123,7 +125,7 @@ func WithURLs(addresses ...string) Option {
 // Optionally it also starts a metrics server in background (if export port > 0).
 // The metrics server is for use with Prometheus or another compatible monitoring tool.
 func ListenAndServe(server *http.Server) error {
-	log.Print("INF Server listening on http://localhost", server.Addr)
+	log.Print("INF Server listening on http://localhost"+ server.Addr)
 
 	err := server.ListenAndServe()
 
