@@ -30,7 +30,7 @@ import (
 	"github.com/teal-finance/incorruptible"
 )
 
-var log = emo.NewZone("garcon")
+var log = emo.NewZone("grc")
 
 type Garcon struct {
 	ServerName ServerName
@@ -125,15 +125,15 @@ func WithURLs(addresses ...string) Option {
 // Optionally it also starts a metrics server in background (if export port > 0).
 // The metrics server is for use with Prometheus or another compatible monitoring tool.
 func ListenAndServe(server *http.Server) error {
-	log.Print("INF Server listening on http://localhost"+ server.Addr)
+	log.Info("Server listening on http://localhost" + server.Addr)
 
 	err := server.ListenAndServe()
 
 	_, port, e := net.SplitHostPort(server.Addr)
 	if e == nil {
-		log.Print("ERR Install ncat and ss: sudo apt install ncat iproute2")
-		log.Printf("ERR Try to listen port %v: sudo ncat -l %v", port, port)
-		log.Printf("ERR Get the process using port %v: sudo ss -pan | grep %v", port, port)
+		log.Error("Install ncat and ss: sudo apt install ncat iproute2")
+		log.Errorf("Try to listen port %v: sudo ncat -l %v", port, port)
+		log.Errorf("Get the process using port %v: sudo ss -pan | grep %v", port, port)
 	}
 
 	return err
@@ -525,11 +525,13 @@ func readBody(w http.ResponseWriter, body io.ReadCloser, maxBytes ...int) ([]byt
 	readManyBytes := len(buf) > 8*defaultMaxBytes
 	if nearTheLimit || readManyBytes {
 		percentage := 100 * len(buf) / max
-		text := "INF body: read many bytes %s but only %d%% of the limit %s (%d bytes)"
+		f := log.Infof
+		text := "body: read many bytes %s but only %d%% of the limit %s (%d bytes)"
 		if nearTheLimit {
-			text = "WRN body: read %s = %d%% of the limit %s, increase maxBytes=%d"
+			f = log.Warningf
+			text = "body: read %s = %d%% of the limit %s, increase maxBytes=%d"
 		}
-		log.Printf(text, ConvertSize(len(buf)), percentage, ConvertSize(max), max)
+		f(text, ConvertSize(len(buf)), percentage, ConvertSize(max), max)
 	}
 
 	return buf, nil
@@ -699,7 +701,7 @@ func EnvInt(envvar string, fallback ...int) int {
 	if str, ok := os.LookupEnv(envvar); ok {
 		integer, err := strconv.Atoi(str)
 		if err != nil {
-			log.Panicf("ERR want integer but got %v=%q err: %v", envvar, str, err)
+			log.Panicf("want integer but got %v=%q err: %v", envvar, str, err)
 		}
 		return integer
 	}

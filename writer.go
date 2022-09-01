@@ -81,7 +81,7 @@ func (gw Writer) WriteErrSafe(w http.ResponseWriter, r *http.Request, statusCode
 
 	buf, err := response.MarshalJSON()
 	if err != nil {
-		log.Print("WRN WriteSafeJSONErr: ", err)
+		log.Warning("WriteSafeJSONErr: ", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -239,7 +239,7 @@ func appendValue(buf []byte, a any) []byte {
 func appendJSON(buf []byte, obj any) []byte {
 	b, err := json.Marshal(obj)
 	if err != nil {
-		log.Printf("ERR Writer jsonify %+v %v", obj, err)
+		log.Errorf("Writer jsonify %+v %v", obj, err)
 	}
 	return append(buf, b...)
 }

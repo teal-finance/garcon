@@ -62,7 +62,7 @@ func (g *Garcon) StartMetricsServer(expPort int) (Chain, func(net.Conn, http.Con
 // StartMetricsServer creates and starts the Prometheus export server.
 func StartMetricsServer(port int, namespace ServerName) (Chain, func(net.Conn, http.ConnState)) {
 	if port <= 0 {
-		log.Print("INF Disable Prometheus, export port=", port)
+		log.Info("Disable Prometheus, export port=", port)
 		return nil, nil
 	}
 
@@ -73,7 +73,7 @@ func StartMetricsServer(port int, namespace ServerName) (Chain, func(net.Conn, h
 		log.Fatal(err)
 	}()
 
-	log.Print("INF Prometheus export http://localhost" + addr + " namespace=" + namespace.String())
+	log.Info("Prometheus export http://localhost" + addr + " namespace=" + namespace.String())
 
 	// Add build info
 	prometheus.MustRegister(collectors.NewBuildInfoCollector())
@@ -106,7 +106,7 @@ func (ns ServerName) MiddlewareExportTrafficMetrics(next http.Handler) http.Hand
 		next.ServeHTTP(record, r)
 		duration := time.Since(start)
 		summary.WithLabelValues(record.Status, r.RequestURI).Observe(duration.Seconds())
-		log.Print(safeIPMethodURLDuration(r, duration))
+		log.Output(safeIPMethodURLDuration(r, duration))
 	})
 }
 

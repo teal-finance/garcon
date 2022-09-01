@@ -35,7 +35,7 @@ func MiddlewareCORS(origins, methods, headers []string, debug bool) func(next ht
 type corsLogger struct{}
 
 func (corsLogger) Printf(fmt string, a ...any) {
-	log.Printf("INF CORS "+fmt, a...)
+	log.Infof("CORS "+fmt, a...)
 }
 
 // DevOrigins provides the development origins:
@@ -75,9 +75,9 @@ func newCORS(origins, methods, headers []string, debug bool) *cors.Cors {
 		Debug:                  debug, // verbose logs
 	}
 
-	log.Print("INF CORS Methods: ", options.AllowedMethods)
-	log.Print("INF CORS Headers: ", options.AllowedHeaders)
-	log.Printf("INF CORS Credentials=%v MaxAge=%v", options.AllowCredentials, options.MaxAge)
+	log.Info("CORS Methods: ", options.AllowedMethods)
+	log.Info("CORS Headers: ", options.AllowedHeaders)
+	log.Infof("CORS Credentials=%v MaxAge=%v", options.AllowCredentials, options.MaxAge)
 
 	return cors.New(options)
 }
@@ -105,26 +105,26 @@ func InsertSchema(urls []string) {
 }
 
 func allOrigins() func(string) bool {
-	log.Print("INF CORS Allow all origins")
+	log.Info("CORS Allow all origins")
 	return func(origin string) bool {
 		return true
 	}
 }
 
 func oneOrigin(allowedOrigin string) func(string) bool {
-	log.Print("INF CORS Allow one origin: ", allowedOrigin)
+	log.Info("CORS Allow one origin: ", allowedOrigin)
 	return func(origin string) bool {
 		if origin == allowedOrigin {
 			return true
 		}
 
-		log.Print("INF CORS Refuse " + origin + " is not " + allowedOrigin)
+		log.Info("CORS Refuse " + origin + " is not " + allowedOrigin)
 		return false
 	}
 }
 
 func multipleOriginPrefixes(addrPrefixes []string) func(origin string) bool {
-	log.Print("INF CORS Allow origin prefixes: ", addrPrefixes)
+	log.Info("CORS Allow origin prefixes: ", addrPrefixes)
 
 	return func(origin string) bool {
 		for _, prefix := range addrPrefixes {
@@ -133,7 +133,7 @@ func multipleOriginPrefixes(addrPrefixes []string) func(origin string) bool {
 			}
 		}
 
-		log.Print("INF CORS Refuse "+origin+" without prefixes ", addrPrefixes)
+		log.Info("CORS Refuse "+origin+" without prefixes ", addrPrefixes)
 		return false
 	}
 }

@@ -10,13 +10,15 @@ package main
 
 import (
 	"flag"
-	"log"
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
 
+	"github.com/teal-finance/emo"
 	"github.com/teal-finance/garcon"
 )
+
+var log = emo.NewZone("app")
 
 const port = ":22000"
 
@@ -43,18 +45,18 @@ func main() {
 		Handler: handler,
 	}
 
-	log.Print("INF Server listening on http://localhost"+ port)
+	log.Info("Server listening on http://localhost" + port)
 	log.Fatal(server.ListenAndServe())
 }
 
 func post(w http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
-	log.Print("INF router.Post")
+	log.Info("router.Post")
 	_, _ = w.Write([]byte("<html><body> router.Post </body></html>"))
 }
 
 type others struct{}
 
 func (others) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
-	log.Print("INF router.NotFound")
+	log.Info("router.NotFound")
 	_, _ = w.Write([]byte("<html><body> router.NotFound </body></html>"))
 }

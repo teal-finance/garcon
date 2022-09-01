@@ -116,7 +116,7 @@ func LogVersion() {
 		if i == 0 {
 			line = "Version: " + line
 		}
-		log.Print(line)
+		log.Init(line)
 	}
 }
 
@@ -213,7 +213,7 @@ func writeJSON(w http.ResponseWriter) {
 	info.Ago = sinceLastCommit()
 	b, err := info.MarshalJSON()
 	if err != nil {
-		log.Print("WRN writeJSON MarshalJSON: ", err)
+		log.Warning("writeJSON MarshalJSON: ", err)
 		w.WriteHeader(http.StatusNoContent)
 	} else {
 		w.Header().Set("Content-Type", "application/json")
@@ -227,7 +227,7 @@ func writeHTML(w http.ResponseWriter, t *template.Template) {
 	lines := versionStrings(noProgramName)
 	data := struct{ Items []string }{lines}
 	if err := t.Execute(w, data); err != nil {
-		log.Print("WRN writeHTML Execute:", err)
+		log.Warning("writeHTML Execute:", err)
 		w.WriteHeader(http.StatusNoContent)
 	}
 }
@@ -246,7 +246,7 @@ func (g *Garcon) MiddlewareServerHeader(serverName ...string) Middleware {
 // MiddlewareServerHeader is the middleware setting the Server HTTP header in the response.
 func MiddlewareServerHeader(version string) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
-		log.Print("INF MiddlewareServerHeader sets the HTTP header Server=" + version + " in the responses")
+		log.Info("MiddlewareServerHeader sets the HTTP header Server=" + version + " in the responses")
 
 		return http.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {

@@ -11,7 +11,6 @@ package main
 import (
 	"encoding/hex"
 	"flag"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -19,8 +18,11 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/teal-finance/emo"
 	"github.com/teal-finance/garcon"
 )
+
+var log = emo.NewZone("app")
 
 // Garcon settings
 const (
@@ -59,7 +61,7 @@ func main() {
 	h := handler(gw, garcon.NewJWTChecker(gw, urls, key))
 	h = middleware.Then(h)
 
-	log.Print("-------------- Open http://localhost:8080/myapp --------------")
+	log.Init("-------------- Open http://localhost:8080/myapp --------------")
 	runServer(h, connState)
 }
 
@@ -122,7 +124,7 @@ func runServer(h http.Handler, connState func(net.Conn, http.ConnState)) {
 		ConnContext:       nil,
 	}
 
-	log.Print("INF Server listening on http://localhost"+ server.Addr)
+	log.Info("Server listening on http://localhost" + server.Addr)
 
 	log.Fatal(server.ListenAndServe())
 }
@@ -139,6 +141,7 @@ func handler(gw garcon.Writer, c *garcon.JWTChecker) http.Handler {
 	r.With(c.Chk).Get("/myapp/js/*", ws.ServeDir("text/javascript; charset=utf-8"))
 	r.With(c.Chk).Get("/myapp/css/*", ws.ServeDir("text/css; charset=utf-8"))
 	r.With(c.Chk).Get("/myapp/images/*", ws.ServeImages())
+	r.With(c.Chk).Get("/myapp/version", garcon.ServeVersion())
 
 	// API
 	r.With(c.Vet).Get("/path/not/in/cookie", items)

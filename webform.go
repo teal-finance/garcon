@@ -89,12 +89,12 @@ func DefaultFileSettings() map[string][2]int {
 func (form *WebForm) init() {
 	if form.TextLimits == nil {
 		form.TextLimits = DefaultContactSettings()
-		log.Print("INF Middleware WebForm: empty TextLimits => use ", form.TextLimits)
+		log.Info("Middleware WebForm: empty TextLimits => use ", form.TextLimits)
 	}
 
 	if form.FileLimits == nil {
 		form.FileLimits = DefaultFileSettings()
-		log.Print("INF Middleware WebForm: empty FileLimits => use ", form.FileLimits)
+		log.Info("Middleware WebForm: empty FileLimits => use ", form.FileLimits)
 	}
 
 	form.maxFieldNameLength = 0
@@ -109,7 +109,7 @@ func (form *WebForm) init() {
 		}
 	}
 
-	log.Print("INF Middleware WebForm redirects to ", form.Redirect)
+	log.Info("Middleware WebForm redirects to ", form.Redirect)
 }
 
 // Notify returns a handler that
@@ -123,7 +123,7 @@ func (form *WebForm) Notify(notifierURL string) func(w http.ResponseWriter, r *h
 	return func(w http.ResponseWriter, r *http.Request) {
 		err := r.ParseForm()
 		if err != nil {
-			log.Print("WRN WebForm ParseForm: ", err)
+			log.Warning("WebForm ParseForm: ", err)
 			form.Writer.WriteErr(w, r, http.StatusInternalServerError, "Cannot parse the webform")
 			return
 		}
@@ -131,7 +131,7 @@ func (form *WebForm) Notify(notifierURL string) func(w http.ResponseWriter, r *h
 		md := form.toMarkdown(r)
 		err = n.Notify(md)
 		if err != nil {
-			log.Print("WRN WebForm Notify: ", err)
+			log.Warning("WebForm Notify: ", err)
 			form.Writer.WriteErr(w, r, http.StatusInternalServerError, "Cannot store webform data")
 			return
 		}
@@ -142,14 +142,14 @@ func (form *WebForm) Notify(notifierURL string) func(w http.ResponseWriter, r *h
 
 func newNotifier(url string) notifier.Notifier {
 	if url == "" {
-		log.Print("INF Middleware WebForm: no Notifier => use the logger Notifier")
+		log.Info("Middleware WebForm: no Notifier => use the logger Notifier")
 		return logger.NewNotifier()
 	}
 	return mattermost.NewNotifier(url)
 }
 
 func (form *WebForm) toMarkdown(r *http.Request) string {
-	log.Printf("INF WebForm with %d input fields", len(r.Form))
+	log.Infof("WebForm with %d input fields", len(r.Form))
 
 	md := ""
 	for name, values := range r.Form {
@@ -159,7 +159,7 @@ func (form *WebForm) toMarkdown(r *http.Request) string {
 
 		max, ok := form.TextLimits[name]
 		if !ok {
-			log.Printf("WRN WebForm: reject name=%s because "+
+			log.Warningf("WebForm: reject name=%s because "+
 				"not an accepted name", name)
 			continue
 		}
@@ -199,7 +199,7 @@ func (form *WebForm) valid(name string, values []string) bool {
 	}
 
 	if len(values) != 1 {
-		log.Printf("WRN WebForm: reject name=%s because "+
+		log.Warningf("WebForm: reject name=%s because "+
 			"received %d input field(s) while expected only one", name, len(values))
 		return false
 	}
@@ -213,27 +213,27 @@ func (form *WebForm) validName(name string) bool {
 		if len(name) > 100 {
 			name = name[:90] + " (cut)"
 		}
-		log.Printf("WRN WebForm: reject name=%s because len=%d > max=%d",
+		log.Warningf("WebForm: reject name=%s because len=%d > max=%d",
 			name, nLen, form.maxFieldNameLength)
 		return false
 	}
 
 	if p := printable(name); p >= 0 {
-		log.Printf("WRN WebForm: reject name=%s because "+
+		log.Warningf("WebForm: reject name=%s because "+
 			"contains a bad character at position %d",
 			Sanitize(name), p)
 		return false
 	}
 
 	if p := printable(name); p >= 0 {
-		log.Printf("WRN WebForm: reject name=%s because "+
+		log.Warningf("WebForm: reject name=%s because "+
 			"contains a bad character at position %d",
 			Sanitize(name), p)
 		return false
 	}
 
 	if _, ok := form.FileLimits[name]; ok {
-		log.Printf("WRN WebForm: skip name=%s because "+
+		log.Warningf("WebForm: skip name=%s because "+
 			"file not yet supported", name)
 		return false
 	}

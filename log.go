@@ -52,22 +52,22 @@ func (g *Garcon) MiddlewareLogDuration(safe ...bool) Middleware {
 
 // MiddlewareLogRequest is the middleware to log the requester IP and the requested URL.
 func MiddlewareLogRequest(next http.Handler) http.Handler {
-	log.Print("INF MiddlewareLogRequest logs requester IP and request URL")
+	log.Info("MiddlewareLogRequest logs requester IP and request URL")
 
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			log.Print(ipMethodURL(r))
+			log.Input(ipMethodURL(r))
 			next.ServeHTTP(w, r)
 		})
 }
 
 // MiddlewareLogRequestSafe is similar to LogRequest but sanitize the URL.
 func MiddlewareLogRequestSafe(next http.Handler) http.Handler {
-	log.Print("INF MiddlewareLogRequestSafe logs requester IP and sanitized URL")
+	log.Info("MiddlewareLogRequestSafe logs requester IP and sanitized URL")
 
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			log.Print(safeIPMethodURL(r))
+			log.Input(safeIPMethodURL(r))
 			next.ServeHTTP(w, r)
 		})
 }
@@ -75,68 +75,68 @@ func MiddlewareLogRequestSafe(next http.Handler) http.Handler {
 // MiddlewareLogFingerprint is the middleware to log
 // incoming HTTP request and browser fingerprint.
 func MiddlewareLogFingerprint(next http.Handler) http.Handler {
-	log.Print("INF MiddlewareLogFingerprint: " + FingerprintExplanation)
+	log.Info("MiddlewareLogFingerprint: " + FingerprintExplanation)
 
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			// double space after "in" is for padding with "out" logs
-			log.Print(ipMethodURL(r) + fingerprint(r))
+			log.Input(ipMethodURL(r) + fingerprint(r))
 			next.ServeHTTP(w, r)
 		})
 }
 
 // MiddlewareLogFingerprintSafe is similar to MiddlewareLogFingerprints but sanitize the URL.
 func MiddlewareLogFingerprintSafe(next http.Handler) http.Handler {
-	log.Print("INF MiddlewareLogFingerprintSafe: " + FingerprintExplanation)
+	log.Info("MiddlewareLogFingerprintSafe: " + FingerprintExplanation)
 
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			// double space after "in" is for padding with "out" logs
-			log.Print(safeIPMethodURL(r) + fingerprint(r))
+			log.Input(safeIPMethodURL(r) + fingerprint(r))
 			next.ServeHTTP(w, r)
 		})
 }
 
 // MiddlewareLogDuration logs the requested URL along with the time to handle it.
 func MiddlewareLogDuration(next http.Handler) http.Handler {
-	log.Print("INF MiddlewareLogDuration logs requester IP, request URL and duration")
+	log.Info("MiddlewareLogDuration logs requester IP, request URL and duration")
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		next.ServeHTTP(w, r)
 		d := time.Since(start)
-		log.Print(ipMethodURLDuration(r, d))
+		log.Output(ipMethodURLDuration(r, d))
 	})
 }
 
 // MiddlewareLogDurationSafe is similar to MiddlewareLogDurations but also sanitizes the URL.
 func MiddlewareLogDurationSafe(next http.Handler) http.Handler {
-	log.Print("INF MiddlewareLogDurationSafe: logs requester IP, sanitized URL and duration")
+	log.Info("MiddlewareLogDurationSafe: logs requester IP, sanitized URL and duration")
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		next.ServeHTTP(w, r)
 		d := time.Since(start)
-		log.Print(safeIPMethodURLDuration(r, d))
+		log.Output(safeIPMethodURLDuration(r, d))
 	})
 }
 
 func ipMethodURL(r *http.Request) string {
 	// double space after "in" is for padding with "out" logs
-	return "INF in  " + r.RemoteAddr + " " + r.Method + " " + r.RequestURI
+	return r.RemoteAddr + " " + r.Method + " " + r.RequestURI
 }
 
 func safeIPMethodURL(r *http.Request) string {
-	return "INF in  " + r.RemoteAddr + " " + r.Method + " " + Sanitize(r.RequestURI)
+	return r.RemoteAddr + " " + r.Method + " " + Sanitize(r.RequestURI)
 }
 
 func ipMethodURLDuration(r *http.Request, d time.Duration) string {
-	return "INF out " + r.RemoteAddr + " " + r.Method + " " +
+	return r.RemoteAddr + " " + r.Method + " " +
 		r.RequestURI + " " + d.String()
 }
 
 func safeIPMethodURLDuration(r *http.Request, d time.Duration) string {
-	return "INF out " + r.RemoteAddr + " " + r.Method + " " +
+	return r.RemoteAddr + " " + r.Method + " " +
 		Sanitize(r.RequestURI) + " " + d.String()
 }
 

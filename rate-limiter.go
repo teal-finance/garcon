@@ -66,7 +66,7 @@ func NewRateLimiter(gw Writer, maxReqBurst, maxReqPerMinute int, devMode bool) R
 }
 
 func (rl *ReqLimiter) MiddlewareRateLimiter(next http.Handler) http.Handler {
-	log.Printf("INF MiddlewareRateLimiter: burst=%v rate=%.2f/s",
+	log.Infof("MiddlewareRateLimiter: burst=%v rate=%.2f/s",
 		rl.initLimiter.Burst(), rl.initLimiter.Limit())
 
 	go rl.removeOldVisitors()
@@ -76,7 +76,7 @@ func (rl *ReqLimiter) MiddlewareRateLimiter(next http.Handler) http.Handler {
 		if err != nil {
 			rl.gw.WriteErr(w, r, http.StatusInternalServerError,
 				"Cannot split remote_addr=host:port", "remote_addr", r.RemoteAddr)
-			log.Print("ERR in  ", r.RemoteAddr, " ", r.Method, " ", r.RequestURI, " SplitHostPort ", err)
+			log.Error("in  ", r.RemoteAddr, " ", r.Method, " ", r.RequestURI, " SplitHostPort ", err)
 			return
 		}
 
@@ -86,9 +86,9 @@ func (rl *ReqLimiter) MiddlewareRateLimiter(next http.Handler) http.Handler {
 			if r.Context().Err() == nil {
 				rl.gw.WriteErr(w, r, http.StatusTooManyRequests, "Too Many Requests",
 					"advice", "Please contact the team support is this is annoying")
-				log.Print("WRN ", r.RemoteAddr, " ", r.Method, " ", r.RequestURI, "TooManyRequests ", err)
+				log.Warning("", r.RemoteAddr, " ", r.Method, " ", r.RequestURI, "TooManyRequests ", err)
 			} else {
-				log.Print("WRN ", r.RemoteAddr, " ", r.Method, " ", r.RequestURI, " ", err)
+				log.Warning("", r.RemoteAddr, " ", r.Method, " ", r.RequestURI, " ", err)
 			}
 			return
 		}
@@ -196,7 +196,7 @@ func (ar *AdaptiveRate) Get(symbol, url string, msg any, maxBytes ...int) error 
 			alpha := int64(maxAlpha * ar.MinSleep / d)
 			d *= time.Duration(try)
 			d += time.Duration(alpha) * ar.MinSleep
-			log.Printf("INF %s Get %s #%d sleep=%s (+%s) alpha=%d n=%s min=%s",
+			log.Infof("%s Get %s #%d sleep=%s (+%s) alpha=%d n=%s min=%s",
 				ar.Name, symbol, try, d, d-previous, alpha, ar.NextSleep, ar.MinSleep)
 		}
 		time.Sleep(d)
@@ -227,20 +227,20 @@ func (ar *AdaptiveRate) get(symbol, url string, msg any, maxBytes ...int) (int, 
 }
 
 func (ar *AdaptiveRate) LogStats() {
-	log.Printf("INF %s Adjusted sleep durations: min=%s next=%s",
+	log.Infof("%s Adjusted sleep durations: min=%s next=%s",
 		ar.Name, ar.MinSleep, ar.NextSleep)
 }
 
 func (ar *AdaptiveRate) logIncrease(prevMin, prevNext time.Duration) {
 	if printDebug {
-		log.Printf("DBG %s Increase MinSleep=%s (+%s) next=%s (+%s)",
+		log.Debugf("%s Increase MinSleep=%s (+%s) next=%s (+%s)",
 			ar.Name, ar.MinSleep, ar.MinSleep-prevMin, ar.NextSleep, ar.NextSleep-prevNext)
 	}
 }
 
 func (ar *AdaptiveRate) logDecrease(reduce time.Duration) {
 	if printDebug {
-		log.Printf("DBG %s Decrease MinSleep=%s (-%s) next=%s",
+		log.Debugf("%s Decrease MinSleep=%s (-%s) next=%s",
 			ar.Name, ar.MinSleep, reduce, ar.NextSleep)
 	}
 }

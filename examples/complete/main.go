@@ -10,14 +10,16 @@ package main
 
 import (
 	"flag"
-	"log"
 	"net/http"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/teal-finance/emo"
 	"github.com/teal-finance/garcon"
 )
+
+var log = emo.NewZone("app")
 
 // Garcon settings
 const (
@@ -80,7 +82,7 @@ func main() {
 
 	server := garcon.Server(h, mainPort, connState)
 
-	log.Print("-------------- Open http://localhost:8080/myapp --------------")
+	log.Init("-------------- Open http://localhost:8080/myapp --------------")
 	err := garcon.ListenAndServe(&server)
 	log.Fatal(err)
 }

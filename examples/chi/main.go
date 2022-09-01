@@ -10,13 +10,15 @@ package main
 
 import (
 	"flag"
-	"log"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/teal-finance/emo"
 	"github.com/teal-finance/garcon"
 )
+
+var log = emo.NewZone("app")
 
 const port = ":22000"
 
@@ -43,16 +45,16 @@ func main() {
 		Handler: handler,
 	}
 
-	log.Print("INF Server listening on http://localhost"+ port)
+	log.Info("Server listening on http://localhost" + port)
 	log.Fatal(server.ListenAndServe())
 }
 
 func post(w http.ResponseWriter, _ *http.Request) {
-	log.Print("INF router.Post()")
+	log.Info("router.Post()")
 	_, _ = w.Write([]byte("<html><body> router.Post() </body></html>"))
 }
 
 func others(w http.ResponseWriter, _ *http.Request) {
-	log.Print("INF router.NotFound()")
+	log.Info("router.NotFound()")
 	_, _ = w.Write([]byte("<html><body> router.MethodNotAllowed() </body></html>"))
 }

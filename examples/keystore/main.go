@@ -11,7 +11,6 @@ package main
 import (
 	"flag"
 	"io"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -19,8 +18,11 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/teal-finance/emo"
 	"github.com/teal-finance/garcon"
 )
+
+var log = emo.NewZone("app")
 
 // Garcon settings
 const (
@@ -95,7 +97,7 @@ func (db *db) list(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		db.g.Writer.WriteErr(w, r, http.StatusInternalServerError,
 			"Cannot split addr=host:port", "addr", r.RemoteAddr)
-		log.Print("ERR Cannot split addr=host:port ", err)
+		log.Error("Cannot split addr=host:port ", err)
 		return
 	}
 
@@ -124,14 +126,14 @@ func (db *db) post(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		db.g.Writer.WriteErr(w, r, http.StatusInternalServerError,
 			"Cannot split addr=host:port", "addr", r.RemoteAddr)
-		log.Print("ERR Cannot split addr=host:port ", err)
+		log.Error("Cannot split addr=host:port ", err)
 	}
 
 	values, err := parseForm(r)
 	if err != nil {
 		db.g.Writer.WriteErr(w, r, http.StatusInternalServerError,
 			"Cannot parse the webform (request body)")
-		log.Print("ERR Cannot parse the webform ", err)
+		log.Error("Cannot parse the webform ", err)
 	}
 
 	if values == nil {
@@ -170,14 +172,14 @@ func (db *db) delete(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		db.g.Writer.WriteErr(w, r, http.StatusInternalServerError,
 			"Cannot split addr=host:port", "addr", r.RemoteAddr)
-		log.Print("ERR Cannot split addr=host:port ", err)
+		log.Error("Cannot split addr=host:port ", err)
 	}
 
 	values, err := parseForm(r)
 	if err != nil {
 		db.g.Writer.WriteErr(w, r, http.StatusInternalServerError,
 			"Cannot parse the webform (request body)")
-		log.Print("ERR Cannot parse the webform ", err)
+		log.Error("Cannot parse the webform ", err)
 	}
 
 	if len(values) == 0 {

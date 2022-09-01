@@ -13,6 +13,7 @@ require (
 	github.com/pkg/profile v1.6.0
 	github.com/prometheus/client_golang v1.13.0
 	github.com/rs/cors v1.8.2
+	github.com/teal-finance/emo v0.0.0-20220602102724-3ed209263d5a
 	github.com/teal-finance/incorruptible v0.0.0-20220828092139-03f6ca911588
 	github.com/teal-finance/notifier v1.1.1
 	github.com/teal-finance/quid v0.0.0-20220829202133-85576afd665a
@@ -37,9 +38,8 @@ require (
 	github.com/prometheus/common v0.37.0 // indirect
 	github.com/prometheus/procfs v0.8.0 // indirect
 	github.com/sergi/go-diff v1.2.0 // indirect
-	github.com/teal-finance/emo v0.0.0-20220602102724-3ed209263d5a // indirect
 	github.com/yuin/goldmark v1.4.13 // indirect
 	golang.org/x/net v0.0.0-20220826154423-83b083e8dc8b // indirect
-	golang.org/x/sys v0.0.0-20220825204002-c680a09ffe64 // indirect
+	golang.org/x/sys v0.0.0-20220829200755-d48e67d00261 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 )

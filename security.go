@@ -144,7 +144,7 @@ func (Garcon) MiddlewareRejectUnprintableURI() Middleware {
 // a Carriage Return "\r" or a Line Feed "\n"
 // within the URI to prevent log injection.
 func MiddlewareRejectUnprintableURI(next http.Handler) http.Handler {
-	log.Print("INF MiddlewareRejectUnprintableURI rejects URI having line breaks or unprintable characters")
+	log.Info("MiddlewareRejectUnprintableURI rejects URI having line breaks or unprintable characters")
 
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
@@ -152,7 +152,7 @@ func MiddlewareRejectUnprintableURI(next http.Handler) http.Handler {
 				WriteErr(w, r, http.StatusBadRequest,
 					"Invalid URI with non-printable symbol",
 					"position", i)
-				log.Print("WRN reject non-printable URI or with <CR> or <LF>:", Sanitize(r.RequestURI))
+				log.Warning("reject non-printable URI or with <CR> or <LF>:", Sanitize(r.RequestURI))
 				return
 			}
 
@@ -163,7 +163,7 @@ func MiddlewareRejectUnprintableURI(next http.Handler) http.Handler {
 // MiddlewareSecureHTTPHeader is a middleware adding recommended HTTP response headers to secure the web application.
 func MiddlewareSecureHTTPHeader(secure bool) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
-		log.Print("INF MiddlewareSecureHTTPHeader sets some secure HTTP headers")
+		log.Info("MiddlewareSecureHTTPHeader sets some secure HTTP headers")
 
 		return http.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
@@ -190,7 +190,7 @@ func MiddlewareSecureHTTPHeader(secure bool) func(next http.Handler) http.Handle
 func TraversalPath(w http.ResponseWriter, r *http.Request) bool {
 	if strings.Contains(r.URL.Path, "..") {
 		WriteErr(w, r, http.StatusBadRequest, "URL contains '..'")
-		log.Print("WRN reject path with '..' ", Sanitize(r.URL.Path))
+		log.Warning("reject path with '..' ", Sanitize(r.URL.Path))
 		return true
 	}
 	return false
