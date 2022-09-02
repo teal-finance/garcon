@@ -11,9 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/teal-finance/notifier"
-	"github.com/teal-finance/notifier/logger"
-	"github.com/teal-finance/notifier/mattermost"
+	"github.com/teal-finance/garcon/notifier"
 )
 
 type WebForm struct {
@@ -118,7 +116,7 @@ func (form *WebForm) init() {
 func (form *WebForm) Notify(notifierURL string) func(w http.ResponseWriter, r *http.Request) {
 	form.init()
 
-	n := newNotifier(notifierURL)
+	n := notifier.New(notifierURL)
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		err := r.ParseForm()
@@ -138,14 +136,6 @@ func (form *WebForm) Notify(notifierURL string) func(w http.ResponseWriter, r *h
 
 		http.Redirect(w, r, form.Redirect, http.StatusFound)
 	}
-}
-
-func newNotifier(url string) notifier.Notifier {
-	if url == "" {
-		log.Info("Middleware WebForm: no Notifier => use the logger Notifier")
-		return logger.NewNotifier()
-	}
-	return mattermost.NewNotifier(url)
 }
 
 func (form *WebForm) toMarkdown(r *http.Request) string {
