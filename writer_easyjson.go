@@ -28,7 +28,7 @@ func easyjsonE873f711DecodeGithubComTealFinanceGarcon(in *jlexer.Lexer, out *msg
 	}
 	in.Delim('{')
 	for !in.IsDelim('}') {
-		key := in.UnsafeFieldName(false)
+		key := in.UnsafeFieldName(true)
 		in.WantColon()
 		if in.IsNull() {
 			in.Skip()
@@ -45,7 +45,11 @@ func easyjsonE873f711DecodeGithubComTealFinanceGarcon(in *jlexer.Lexer, out *msg
 		case "query":
 			out.Query = string(in.String())
 		default:
-			in.SkipRecursive()
+			in.AddError(&jlexer.LexerError{
+				Offset: in.GetPos(),
+				Reason: "unknown field",
+				Data:   key,
+			})
 		}
 		in.WantComma()
 	}
@@ -58,40 +62,24 @@ func easyjsonE873f711EncodeGithubComTealFinanceGarcon(out *jwriter.Writer, in ms
 	out.RawByte('{')
 	first := true
 	_ = first
-	if in.Message != "" {
+	{
 		const prefix string = ",\"message\":"
-		first = false
 		out.RawString(prefix[1:])
 		out.String(string(in.Message))
 	}
-	if in.Doc != "" {
+	{
 		const prefix string = ",\"doc\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
+		out.RawString(prefix)
 		out.String(string(in.Doc))
 	}
-	if in.Path != "" {
+	{
 		const prefix string = ",\"path\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
+		out.RawString(prefix)
 		out.String(string(in.Path))
 	}
-	if in.Query != "" {
+	{
 		const prefix string = ",\"query\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
+		out.RawString(prefix)
 		out.String(string(in.Query))
 	}
 	out.RawByte('}')
