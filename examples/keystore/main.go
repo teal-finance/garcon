@@ -97,7 +97,7 @@ func (db *db) list(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		db.g.Writer.WriteErr(w, r, http.StatusInternalServerError,
 			"Cannot split addr=host:port", "addr", r.RemoteAddr)
-		log.Error("Cannot split addr=host:port ", err)
+		log.Error("Cannot split addr=host:port", err)
 		return
 	}
 
@@ -126,14 +126,14 @@ func (db *db) post(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		db.g.Writer.WriteErr(w, r, http.StatusInternalServerError,
 			"Cannot split addr=host:port", "addr", r.RemoteAddr)
-		log.Error("Cannot split addr=host:port ", err)
+		log.Error("Cannot split addr=host:port", err)
 	}
 
 	values, err := parseForm(r)
 	if err != nil {
 		db.g.Writer.WriteErr(w, r, http.StatusInternalServerError,
 			"Cannot parse the webform (request body)")
-		log.Error("Cannot parse the webform ", err)
+		log.Error("Cannot parse the webform", err)
 	}
 
 	if values == nil {
@@ -172,14 +172,14 @@ func (db *db) delete(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		db.g.Writer.WriteErr(w, r, http.StatusInternalServerError,
 			"Cannot split addr=host:port", "addr", r.RemoteAddr)
-		log.Error("Cannot split addr=host:port ", err)
+		log.Error("Cannot split addr=host:port", err)
 	}
 
 	values, err := parseForm(r)
 	if err != nil {
 		db.g.Writer.WriteErr(w, r, http.StatusInternalServerError,
 			"Cannot parse the webform (request body)")
-		log.Error("Cannot parse the webform ", err)
+		log.Error("Cannot parse the webform", err)
 	}
 
 	if len(values) == 0 {

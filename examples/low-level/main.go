@@ -51,10 +51,10 @@ func main() {
 
 	key, err := hex.DecodeString(hmacSHA256Hex)
 	if err != nil {
-		log.Panic("Cannot decode the HMAC-SHA256 key, please provide hexadecimal format (64 characters) ", err)
+		log.Panic("Cannot decode the HMAC-SHA256 key, please provide hexadecimal format (64 characters)", err)
 	}
 	if len(key) != 32 {
-		log.Panic("Want HMAC-SHA256 key containing 32 bytes, but got ", len(key))
+		log.Panic("Want HMAC-SHA256 key containing 32 bytes, but got", len(key))
 	}
 
 	// Handles both REST API and static web files

@@ -87,12 +87,12 @@ func DefaultFileSettings() map[string][2]int {
 func (form *WebForm) init() {
 	if form.TextLimits == nil {
 		form.TextLimits = DefaultContactSettings()
-		log.Info("Middleware WebForm: empty TextLimits => use ", form.TextLimits)
+		log.Info("Middleware WebForm: empty TextLimits => use", form.TextLimits)
 	}
 
 	if form.FileLimits == nil {
 		form.FileLimits = DefaultFileSettings()
-		log.Info("Middleware WebForm: empty FileLimits => use ", form.FileLimits)
+		log.Info("Middleware WebForm: empty FileLimits => use", form.FileLimits)
 	}
 
 	form.maxFieldNameLength = 0
@@ -107,7 +107,7 @@ func (form *WebForm) init() {
 		}
 	}
 
-	log.Info("Middleware WebForm redirects to ", form.Redirect)
+	log.Info("Middleware WebForm redirects to", form.Redirect)
 }
 
 // Notify returns a handler that
@@ -121,7 +121,7 @@ func (form *WebForm) Notify(notifierURL string) func(w http.ResponseWriter, r *h
 	return func(w http.ResponseWriter, r *http.Request) {
 		err := r.ParseForm()
 		if err != nil {
-			log.Warning("WebForm ParseForm: ", err)
+			log.Warning("WebForm ParseForm:", err)
 			form.Writer.WriteErr(w, r, http.StatusInternalServerError, "Cannot parse the webform")
 			return
 		}
@@ -129,7 +129,7 @@ func (form *WebForm) Notify(notifierURL string) func(w http.ResponseWriter, r *h
 		md := form.toMarkdown(r)
 		err = n.Notify(md)
 		if err != nil {
-			log.Warning("WebForm Notify: ", err)
+			log.Warning("WebForm Notify:", err)
 			form.Writer.WriteErr(w, r, http.StatusInternalServerError, "Cannot store webform data")
 			return
 		}

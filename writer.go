@@ -81,7 +81,7 @@ func (gw Writer) WriteErrSafe(w http.ResponseWriter, r *http.Request, statusCode
 
 	buf, err := response.MarshalJSON()
 	if err != nil {
-		log.Warning("WriteSafeJSONErr: ", err)
+		log.Warning("WriteSafeJSONErr:", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -175,7 +175,7 @@ func appendMessages(buf []byte, kv []any) (_ []byte, comma bool) {
 
 func appendKeyValues(buf []byte, comma bool, kv []any) []byte {
 	if (len(kv) == 0) || (len(kv)%2 != 0) {
-		log.Panic("Writer: want non-zero even len(kv) but got ", len(kv))
+		log.Panic("Writer: want non-zero even len(kv) but got", len(kv))
 	}
 
 	for i := 0; i < len(kv); i += 2 {

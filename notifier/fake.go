@@ -22,7 +22,7 @@ func NewFake() FakeNotifier {
 
 // Notify prints the messages to the logs.
 func (n FakeNotifier) Notify(msg string) error {
-	log.State("FakeNotifier: ", sanitize(msg))
+	log.State("FakeNotifier:", sanitize(msg))
 	return nil
 }
 

@@ -213,7 +213,7 @@ func writeJSON(w http.ResponseWriter) {
 	info.Ago = sinceLastCommit()
 	b, err := info.MarshalJSON()
 	if err != nil {
-		log.Warning("writeJSON MarshalJSON: ", err)
+		log.Warning("writeJSON MarshalJSON:", err)
 		w.WriteHeader(http.StatusNoContent)
 	} else {
 		w.Header().Set("Content-Type", "application/json")

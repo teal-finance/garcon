@@ -42,7 +42,7 @@ func (g *Garcon) MiddlewareRateLimiter(settings ...int) Middleware {
 		maxReqBurst = settings[0]
 		maxReqPerMinute = settings[1]
 	default:
-		log.Panic("garcon.MiddlewareRateLimiter() accept up to two arguments, got ", len(settings))
+		log.Panic("garcon.MiddlewareRateLimiter() accepts up to two arguments, got", len(settings))
 	}
 
 	reqLimiter := NewRateLimiter(g.Writer, maxReqBurst, maxReqPerMinute, g.devMode)
@@ -76,7 +76,7 @@ func (rl *ReqLimiter) MiddlewareRateLimiter(next http.Handler) http.Handler {
 		if err != nil {
 			rl.gw.WriteErr(w, r, http.StatusInternalServerError,
 				"Cannot split remote_addr=host:port", "remote_addr", r.RemoteAddr)
-			log.Error("in  ", r.RemoteAddr, " ", r.Method, " ", r.RequestURI, " SplitHostPort ", err)
+			log.Out("500", r.RemoteAddr, r.Method, r.RequestURI, "Split host:port ERROR:", err)
 			return
 		}
 
@@ -86,9 +86,9 @@ func (rl *ReqLimiter) MiddlewareRateLimiter(next http.Handler) http.Handler {
 			if r.Context().Err() == nil {
 				rl.gw.WriteErr(w, r, http.StatusTooManyRequests, "Too Many Requests",
 					"advice", "Please contact the team support is this is annoying")
-				log.Warning("", r.RemoteAddr, " ", r.Method, " ", r.RequestURI, "TooManyRequests ", err)
+				log.Out("429", r.RemoteAddr, r.Method, r.RequestURI, "ERROR:", err)
 			} else {
-				log.Warning("", r.RemoteAddr, " ", r.Method, " ", r.RequestURI, " ", err)
+				log.In("-->", r.RemoteAddr, r.Method, r.RequestURI, "ERROR:", err)
 			}
 			return
 		}

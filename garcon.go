@@ -192,11 +192,11 @@ type TokenChecker interface {
 // IncorruptibleChecker requires g.WithURLs() to set the Cookie secure, domain and path.
 func (g *Garcon) IncorruptibleChecker(secretKeyHex string, maxAge int, setIP bool) *incorruptible.Incorruptible {
 	if len(secretKeyHex) != 32 {
-		log.Panic("Want AES-128 key composed by 32 hexadecimal digits, but got ", len(secretKeyHex), " digits")
+		log.Panic("Want AES-128 key composed by 32 hexadecimal digits, but got", len(secretKeyHex), "digits")
 	}
 	key, err := hex.DecodeString(secretKeyHex)
 	if err != nil {
-		log.Panic("Cannot decode the 128-bit AES key, please provide 32 hexadecimal digits: ", err)
+		log.Panic("Cannot decode the 128-bit AES key, please provide 32 hexadecimal digits:", err)
 	}
 
 	return g.IncorruptibleCheckerBin(key, maxAge, setIP)
@@ -206,7 +206,7 @@ func (g *Garcon) IncorruptibleChecker(secretKeyHex string, maxAge int, setIP boo
 // IncorruptibleChecker requires g.WithURLs() to set the Cookie secure, domain and path.
 func (g *Garcon) IncorruptibleCheckerBin(secretKeyBin []byte, maxAge int, setIP bool) *incorruptible.Incorruptible {
 	if len(secretKeyBin) != 16 {
-		log.Panic("Want AES-128 key composed by 16 bytes, but got ", len(secretKeyBin), " bytes")
+		log.Panic("Want AES-128 key composed by 16 bytes, but got", len(secretKeyBin), "bytes")
 	}
 
 	if len(g.urls) == 0 {
@@ -224,11 +224,11 @@ func (g *Garcon) JWTChecker(secretKeyHex string, planPerm ...any) *JWTChecker {
 	}
 
 	if len(secretKeyHex) != 64 {
-		log.Panic("Want HMAC-SHA256 key composed by 64 hexadecimal digits, but got ", len(secretKeyHex))
+		log.Panic("Want HMAC-SHA256 key composed by 64 hexadecimal digits, but got", len(secretKeyHex))
 	}
 	key, err := hex.DecodeString(secretKeyHex)
 	if err != nil {
-		log.Panic("Cannot decode the HMAC-SHA256 key, please provide 64 hexadecimal digits: ", err)
+		log.Panic("Cannot decode the HMAC-SHA256 key, please provide 64 hexadecimal digits:", err)
 	}
 
 	return NewJWTChecker(g.Writer, g.urls, key, planPerm...)
@@ -360,11 +360,11 @@ func ParseURLs(origins []string) []*url.URL {
 	for _, o := range origins {
 		u, err := url.ParseRequestURI(o) // strip #fragment
 		if err != nil {
-			log.Panic("WithURLs: ", err)
+			log.Panic("WithURLs:", err)
 		}
 
 		if u.Host == "" {
-			log.Panic("WithURLs: missing host in ", o)
+			log.Panic("WithURLs: missing host in", o)
 		}
 
 		urls = append(urls, u)

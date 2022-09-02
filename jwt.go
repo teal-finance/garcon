@@ -84,17 +84,17 @@ func NewJWTChecker(gw Writer, urls []*url.URL, secretKey []byte, permissions ...
 
 func NewAccessToken(maxTTL, user string, groups, orgs []string, hexKey string) string {
 	if len(hexKey) != 64 {
-		log.Panic("Want HMAC-SHA256 key composed by 64 hexadecimal digits, but got ", len(hexKey))
+		log.Panic("Want HMAC-SHA256 key composed by 64 hexadecimal digits, but got", len(hexKey))
 	}
 
 	binKey, err := hex.DecodeString(hexKey)
 	if err != nil {
-		log.Panic("Cannot decode the HMAC-SHA256 key, please provide 64 hexadecimal digits: ", err)
+		log.Panic("Cannot decode the HMAC-SHA256 key, please provide 64 hexadecimal digits:", err)
 	}
 
 	token, err := tokens.GenAccessToken(maxTTL, maxTTL, user, groups, orgs, binKey)
 	if err != nil || token == "" {
-		log.Panic("Cannot create JWT: ", err)
+		log.Panic("Cannot create JWT:", err)
 	}
 
 	return token
@@ -103,7 +103,7 @@ func NewAccessToken(maxTTL, user string, groups, orgs []string, hexKey string) s
 func (ck *JWTChecker) NewCookie(name, plan, user string, secure bool, dns, dir string) http.Cookie {
 	JWT, err := tokens.GenAccessToken("1y", "1y", user, []string{plan}, nil, ck.secretKey)
 	if err != nil || JWT == "" {
-		log.Panic("Cannot create JWT: ", err)
+		log.Panic("Cannot create JWT:", err)
 	}
 
 	log.Info("JWT newCookie plan="+plan+" domain="+dns+
@@ -191,7 +191,7 @@ func (ck *JWTChecker) Vet(next http.Handler) http.Handler {
 
 func checkParameters(secretKey []byte, permissions ...any) ([]string, []Perm) {
 	if len(secretKey) != 32 {
-		log.Panic("Want HMAC-SHA256 key containing 32 bytes, but got ", len(secretKey))
+		log.Panic("Want HMAC-SHA256 key containing 32 bytes, but got", len(secretKey))
 	}
 
 	n := len(permissions)
@@ -231,7 +231,7 @@ func extractCookieAttributes(urls []*url.URL) (secure bool, dns, dir string) {
 
 	u := urls[0]
 	if u == nil {
-		log.Panic("Unexpected nil in URL slide: ", urls)
+		log.Panic("Unexpected nil in URL slide:", urls)
 	}
 
 	switch {
@@ -240,7 +240,7 @@ func extractCookieAttributes(urls []*url.URL) (secure bool, dns, dir string) {
 	case u.Scheme == "https":
 		secure = true
 	default:
-		log.Panic("Unexpected URL scheme in ", u)
+		log.Panic("Unexpected URL scheme in", u)
 	}
 
 	dns = u.Hostname()
@@ -423,7 +423,7 @@ var permKey struct{}
 func PermFromCtx(r *http.Request) Perm {
 	perm, ok := r.Context().Value(permKey).(Perm)
 	if !ok {
-		log.Warning("JWT no permission in context ", r.URL.Path)
+		log.Warning("JWT no permission in context", r.URL.Path)
 	}
 	return perm
 }

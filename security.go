@@ -190,7 +190,7 @@ func MiddlewareSecureHTTPHeader(secure bool) func(next http.Handler) http.Handle
 func TraversalPath(w http.ResponseWriter, r *http.Request) bool {
 	if strings.Contains(r.URL.Path, "..") {
 		WriteErr(w, r, http.StatusBadRequest, "URL contains '..'")
-		log.Warning("reject path with '..' ", Sanitize(r.URL.Path))
+		log.Warning("reject path with '..'", Sanitize(r.URL.Path))
 		return true
 	}
 	return false
@@ -199,7 +199,7 @@ func TraversalPath(w http.ResponseWriter, r *http.Request) bool {
 func RandomBytes(n int) []byte {
 	key := make([]byte, n)
 	if _, err := rand.Read(key); err != nil {
-		log.Panic("RandomBytes: ", err)
+		log.Panic("RandomBytes:", err)
 	}
 	return key
 }

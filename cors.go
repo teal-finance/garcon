@@ -78,8 +78,8 @@ func newCORS(origins, methods, headers []string, debug bool) *cors.Cors {
 		Debug:                  debug, // verbose logs
 	}
 
-	log.Security("CORS Methods: ", options.AllowedMethods)
-	log.Security("CORS Headers: ", options.AllowedHeaders)
+	log.Security("CORS Methods:", options.AllowedMethods)
+	log.Security("CORS Headers:", options.AllowedHeaders)
 	log.Securityf("CORS Credentials=%v MaxAge=%v", options.AllowCredentials, options.MaxAge)
 
 	return cors.New(options)
@@ -115,7 +115,7 @@ func allOrigins() func(string) bool {
 }
 
 func oneOrigin(allowedOrigin string) func(string) bool {
-	log.Security("CORS Allow one origin: ", allowedOrigin)
+	log.Security("CORS Allow one origin:", allowedOrigin)
 	return func(origin string) bool {
 		if origin == allowedOrigin {
 			return true
@@ -127,7 +127,7 @@ func oneOrigin(allowedOrigin string) func(string) bool {
 }
 
 func multipleOriginPrefixes(addrPrefixes []string) func(origin string) bool {
-	log.Security("CORS Allow origin prefixes: ", addrPrefixes)
+	log.Security("CORS Allow origin prefixes:", addrPrefixes)
 
 	return func(origin string) bool {
 		for _, prefix := range addrPrefixes {
@@ -136,7 +136,7 @@ func multipleOriginPrefixes(addrPrefixes []string) func(origin string) bool {
 			}
 		}
 
-		log.Security("CORS Refuse "+origin+" without prefixes ", addrPrefixes)
+		log.Security("CORS Refuse", origin ,"without prefixes", addrPrefixes)
 		return false
 	}
 }
