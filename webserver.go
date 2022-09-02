@@ -168,7 +168,7 @@ func (ws *StaticWebServer) send(w http.ResponseWriter, r *http.Request, absPath 
 	if n, err := io.Copy(w, file); err != nil {
 		log.Warning("WebServer: Copy(", absPath, ") ", err)
 	} else {
-		log.Info("out "+r.RemoteAddr+" "+r.Method+" "+absPath+" ", ConvertSize64(n))
+		log.Out("200 "+r.RemoteAddr+" "+r.Method+" "+absPath+" ", ConvertSize64(n))
 	}
 }
 
