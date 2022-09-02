@@ -136,7 +136,7 @@ func multipleOriginPrefixes(addrPrefixes []string) func(origin string) bool {
 			}
 		}
 
-		log.Security("CORS Refuse", origin ,"without prefixes", addrPrefixes)
+		log.Security("CORS Refuse", origin, "without prefixes", addrPrefixes)
 		return false
 	}
 }
