@@ -35,7 +35,10 @@ func MiddlewareCORS(origins, methods, headers []string, debug bool) func(next ht
 type corsLogger struct{}
 
 func (corsLogger) Printf(fmt string, a ...any) {
-	log.Infof("CORS "+fmt, a...)
+	if strings.Contains(fmt, "Actual request") {
+		return
+	}
+	log.Securityf("CORS "+fmt, a...)
 }
 
 // DevOrigins provides the development origins:
@@ -75,9 +78,9 @@ func newCORS(origins, methods, headers []string, debug bool) *cors.Cors {
 		Debug:                  debug, // verbose logs
 	}
 
-	log.Info("CORS Methods: ", options.AllowedMethods)
-	log.Info("CORS Headers: ", options.AllowedHeaders)
-	log.Infof("CORS Credentials=%v MaxAge=%v", options.AllowCredentials, options.MaxAge)
+	log.Security("CORS Methods: ", options.AllowedMethods)
+	log.Security("CORS Headers: ", options.AllowedHeaders)
+	log.Securityf("CORS Credentials=%v MaxAge=%v", options.AllowCredentials, options.MaxAge)
 
 	return cors.New(options)
 }
@@ -105,26 +108,26 @@ func InsertSchema(urls []string) {
 }
 
 func allOrigins() func(string) bool {
-	log.Info("CORS Allow all origins")
+	log.Security("CORS Allow all origins")
 	return func(origin string) bool {
 		return true
 	}
 }
 
 func oneOrigin(allowedOrigin string) func(string) bool {
-	log.Info("CORS Allow one origin: ", allowedOrigin)
+	log.Security("CORS Allow one origin: ", allowedOrigin)
 	return func(origin string) bool {
 		if origin == allowedOrigin {
 			return true
 		}
 
-		log.Info("CORS Refuse " + origin + " is not " + allowedOrigin)
+		log.Security("CORS Refuse " + origin + " is not " + allowedOrigin)
 		return false
 	}
 }
 
 func multipleOriginPrefixes(addrPrefixes []string) func(origin string) bool {
-	log.Info("CORS Allow origin prefixes: ", addrPrefixes)
+	log.Security("CORS Allow origin prefixes: ", addrPrefixes)
 
 	return func(origin string) bool {
 		for _, prefix := range addrPrefixes {
@@ -133,7 +136,7 @@ func multipleOriginPrefixes(addrPrefixes []string) func(origin string) bool {
 			}
 		}
 
-		log.Info("CORS Refuse "+origin+" without prefixes ", addrPrefixes)
+		log.Security("CORS Refuse "+origin+" without prefixes ", addrPrefixes)
 		return false
 	}
 }
