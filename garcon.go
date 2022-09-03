@@ -125,7 +125,7 @@ func WithURLs(addresses ...string) Option {
 // Optionally it also starts a metrics server in background (if export port > 0).
 // The metrics server is for use with Prometheus or another compatible monitoring tool.
 func ListenAndServe(server *http.Server) error {
-	log.Info("Server listening on http://localhost" + server.Addr)
+	log.Print("Server listening on http://localhost" + server.Addr)
 
 	err := server.ListenAndServe()
 

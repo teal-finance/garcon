@@ -45,7 +45,7 @@ func main() {
 		Handler: handler,
 	}
 
-	log.Info("Server listening on http://localhost" + port)
+	log.Print("Server listening on http://localhost" + port)
 	log.Fatal(server.ListenAndServe())
 }
 

@@ -124,8 +124,7 @@ func runServer(h http.Handler, connState func(net.Conn, http.ConnState)) {
 		ConnContext:       nil,
 	}
 
-	log.Info("Server listening on http://localhost" + server.Addr)
-
+	log.Print("Server listening on http://localhost" + server.Addr)
 	log.Fatal(server.ListenAndServe())
 }
 
