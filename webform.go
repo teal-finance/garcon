@@ -121,7 +121,7 @@ func (form *WebForm) Notify(notifierURL string) func(w http.ResponseWriter, r *h
 	return func(w http.ResponseWriter, r *http.Request) {
 		err := r.ParseForm()
 		if err != nil {
-			log.Warning("WebForm ParseForm:", err)
+			log.Warn("WebForm ParseForm:", err)
 			form.Writer.WriteErr(w, r, http.StatusInternalServerError, "Cannot parse the webform")
 			return
 		}
@@ -129,7 +129,7 @@ func (form *WebForm) Notify(notifierURL string) func(w http.ResponseWriter, r *h
 		md := form.toMarkdown(r)
 		err = n.Notify(md)
 		if err != nil {
-			log.Warning("WebForm Notify:", err)
+			log.Warn("WebForm Notify:", err)
 			form.Writer.WriteErr(w, r, http.StatusInternalServerError, "Cannot store webform data")
 			return
 		}
@@ -149,7 +149,7 @@ func (form *WebForm) toMarkdown(r *http.Request) string {
 
 		max, ok := form.TextLimits[name]
 		if !ok {
-			log.Warningf("WebForm: reject name=%s because "+
+			log.Warnf("WebForm: reject name=%s because "+
 				"not an accepted name", name)
 			continue
 		}
@@ -189,7 +189,7 @@ func (form *WebForm) valid(name string, values []string) bool {
 	}
 
 	if len(values) != 1 {
-		log.Warningf("WebForm: reject name=%s because "+
+		log.Warnf("WebForm: reject name=%s because "+
 			"received %d input field(s) while expected only one", name, len(values))
 		return false
 	}
@@ -203,27 +203,27 @@ func (form *WebForm) validName(name string) bool {
 		if len(name) > 100 {
 			name = name[:90] + " (cut)"
 		}
-		log.Warningf("WebForm: reject name=%s because len=%d > max=%d",
+		log.Warnf("WebForm: reject name=%s because len=%d > max=%d",
 			name, nLen, form.maxFieldNameLength)
 		return false
 	}
 
 	if p := printable(name); p >= 0 {
-		log.Warningf("WebForm: reject name=%s because "+
+		log.Warnf("WebForm: reject name=%s because "+
 			"contains a bad character at position %d",
 			Sanitize(name), p)
 		return false
 	}
 
 	if p := printable(name); p >= 0 {
-		log.Warningf("WebForm: reject name=%s because "+
+		log.Warnf("WebForm: reject name=%s because "+
 			"contains a bad character at position %d",
 			Sanitize(name), p)
 		return false
 	}
 
 	if _, ok := form.FileLimits[name]; ok {
-		log.Warningf("WebForm: skip name=%s because "+
+		log.Warnf("WebForm: skip name=%s because "+
 			"file not yet supported", name)
 		return false
 	}

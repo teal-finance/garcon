@@ -213,7 +213,7 @@ func writeJSON(w http.ResponseWriter) {
 	info.Ago = sinceLastCommit()
 	b, err := info.MarshalJSON()
 	if err != nil {
-		log.Warning("writeJSON MarshalJSON:", err)
+		log.Warn("writeJSON MarshalJSON:", err)
 		w.WriteHeader(http.StatusNoContent)
 	} else {
 		w.Header().Set("Content-Type", "application/json")
@@ -227,7 +227,7 @@ func writeHTML(w http.ResponseWriter, t *template.Template) {
 	lines := versionStrings(noProgramName)
 	data := struct{ Items []string }{lines}
 	if err := t.Execute(w, data); err != nil {
-		log.Warning("writeHTML Execute:", err)
+		log.Warn("writeHTML Execute:", err)
 		w.WriteHeader(http.StatusNoContent)
 	}
 }

@@ -81,7 +81,7 @@ func (gw Writer) WriteErrSafe(w http.ResponseWriter, r *http.Request, statusCode
 
 	buf, err := response.MarshalJSON()
 	if err != nil {
-		log.Warning("WriteSafeJSONErr:", err)
+		log.Warn("WriteSafeJSONErr:", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

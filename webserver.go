@@ -139,7 +139,7 @@ func (ws *StaticWebServer) openFile(w http.ResponseWriter, r *http.Request, absP
 
 	file, err := os.Open(absPath)
 	if err != nil {
-		log.Warning("WebServer:", err)
+		log.Warn("WebServer:", err)
 		http.Error(w, "Not Found", http.StatusNotFound)
 		log.Out("404", r.RemoteAddr, r.Method, absPath, err)
 		return nil, ""
@@ -156,12 +156,12 @@ func (ws *StaticWebServer) send(w http.ResponseWriter, r *http.Request, absPath 
 
 	defer func() {
 		if e := file.Close(); e != nil {
-			log.Warning("WebServer: Close()", e)
+			log.Warn("WebServer: Close()", e)
 		}
 	}()
 
 	if fi, err := file.Stat(); err != nil {
-		log.Warning("WebServer: Stat("+absPath+")", err)
+		log.Warn("WebServer: Stat("+absPath+")", err)
 	} else {
 		w.Header().Set("Content-Length", strconv.FormatInt(fi.Size(), 10))
 		w.Header().Set("Last-Modified", fi.ModTime().UTC().Format(http.TimeFormat))
@@ -170,7 +170,7 @@ func (ws *StaticWebServer) send(w http.ResponseWriter, r *http.Request, absPath 
 	}
 
 	if n, err := io.Copy(w, file); err != nil {
-		log.Warning("WebServer: Copy("+absPath+")", err)
+		log.Warn("WebServer: Copy("+absPath+")", err)
 	} else {
 		log.Out("200", r.RemoteAddr, r.Method, absPath, ConvertSize64(n))
 	}
@@ -240,7 +240,7 @@ func imageContentType(ext string) string {
 	case "svg":
 		return "image/svg+xml"
 	}
-	log.Warning("WebServer does not support image extension:", ext)
+	log.Warn("WebServer does not support image extension:", ext)
 	return ""
 }
 

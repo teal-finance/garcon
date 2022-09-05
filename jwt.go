@@ -423,7 +423,7 @@ var permKey struct{}
 func PermFromCtx(r *http.Request) Perm {
 	perm, ok := r.Context().Value(permKey).(Perm)
 	if !ok {
-		log.Warning("JWT no permission in context", r.URL.Path)
+		log.Warn("JWT no permission in context", r.URL.Path)
 	}
 	return perm
 }

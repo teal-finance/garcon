@@ -152,7 +152,7 @@ func MiddlewareRejectUnprintableURI(next http.Handler) http.Handler {
 				WriteErr(w, r, http.StatusBadRequest,
 					"Invalid URI with non-printable symbol",
 					"position", i)
-				log.Warning("reject non-printable URI or with <CR> or <LF>:", Sanitize(r.RequestURI))
+				log.Warn("reject non-printable URI or with <CR> or <LF>:", Sanitize(r.RequestURI))
 				return
 			}
 
@@ -190,7 +190,7 @@ func MiddlewareSecureHTTPHeader(secure bool) func(next http.Handler) http.Handle
 func TraversalPath(w http.ResponseWriter, r *http.Request) bool {
 	if strings.Contains(r.URL.Path, "..") {
 		WriteErr(w, r, http.StatusBadRequest, "URL contains '..'")
-		log.Warning("reject path with '..'", Sanitize(r.URL.Path))
+		log.Warn("reject path with '..'", Sanitize(r.URL.Path))
 		return true
 	}
 	return false
