@@ -9,7 +9,7 @@ import (
 	"github.com/teal-finance/emo"
 )
 
-var log = emo.NewZone("ntf")
+var log = emo.NewZone("notifier")
 
 // Notifier interface for sending messages.
 type Notifier interface {

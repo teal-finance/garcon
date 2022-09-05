@@ -30,7 +30,7 @@ import (
 	"github.com/teal-finance/incorruptible"
 )
 
-var log = emo.NewZone("grc")
+var log = emo.NewZone("garcon")
 
 type Garcon struct {
 	ServerName ServerName
@@ -528,7 +528,7 @@ func readBody(w http.ResponseWriter, body io.ReadCloser, maxBytes ...int) ([]byt
 		f := log.Infof
 		text := "body: read many bytes %s but only %d%% of the limit %s (%d bytes)"
 		if nearTheLimit {
-			f = log.Warningf
+			f = log.Warnf
 			text = "body: read %s = %d%% of the limit %s, increase maxBytes=%d"
 		}
 		f(text, ConvertSize(len(buf)), percentage, ConvertSize(max), max)
