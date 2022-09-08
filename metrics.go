@@ -440,6 +440,11 @@ func StatusCodeStr(code int) string {
 	case http.StatusNotImplemented:
 		return "501" // Not Implemented
 	}
+
+	if false {
+		return lessCommonStatusCodes(code)
+	}
+
 	return strconv.Itoa(code)
 }
 
@@ -560,5 +565,6 @@ func lessCommonStatusCodes(code int) string {
 	case http.StatusNetworkAuthenticationRequired:
 		return "511" // Network Authentication Required
 	}
+
 	return strconv.Itoa(code)
 }
