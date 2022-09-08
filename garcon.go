@@ -525,13 +525,11 @@ func readBody(w http.ResponseWriter, body io.ReadCloser, maxBytes ...int) ([]byt
 	readManyBytes := len(buf) > 8*defaultMaxBytes
 	if nearTheLimit || readManyBytes {
 		percentage := 100 * len(buf) / max
-		f := log.Infof
-		text := "body: read many bytes %s but only %d%% of the limit %s (%d bytes)"
 		if nearTheLimit {
-			f = log.Warnf
-			text = "body: read %s = %d%% of the limit %s, increase maxBytes=%d"
+			log.Warnf("body: read %s = %d%% of the limit %s, please increase maxBytes=%d", ConvertSize(len(buf)), percentage, ConvertSize(max), max)
+		} else {
+			log.Infof("body: read many bytes %s but only %d%% of the limit %s (%d bytes)", ConvertSize(len(buf)), percentage, ConvertSize(max), max)
 		}
-		f(text, ConvertSize(len(buf)), percentage, ConvertSize(max), max)
 	}
 
 	return buf, nil
