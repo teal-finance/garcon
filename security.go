@@ -11,6 +11,7 @@ import (
 	"hash"
 	"net/http"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 
 	"github.com/minio/highwayhash"
@@ -48,8 +49,90 @@ func sanitize(str string) string {
 		case surrogateMin <= r && r <= surrogateMax, r > utf8.MaxRune:
 			return '�' // The replacement character U+FFFD indicates an invalid UTF-8 character.
 		}
-		return r
+			return r
 	}, str)
+}
+
+// SplitCleanedLines splits on linefeed,
+// drops redundant blank lines,
+// replaces the non-printable runes by spaces,
+// trims leading/trailing/redundant spaces,.
+func SplitCleanedLines(str string) []string {
+	// count number of lines in the returned txt
+	n, m, max := 1, 0, 0
+	r1, r2 := '\n', '\n'
+	for _, r0 := range str {
+		if r0 == '\r' {
+			continue
+		}
+		if r0 == '\n' {
+			if (r1 == '\n') && (r2 == '\n') {
+				continue // skip redundant line feeds
+			}
+			n++
+			if max < m {
+				max = m // max line length
+			}
+			m = 0
+		}
+		r1, r2 = r0, r1
+		m++
+	}
+
+	txt := make([]string, 0, n)
+	line := make([]rune, 0, max)
+
+	r1, r2 = '\n', '\n'
+	wasSpace := true
+	blank := false
+	for _, r0 := range str {
+		if r0 == '\r' {
+			continue
+		}
+		if r0 == '\n' {
+			if (r1 == '\n') && (r2 == '\n') {
+				continue
+			}
+			if len(txt) > 0 || len(line) > 0 {
+				if len(line) == 0 {
+					blank = true
+				} else {
+					txt = append(txt, string(line))
+					line = line[:0]
+				}
+			}
+			wasSpace = true
+			r1, r2 = r0, r1
+			continue
+		}
+		r1, r2 = r0, r1
+
+		// also replace non-printable characters by spaces
+		isSpace := !unicode.IsPrint(r0) || unicode.IsSpace(r0)
+		if isSpace {
+			if wasSpace {
+				continue // skip redundant whitespaces
+			}
+		} else {
+			if wasSpace && len(line) > 0 {
+				line = append(line, ' ')
+			}
+			line = append(line, r0)
+			if blank {
+				blank = false
+				txt = append(txt, "")
+			}
+		}
+		wasSpace = isSpace
+	}
+
+	if len(line) > 0 {
+		txt = append(txt, string(line))
+	}
+	if len(txt) == 0 {
+		return nil
+	}
+	return txt
 }
 
 // SafeHeader stringifies a safe list of HTTP header values.
