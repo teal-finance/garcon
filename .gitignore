@@ -3,11 +3,12 @@
 *.log
 *.xcf
 /.vscode
+/chi
+/code-coverage.out
+/complete
 /cpu.pprof
 /dev
 /go.work*
-/complete
-/chi
 /httprouter
 /keystore
 /low-level
