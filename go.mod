@@ -13,9 +13,9 @@ require (
 	github.com/pkg/profile v1.6.0
 	github.com/prometheus/client_golang v1.13.0
 	github.com/rs/cors v1.8.2
-	github.com/teal-finance/emo v0.0.0-20220902211252-daf94c52658a
-	github.com/teal-finance/incorruptible v0.0.0-20220902213136-fa2d591796b8
-	github.com/teal-finance/quid v0.0.0-20220902211526-b74654f7358b
+	github.com/teal-finance/emo v0.0.0-20220908102640-66d9abfb8bac
+	github.com/teal-finance/incorruptible v0.0.0-20220905202129-2764bbcba352
+	github.com/teal-finance/quid v0.0.0-20220908091258-083c3509e1d7
 	github.com/zhangyunhao116/fastrand v0.3.0
 	golang.org/x/time v0.0.0-20220722155302-e5dcc9cfc0b9
 )
@@ -28,6 +28,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/golang-jwt/jwt/v4 v4.4.2 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
+	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/klauspost/compress v1.15.9 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 // indirect
@@ -36,7 +37,7 @@ require (
 	github.com/prometheus/common v0.37.0 // indirect
 	github.com/prometheus/procfs v0.8.0 // indirect
 	github.com/yuin/goldmark v1.4.14 // indirect
-	golang.org/x/net v0.0.0-20220826154423-83b083e8dc8b // indirect
-	golang.org/x/sys v0.0.0-20220829200755-d48e67d00261 // indirect
+	golang.org/x/net v0.0.0-20220907135653-1e95f45603a7 // indirect
+	golang.org/x/sys v0.0.0-20220908164124-27713097b956 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 )

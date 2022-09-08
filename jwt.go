@@ -22,7 +22,7 @@ import (
 	"time"
 
 	"github.com/teal-finance/garcon/timex"
-	"github.com/teal-finance/quid/quidlib/tokens"
+	"github.com/teal-finance/quid/tokens"
 )
 
 const (
