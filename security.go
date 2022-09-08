@@ -44,12 +44,18 @@ func Sanitize(slice ...string) string {
 func sanitize(str string) string {
 	return strings.Map(func(r rune) rune {
 		switch {
-		case r < 32, r == 127: // The .notdef character is often represented by the empty box (tofu)
-			return '􏿮' // to indicate a valid but not rendered character.
+		// case r == '\t':
+		// 	return ' '
 		case surrogateMin <= r && r <= surrogateMax, r > utf8.MaxRune:
-			return '�' // The replacement character U+FFFD indicates an invalid UTF-8 character.
-		}
+			// The replacement character U+FFFD indicates an invalid UTF-8 character.
+			return '�'
+		case unicode.IsPrint(r):
 			return r
+		default: // r < 32, r == 127
+			// The empty box (tofu) symbolizes the .notdef character
+			// indicating a valid but not rendered character.
+			return '􏿮'
+		}
 	}, str)
 }
 
