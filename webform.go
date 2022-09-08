@@ -8,8 +8,8 @@ package garcon
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
-	"strings"
 
 	"github.com/teal-finance/garcon/notifier"
 )
@@ -36,9 +36,9 @@ type WebForm struct {
 	// Use 0 to disable any limit.
 	FileLimits map[string][2]int
 
-	// MaxTotalLength includes the
+	// MaxMDLength includes the
 	// form fields and browser fingerprints.
-	MaxTotalLength int
+	MaxMDLength int
 
 	maxFieldNameLength int
 }
@@ -49,19 +49,15 @@ func (g *Garcon) NewContactForm(redirectURL string) WebForm {
 
 // NewContactForm initializes a new WebForm with the default contact-form settings.
 func NewContactForm(gw Writer, redirectURL string) WebForm {
-	form := WebForm{
+	return WebForm{
 		Writer:             gw,
 		Notifier:           nil,
 		Redirect:           redirectURL,
 		TextLimits:         DefaultContactSettings(),
 		FileLimits:         DefaultFileSettings(),
-		MaxTotalLength:     0,
+		MaxMDLength:        4000,
 		maxFieldNameLength: 0,
 	}
-
-	form.MaxTotalLength = 2000
-
-	return form
 }
 
 // DefaultContactSettings is compliant with standard names for web form input fields:
@@ -84,37 +80,37 @@ func DefaultFileSettings() map[string][2]int {
 	}
 }
 
-func (form *WebForm) init() {
-	if form.TextLimits == nil {
-		form.TextLimits = DefaultContactSettings()
-		log.Info("Middleware WebForm: empty TextLimits => use", form.TextLimits)
+func (wf *WebForm) init() {
+	if wf.TextLimits == nil {
+		wf.TextLimits = DefaultContactSettings()
+		log.Info("Middleware WebForm: empty TextLimits => use", wf.TextLimits)
 	}
 
-	if form.FileLimits == nil {
-		form.FileLimits = DefaultFileSettings()
-		log.Info("Middleware WebForm: empty FileLimits => use", form.FileLimits)
+	if wf.FileLimits == nil {
+		wf.FileLimits = DefaultFileSettings()
+		log.Info("Middleware WebForm: empty FileLimits => use", wf.FileLimits)
 	}
 
-	form.maxFieldNameLength = 0
-	for name := range form.TextLimits {
-		if form.maxFieldNameLength < len(name) {
-			form.maxFieldNameLength = len(name)
+	wf.maxFieldNameLength = 0
+	for name := range wf.TextLimits {
+		if wf.maxFieldNameLength < len(name) {
+			wf.maxFieldNameLength = len(name)
 		}
 	}
-	for name := range form.FileLimits {
-		if form.maxFieldNameLength < len(name) {
-			form.maxFieldNameLength = len(name)
+	for name := range wf.FileLimits {
+		if wf.maxFieldNameLength < len(name) {
+			wf.maxFieldNameLength = len(name)
 		}
 	}
 
-	log.Info("Middleware WebForm redirects to", form.Redirect)
+	log.Info("Middleware WebForm redirects to", wf.Redirect)
 }
 
 // Notify returns a handler that
 // converts the received web-form into markdown format
 // and sends it to the notifierURL.
-func (form *WebForm) Notify(notifierURL string) func(w http.ResponseWriter, r *http.Request) {
-	form.init()
+func (wf *WebForm) Notify(notifierURL string) func(w http.ResponseWriter, r *http.Request) {
+	wf.init()
 
 	n := notifier.New(notifierURL)
 
@@ -122,68 +118,65 @@ func (form *WebForm) Notify(notifierURL string) func(w http.ResponseWriter, r *h
 		err := r.ParseForm()
 		if err != nil {
 			log.Warn("WebForm ParseForm:", err)
-			form.Writer.WriteErr(w, r, http.StatusInternalServerError, "Cannot parse the webform")
+			wf.Writer.WriteErr(w, r, http.StatusInternalServerError, "Cannot parse the webform")
 			return
 		}
 
-		md := form.toMarkdown(r)
+		md := wf.toMarkdown(r)
 		err = n.Notify(md)
 		if err != nil {
 			log.Warn("WebForm Notify:", err)
-			form.Writer.WriteErr(w, r, http.StatusInternalServerError, "Cannot store webform data")
+			wf.Writer.WriteErr(w, r, http.StatusInternalServerError, "Cannot store webform data")
 			return
 		}
 
-		http.Redirect(w, r, form.Redirect, http.StatusFound)
+		http.Redirect(w, r, wf.Redirect, http.StatusFound)
 	}
 }
 
-func (form *WebForm) toMarkdown(r *http.Request) string {
+func (wf *WebForm) toMarkdown(r *http.Request) string {
 	log.Infof("WebForm with %d input fields", len(r.Form))
-
-	md := ""
-	for name, values := range r.Form {
-		if !form.valid(name, values) {
-			continue
-		}
-
-		max, ok := form.TextLimits[name]
-		if !ok {
-			log.Warnf("WebForm: reject name=%s because "+
-				"not an accepted name", name)
-			continue
-		}
-
-		maxLen, maxBreaks := max[0], max[1]
-
-		if len(values[0]) > maxLen && maxLen > 0 {
-			extra := len(values[0]) - maxLen
-			if extra > 30 {
-				values[0] = values[0][:maxLen] +
-					"\n" + "(cut last " + strconv.Itoa(extra) + " characters)"
-				maxBreaks++
-			}
-		}
-
-		if md != "" { // no break line at first loop
-			md += "\n"
-		}
-
-		md += "* " + name + ": " + form.valueMD(values[0], maxBreaks)
+	md := wf.formMD(r.Form) + FingerprintMD(r)
+	if extra := overflow25(len(md), wf.MaxMDLength); extra > 0 {
+		md = md[:wf.MaxMDLength] + "\n\n" +
+			"(cut last " + strconv.Itoa(extra) + " characters)"
 	}
+	return md
+}
 
-	md += FingerprintMD(r)
+func (wf *WebForm) formMD(fields url.Values) string {
+	md := ""
 
-	if len(md) > form.MaxTotalLength && form.MaxTotalLength > 0 {
-		md = md[:form.MaxTotalLength] +
-			"\n\n(cut because len=" + strconv.Itoa(len(md)) +
-			" > max=" + strconv.Itoa(form.MaxTotalLength) + ")"
+	for name, values := range fields {
+		if !wf.valid(name, values) {
+			continue
+		}
+
+		max, ok := wf.TextLimits[name]
+		maxLen, maxLines := max[0], max[1]
+		if !ok {
+			log.Warnf("WebForm: reject name=%s not in allowlist", name)
+			continue
+		}
+
+		if extra := overflow25(len(values[0]), maxLen); extra > 0 {
+			values[0] = values[0][:maxLen] + "\n" +
+				"(cut last " + strconv.Itoa(extra) + " characters)"
+			maxLines++
+		}
+
+		if md == "" { // no break line at first loop
+			md += "- **"
+		} else {
+			md += "\n" + "- **" // double star -> bold
+		}
+		md += name + "**: " + wf.bulletParagraph(values[0], maxLines)
 	}
 
 	return md
 }
 
-func (form *WebForm) valid(name string, values []string) bool {
+func (wf *WebForm) valid(name string, values []string) bool {
 	if len(values) == 1 && values[0] == "" {
 		return false // skip empty values
 	}
@@ -194,73 +187,80 @@ func (form *WebForm) valid(name string, values []string) bool {
 		return false
 	}
 
-	return form.validName(name)
+	return wf.validName(name)
 }
 
-func (form *WebForm) validName(name string) bool {
-	if nLen := len(name); nLen > form.maxFieldNameLength {
+func (wf *WebForm) validName(name string) bool {
+	nLen := len(name)
+	if nLen > wf.maxFieldNameLength {
 		name = Sanitize(name)
-		if len(name) > 100 {
-			name = name[:90] + " (cut)"
+		state := "(sanitized)"
+		maxDisplay := 8 * wf.maxFieldNameLength
+		if nLen > maxDisplay+10 {
+			name = name[:maxDisplay]
+			state = "(sanitized and cut)"
 		}
-		log.Warnf("WebForm: reject name=%s because len=%d > max=%d",
-			name, nLen, form.maxFieldNameLength)
+		log.Warnf("WebForm: reject name=%q %s too long (%d > %d)", name, state, nLen, wf.maxFieldNameLength)
 		return false
 	}
 
 	if p := printable(name); p >= 0 {
-		log.Warnf("WebForm: reject name=%s because "+
-			"contains a bad character at position %d",
-			Sanitize(name), p)
+		log.Warnf("WebForm: reject name=%q contains a bad character at position %d", Sanitize(name), p)
 		return false
 	}
 
-	if p := printable(name); p >= 0 {
-		log.Warnf("WebForm: reject name=%s because "+
-			"contains a bad character at position %d",
-			Sanitize(name), p)
-		return false
-	}
-
-	if _, ok := form.FileLimits[name]; ok {
-		log.Warnf("WebForm: skip name=%s because "+
-			"file not yet supported", name)
+	if _, ok := wf.FileLimits[name]; ok {
+		log.Warnf("WebForm: skip name=%s because file not yet supported (TODO)", name)
 		return false
 	}
 
 	return true
 }
 
-func (form *WebForm) valueMD(str string, maxBreaks int) string {
-	if !strings.ContainsAny(str, "\n\r") {
-		return Sanitize(str)
+// overflow25 returns the overflow if n is 25% above max, else returns zero.
+// max=0 means max is infinite.
+func overflow25(n, max int) int {
+	if (n > max+max/4) && (max > 0) {
+		return n - max
 	}
+	return 0
+}
 
-	str = strings.ReplaceAll(str, "\r", "")
-	txt := strings.Split(str, "\n")
+// Markdown encoding.
+const (
+	lineBreak    = "  " // trailing double space -> line break
+	bulletIndent = " "  // leading spaces -> bullet indent
+)
 
+func (wf *WebForm) bulletParagraph(str string, maxLines int) string {
 	md := ""
-	previous := ""
-	breaks := 0
-	for _, line := range txt {
-		line = Sanitize(line)
-		if line == "" && previous == "" {
-			// no blank lines in the beginning and no successive blank lines
+
+	count := 0
+	blank := false
+	txt := SplitCleanedLines(str)
+	for i := range txt {
+		// skip top blank lines, redundant blank lines and bottom blank lines
+		if txt[i] == "" {
+			if md != "" {
+				blank = true
+			}
 			continue
 		}
 
-		if breaks >= maxBreaks && maxBreaks > 0 {
-			md += fmt.Sprintf("\n  (too much line breaks %d > %d)", breaks, maxBreaks)
+		count++
+		if blank {
+			count++
+			md += lineBreak + "\n\n" + bulletIndent
+		} else if md != "" {
+			md += lineBreak + "\n" + bulletIndent
+		}
+		md += txt[i]
+
+		remaining := len(txt) - i
+		if (count > maxLines) && (maxLines > 0) && (remaining > maxLines/2) {
+			md += fmt.Sprintf("\n  (skip %d lines)", remaining)
 			break
 		}
-
-		if md != "" {
-			md += "\n" + "  " // leading spaces = bullet indent
-		}
-		md += line + "  " // trailing double space = line break
-
-		previous = line
-		breaks++
 	}
 
 	return md
