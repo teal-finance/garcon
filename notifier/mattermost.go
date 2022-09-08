@@ -42,8 +42,9 @@ func (n MattermostNotifier) Notify(msg string) error {
 }
 
 func (n MattermostNotifier) host() string {
-	if url, er := url.Parse(n.endpoint); er == nil {
-		return url.Hostname()
+	u, err := url.Parse(n.endpoint)
+	if err == nil {
+		return u.Hostname()
 	}
 	return ""
 }
