@@ -409,7 +409,7 @@ func headerTxt(r *http.Request, header, key, skip string) string {
 	if v == skip {
 		return ""
 	}
-	return " " + key + "=" + v
+	return " " + key + v
 }
 
 func headerMD(r *http.Request, header string) string {
@@ -417,7 +417,7 @@ func headerMD(r *http.Request, header string) string {
 	if v == "" {
 		return ""
 	}
-	return "\n" + "* " + header + ": " + v
+	return "\n" + "- " + header + ": " + v
 }
 
 func StatusCodeStr(code int) string {
