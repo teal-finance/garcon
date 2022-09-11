@@ -19,6 +19,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+
+	"github.com/teal-finance/garcon/gg"
 )
 
 // ServerName is used in multiple parts in Garcon:
@@ -194,7 +196,7 @@ func MiddlewareLogDurationSafe(next http.Handler) http.Handler {
 // MiddlewareLogRequest logs the incoming request URL.
 // If one of its optional parameter is "fingerprint", this middleware also logs the browser fingerprint.
 // If the other optional parameter is "safe", this middleware sanitizes the URL before printing it.
-func (g *Garcon) MiddlewareLogRequest(settings ...string) Middleware {
+func (g *Garcon) MiddlewareLogRequest(settings ...string) gg.Middleware {
 	logFingerprint := false
 	logSafe := false
 
@@ -224,7 +226,7 @@ func (g *Garcon) MiddlewareLogRequest(settings ...string) Middleware {
 
 // MiddlewareLogDuration logs the requested URL along with its handling time.
 // When the optional parameter safe is true, this middleware sanitizes the URL before printing it.
-func (g *Garcon) MiddlewareLogDuration(safe ...bool) Middleware {
+func (g *Garcon) MiddlewareLogDuration(safe ...bool) gg.Middleware {
 	if len(safe) > 0 && safe[0] {
 		return MiddlewareLogDurationSafe
 	}
@@ -279,12 +281,12 @@ func MiddlewareLogFingerprintSafe(next http.Handler) http.Handler {
 }
 
 // StartMetricsServer creates and starts the Prometheus export server.
-func (g *Garcon) StartMetricsServer(expPort int) (Chain, func(net.Conn, http.ConnState)) {
+func (g *Garcon) StartMetricsServer(expPort int) (gg.Chain, func(net.Conn, http.ConnState)) {
 	return StartMetricsServer(expPort, g.ServerName)
 }
 
 // StartMetricsServer creates and starts the Prometheus export server.
-func StartMetricsServer(port int, namespace ServerName) (Chain, func(net.Conn, http.ConnState)) {
+func StartMetricsServer(port int, namespace ServerName) (gg.Chain, func(net.Conn, http.ConnState)) {
 	if port <= 0 {
 		log.Info("Disable Prometheus, export port=", port)
 		return nil, nil
@@ -303,7 +305,7 @@ func StartMetricsServer(port int, namespace ServerName) (Chain, func(net.Conn, h
 	prometheus.MustRegister(collectors.NewBuildInfoCollector())
 
 	namespace.SetPromNamingRule()
-	chain := NewChain(namespace.MiddlewareExportTrafficMetrics)
+	chain := gg.NewChain(namespace.MiddlewareExportTrafficMetrics)
 	counter := namespace.updateHTTPMetrics()
 	return chain, counter
 }
@@ -322,7 +324,7 @@ func ipMethodURL(r *http.Request) string {
 }
 
 func ipMethodURLSafe(r *http.Request) string {
-	return "--> " + r.RemoteAddr + " " + r.Method + " " + Sanitize(r.RequestURI)
+	return "--> " + r.RemoteAddr + " " + r.Method + " " + gg.Sanitize(r.RequestURI)
 }
 
 func ipMethodURLDuration(r *http.Request, statusCode string, d time.Duration) string {
@@ -332,7 +334,7 @@ func ipMethodURLDuration(r *http.Request, statusCode string, d time.Duration) st
 
 func ipMethodURLDurationSafe(r *http.Request, statusCode string, d time.Duration) string {
 	return statusCode + " " + r.RemoteAddr + " " + r.Method + " " +
-		Sanitize(r.RequestURI) + " " + d.String()
+		gg.Sanitize(r.RequestURI) + " " + d.String()
 }
 
 // FingerprintExplanation provides a description of the logged HTTP headers.
@@ -358,9 +360,9 @@ func fingerprint(r *http.Request) string {
 	// double space after "in" is for padding with "out" logs
 	line := " " +
 		// 1. Accept-Language, the language preferred by the user.
-		SafeHeader(r, "Accept-Language") + " " +
+		gg.SafeHeader(r, "Accept-Language") + " " +
 		// 2. User-Agent, name and version of the browser and OS.
-		SafeHeader(r, "User-Agent") +
+		gg.SafeHeader(r, "User-Agent") +
 		// 3. R=Referer, the website from which the request originated.
 		headerTxt(r, "Referer", "R=", "") +
 		// 4. A=Accept, the content types the browser prefers.
@@ -405,7 +407,7 @@ func FingerprintMD(r *http.Request) string {
 }
 
 func headerTxt(r *http.Request, header, key, skip string) string {
-	v := SafeHeader(r, header)
+	v := gg.SafeHeader(r, header)
 	if v == skip {
 		return ""
 	}
@@ -413,7 +415,7 @@ func headerTxt(r *http.Request, header, key, skip string) string {
 }
 
 func headerMD(r *http.Request, header string) string {
-	v := SafeHeader(r, header)
+	v := gg.SafeHeader(r, header)
 	if v == "" {
 		return ""
 	}

@@ -16,6 +16,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/teal-finance/garcon/gg"
 	"github.com/teal-finance/garcon/timex"
 	"github.com/teal-finance/quid/tokens"
 )
@@ -353,7 +354,7 @@ func (ck *JWTChecker) permFromAccessClaims(claims *tokens.AccessClaims) (Perm, e
 	}
 
 	return Perm{}, fmt.Errorf("cannot find any of %v within the JWT claims groups=%s, and cannot convert any group to integer",
-		Sanitize(claims.Groups...), ck.plans)
+		gg.Sanitize(claims.Groups...), ck.plans)
 }
 
 // --------------------------------------

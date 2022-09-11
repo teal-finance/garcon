@@ -16,6 +16,7 @@ import (
 
 	"github.com/teal-finance/emo"
 	"github.com/teal-finance/garcon"
+	"github.com/teal-finance/garcon/gg"
 )
 
 var log = emo.NewZone("app")
@@ -28,7 +29,7 @@ func main() {
 
 	g := garcon.New(garcon.WithServerName("HttpRouterExample"))
 
-	middleware := garcon.NewChain(
+	middleware := gg.NewChain(
 		g.MiddlewareLogRequest("safe"),
 		g.MiddlewareServerHeader(),
 	)

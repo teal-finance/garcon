@@ -11,15 +11,17 @@ import (
 	"strings"
 
 	"github.com/rs/cors"
+
+	"github.com/teal-finance/garcon/gg"
 )
 
 // MiddlewareCORS is a middleware to handle Cross-Origin Resource Sharing (CORS).
-func (g *Garcon) MiddlewareCORS() Middleware {
+func (g *Garcon) MiddlewareCORS() gg.Middleware {
 	return g.MiddlewareCORSWithMethodsHeaders(nil, nil)
 }
 
 // MiddlewareCORSWithMethodsHeaders is a middleware to handle Cross-Origin Resource Sharing (CORS).
-func (g *Garcon) MiddlewareCORSWithMethodsHeaders(methods, headers []string) Middleware {
+func (g *Garcon) MiddlewareCORSWithMethodsHeaders(methods, headers []string) gg.Middleware {
 	return MiddlewareCORS(g.origins, methods, headers, g.devMode)
 }
 

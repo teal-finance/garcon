@@ -17,6 +17,7 @@ import (
 	"github.com/carlmjohnson/flagx"
 	"github.com/carlmjohnson/versioninfo"
 
+	"github.com/teal-finance/garcon/gg"
 	"github.com/teal-finance/garcon/timex"
 )
 
@@ -232,7 +233,7 @@ func writeHTML(w http.ResponseWriter, t *template.Template) {
 	}
 }
 
-func (g *Garcon) MiddlewareServerHeader(serverName ...string) Middleware {
+func (g *Garcon) MiddlewareServerHeader(serverName ...string) gg.Middleware {
 	name := g.ServerName.String()
 	if len(serverName) > 0 && serverName[0] != "" {
 		name = serverName[0]

@@ -9,7 +9,7 @@
 // SPDX-License-Identifier: MIT
 
 //nolint:paralleltest // is not suitable in this file
-package garcon_test
+package gg_test
 
 import (
 	"bytes"
@@ -20,7 +20,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/teal-finance/garcon"
+	"github.com/teal-finance/garcon/gg"
 )
 
 func TestNewChain(t *testing.T) {
@@ -32,12 +32,12 @@ func TestNewChain(t *testing.T) {
 		return http.StripPrefix("potato", nil)
 	}
 
-	slice := []garcon.Middleware{c1, c2}
+	slice := []gg.Middleware{c1, c2}
 
-	chain := garcon.NewChain(slice...)
+	chain := gg.NewChain(slice...)
 	for k := range slice {
 		if !funcsEqual(chain[k], slice[k]) {
-			t.Error("garcon.NewChain does not add middlewares correctly")
+			t.Error("gg.NewChain does not add middlewares correctly")
 		}
 	}
 }
@@ -51,48 +51,48 @@ func TestNewRTChain(t *testing.T) {
 		return http.DefaultTransport
 	}
 
-	slice := []garcon.RTMiddleware{c1, c2}
+	slice := []gg.RTMiddleware{c1, c2}
 
-	chain := garcon.NewRTChain(slice...)
+	chain := gg.NewRTChain(slice...)
 	for k := range slice {
 		if !funcsEqual(chain[k], slice[k]) {
-			t.Error("garcon.NewRTChain does not add middlewares correctly")
+			t.Error("gg.NewRTChain does not add middlewares correctly")
 		}
 	}
 }
 
 func TestChain_Then_WorksWithNoMiddleware(t *testing.T) {
-	if !funcsEqual(garcon.NewChain().Then(testApp), testApp) {
+	if !funcsEqual(gg.NewChain().Then(testApp), testApp) {
 		t.Error("Then does not work with zero middleware")
 	}
 }
 
 func TestRTChain_Then_WorksWithNoMiddleware(t *testing.T) {
-	if !funcsEqual(garcon.NewRTChain().Then(testRoundTripApp), testRoundTripApp) {
+	if !funcsEqual(gg.NewRTChain().Then(testRoundTripApp), testRoundTripApp) {
 		t.Error("Then does not work with zero middleware")
 	}
 }
 
 func TestChain_Then_TreatsNilAsDefaultServeMux(t *testing.T) {
-	if garcon.NewChain().Then(nil) != http.DefaultServeMux {
+	if gg.NewChain().Then(nil) != http.DefaultServeMux {
 		t.Error("Then does not treat nil as DefaultServeMux")
 	}
 }
 
 func TestChain_ThenFunc_TreatsNilAsDefaultServeMux(t *testing.T) {
-	if garcon.NewChain().ThenFunc(nil) != http.DefaultServeMux {
+	if gg.NewChain().ThenFunc(nil) != http.DefaultServeMux {
 		t.Error("ThenFunc does not treat nil as DefaultServeMux")
 	}
 }
 
 func TestRTChain_Then_TreatsNilAsDefaultTransport(t *testing.T) {
-	if garcon.NewRTChain().Then(nil) != http.DefaultTransport {
+	if gg.NewRTChain().Then(nil) != http.DefaultTransport {
 		t.Error("Then does not treat nil as DefaultTransport")
 	}
 }
 
 func TestRTChain_ThenFunc_TreatsNilAsDefaultTransport(t *testing.T) {
-	if garcon.NewRTChain().ThenFunc(nil) != http.DefaultTransport {
+	if gg.NewRTChain().ThenFunc(nil) != http.DefaultTransport {
 		t.Error("ThenFunc does not treat nil as DefaultTransport")
 	}
 }
@@ -101,7 +101,7 @@ func TestChain_ThenFunc_ConstructsHandlerFunc(t *testing.T) {
 	fn := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
-	chained := garcon.NewChain().ThenFunc(fn)
+	chained := gg.NewChain().ThenFunc(fn)
 	rec := httptest.NewRecorder()
 
 	chained.ServeHTTP(rec, (*http.Request)(nil))
@@ -112,11 +112,11 @@ func TestChain_ThenFunc_ConstructsHandlerFunc(t *testing.T) {
 }
 
 func TestRTChain_ThenFunc_ConstructsRoundTripperFunc(t *testing.T) {
-	fn := garcon.RoundTripperFunc(func(r *http.Request) (*http.Response, error) {
+	fn := gg.RoundTripperFunc(func(r *http.Request) (*http.Response, error) {
 		var res http.Response
 		return &res, nil
 	})
-	chained := garcon.NewRTChain().ThenFunc(fn)
+	chained := gg.NewRTChain().ThenFunc(fn)
 
 	r, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "/", http.NoBody)
 	if err != nil {
@@ -131,7 +131,7 @@ func TestRTChain_ThenFunc_ConstructsRoundTripperFunc(t *testing.T) {
 		res.Body.Close()
 	}
 
-	if reflect.TypeOf(chained) != reflect.TypeOf(garcon.RoundTripperFunc(nil)) {
+	if reflect.TypeOf(chained) != reflect.TypeOf(gg.RoundTripperFunc(nil)) {
 		t.Error("ThenFunc does not construct RoundTripperFunc")
 	}
 }
@@ -141,7 +141,7 @@ func TestChain_Then_OrdersHandlersCorrectly(t *testing.T) {
 	t2 := tagMiddleware("t2\n")
 	t3 := tagMiddleware("t3\n")
 
-	chained := garcon.NewChain(t1, t2, t3).Then(testApp)
+	chained := gg.NewChain(t1, t2, t3).Then(testApp)
 
 	w := httptest.NewRecorder()
 	r, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "/", http.NoBody)
@@ -161,7 +161,7 @@ func TestChain_Then_OrdersRoundTrippersCorrectly(t *testing.T) {
 	t2 := tagRTMiddleware("t2\n")
 	t3 := tagRTMiddleware("t3\n")
 
-	chained := garcon.NewRTChain(t1, t2, t3).Then(testRoundTripApp)
+	chained := gg.NewRTChain(t1, t2, t3).Then(testRoundTripApp)
 
 	r, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "/", http.NoBody)
 	if err != nil {
@@ -186,7 +186,7 @@ func TestChain_Then_OrdersRoundTrippersCorrectly(t *testing.T) {
 }
 
 func TestChain_Append_AddsHandlersCorrectly1(t *testing.T) {
-	chain := garcon.NewChain(tagMiddleware("t1\n"), tagMiddleware("t2\n"))
+	chain := gg.NewChain(tagMiddleware("t1\n"), tagMiddleware("t2\n"))
 	newChain := chain.Append(tagMiddleware("t3\n"), tagMiddleware("t4\n"))
 
 	if len(chain) != 2 {
@@ -212,7 +212,7 @@ func TestChain_Append_AddsHandlersCorrectly1(t *testing.T) {
 }
 
 func TestRTChain_Append_AddsRoundTrippersCorrectly1(t *testing.T) {
-	chain := garcon.NewRTChain(tagRTMiddleware("t1\n"), tagRTMiddleware("t2\n"))
+	chain := gg.NewRTChain(tagRTMiddleware("t1\n"), tagRTMiddleware("t2\n"))
 	newChain := chain.Append(tagRTMiddleware("t3\n"), tagRTMiddleware("t4\n"))
 
 	if len(chain) != 2 {
@@ -247,8 +247,8 @@ func TestRTChain_Append_AddsRoundTrippersCorrectly1(t *testing.T) {
 }
 
 func TestChain_Append_AddsHandlersCorrectly2(t *testing.T) {
-	chain1 := garcon.NewChain(tagMiddleware("t1\n"), tagMiddleware("t2\n"))
-	chain2 := garcon.NewChain(tagMiddleware("t3\n"), tagMiddleware("t4\n"))
+	chain1 := gg.NewChain(tagMiddleware("t1\n"), tagMiddleware("t2\n"))
+	chain2 := gg.NewChain(tagMiddleware("t3\n"), tagMiddleware("t4\n"))
 	newChain := chain1.Append(chain2...)
 
 	if len(chain1) != 2 {
@@ -277,8 +277,8 @@ func TestChain_Append_AddsHandlersCorrectly2(t *testing.T) {
 }
 
 func TestRTChain_Append_AddsRoundTrippersCorrectly2(t *testing.T) {
-	chain1 := garcon.NewRTChain(tagRTMiddleware("t1\n"), tagRTMiddleware("t2\n"))
-	chain2 := garcon.NewRTChain(tagRTMiddleware("t3\n"), tagRTMiddleware("t4\n"))
+	chain1 := gg.NewRTChain(tagRTMiddleware("t1\n"), tagRTMiddleware("t2\n"))
+	chain2 := gg.NewRTChain(tagRTMiddleware("t3\n"), tagRTMiddleware("t4\n"))
 	newChain := chain1.Append(chain2...)
 
 	if len(chain1) != 2 {
@@ -316,7 +316,7 @@ func TestRTChain_Append_AddsRoundTrippersCorrectly2(t *testing.T) {
 }
 
 func TestChain_Append_RespectsImmutability1(t *testing.T) {
-	chain := garcon.NewChain(tagMiddleware(""))
+	chain := gg.NewChain(tagMiddleware(""))
 	newChain := chain.Append(tagMiddleware(""))
 
 	if &chain[0] == &newChain[0] {
@@ -325,7 +325,7 @@ func TestChain_Append_RespectsImmutability1(t *testing.T) {
 }
 
 func TestRTChain_Append_RespectsImmutability1(t *testing.T) {
-	chain := garcon.NewRTChain(tagRTMiddleware(""))
+	chain := gg.NewRTChain(tagRTMiddleware(""))
 	newChain := chain.Append(tagRTMiddleware(""))
 
 	if &chain[0] == &newChain[0] {
@@ -334,8 +334,8 @@ func TestRTChain_Append_RespectsImmutability1(t *testing.T) {
 }
 
 func TestChain_Append_RespectsImmutability2(t *testing.T) {
-	chain := garcon.NewChain(tagMiddleware(""))
-	newChain := chain.Append(garcon.NewChain(tagMiddleware(""))...)
+	chain := gg.NewChain(tagMiddleware(""))
+	newChain := chain.Append(gg.NewChain(tagMiddleware(""))...)
 
 	if &chain[0] == &newChain[0] {
 		t.Error("Append does not respect immutability")
@@ -343,8 +343,8 @@ func TestChain_Append_RespectsImmutability2(t *testing.T) {
 }
 
 func TestRTChain_Append_RespectsImmutability2(t *testing.T) {
-	chain := garcon.NewRTChain(tagRTMiddleware(""))
-	newChain := chain.Append(garcon.NewRTChain(tagRTMiddleware(""))...)
+	chain := gg.NewRTChain(tagRTMiddleware(""))
+	newChain := chain.Append(gg.NewRTChain(tagRTMiddleware(""))...)
 
 	if &chain[0] == &newChain[0] {
 		t.Error("Append does not respect immutability")
@@ -354,7 +354,7 @@ func TestRTChain_Append_RespectsImmutability2(t *testing.T) {
 // tagMiddleware and tagRTMiddleware are constructors for middleware
 // that writes its own "tag" into the request body and does nothing else.
 // Useful in checking if a chain is behaving in the right order.
-func tagMiddleware(tag string) garcon.Middleware {
+func tagMiddleware(tag string) gg.Middleware {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			_, err := w.Write([]byte(tag))
@@ -366,9 +366,9 @@ func tagMiddleware(tag string) garcon.Middleware {
 	}
 }
 
-func tagRTMiddleware(tag string) garcon.RTMiddleware {
+func tagRTMiddleware(tag string) gg.RTMiddleware {
 	return func(rt http.RoundTripper) http.RoundTripper {
-		return garcon.RoundTripperFunc(func(r *http.Request) (*http.Response, error) {
+		return gg.RoundTripperFunc(func(r *http.Request) (*http.Response, error) {
 			err := appendTag(tag, r)
 			if err != nil {
 				return nil, err
@@ -393,7 +393,7 @@ var testApp = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	}
 })
 
-var testRoundTripApp = garcon.RoundTripperFunc(func(r *http.Request) (*http.Response, error) {
+var testRoundTripApp = gg.RoundTripperFunc(func(r *http.Request) (*http.Response, error) {
 	err := appendTag("app\n", r)
 	if err != nil {
 		panic(err)

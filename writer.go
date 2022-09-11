@@ -11,6 +11,9 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
+
+	"github.com/teal-finance/garcon/gg"
 )
 
 const (
@@ -46,49 +49,18 @@ func WriteErr(w http.ResponseWriter, r *http.Request, statusCode int, kv ...any)
 	Writer("").WriteErr(w, r, statusCode, kv...)
 }
 
-func WriteErrSafe(w http.ResponseWriter, r *http.Request, statusCode int, kv ...any) {
-	Writer("").WriteErrSafe(w, r, statusCode, kv...)
-}
-
 func WriteOK(w http.ResponseWriter, kv ...any) {
 	Writer("").WriteOK(w, kv...)
 }
 
-// msg is only used by SafeWrite to generate a fast JSON marshaler.
-type msg struct {
-	Message string // "message" is more common than "error"
-	Doc     string
-	Path    string
-	Query   string
-}
-
-// WriteErrSafe is a safe alternative to Write, may be slower despite the easyjson generated code.
-// Disadvantage: WriteErrSafe concatenates all key-values (kv) in "message" field.
-func (gw Writer) WriteErrSafe(w http.ResponseWriter, r *http.Request, statusCode int, kv ...any) {
-	response := msg{
-		Message: fmt.Sprint(kv...),
-		Doc:     string(gw),
-		Path:    "",
-		Query:   "",
+// TraversalPath returns true when path contains ".." to prevent path traversal attack.
+func (gw Writer) TraversalPath(w http.ResponseWriter, r *http.Request) bool {
+	if strings.Contains(r.URL.Path, "..") {
+		gw.WriteErr(w, r, http.StatusBadRequest, "URL contains '..'")
+		log.Warn("reject path with '..'", gg.Sanitize(r.URL.Path))
+		return true
 	}
-
-	if r != nil {
-		response.Path = r.URL.Path
-		if r.URL.RawQuery != "" {
-			response.Query = r.URL.RawQuery
-		}
-	}
-
-	buf, err := response.MarshalJSON()
-	if err != nil {
-		log.Warn("WriteSafeJSONErr:", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(statusCode)
-	_, _ = w.Write(buf)
+	return false
 }
 
 // WriteErr is a fast pretty-JSON marshaler dedicated to the HTTP error response.

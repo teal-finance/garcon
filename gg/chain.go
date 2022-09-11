@@ -8,7 +8,7 @@
 //
 // SPDX-License-Identifier: MIT
 
-package garcon
+package gg
 
 import (
 	"net/http"

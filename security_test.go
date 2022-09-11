@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/teal-finance/garcon"
+	"github.com/teal-finance/garcon/gg"
 )
 
 func TestPrintableRune(t *testing.T) {
@@ -30,7 +30,7 @@ func TestPrintableRune(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
 
-			if got := garcon.PrintableRune(c.r); got != c.want {
+			if got := gg.PrintableRune(c.r); got != c.want {
 				t.Errorf("PrintableRune(%v) = %v, want %v", c.r, got, c.want)
 			}
 		})
@@ -70,7 +70,7 @@ func TestSplitCleanedLines(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := garcon.SplitCleanedLines(c.arg)
+			got := gg.SplitCleanedLines(c.arg)
 			if !reflect.DeepEqual(got, c.want) {
 				t.Errorf("SplitCleanedLines() = %q, want %q", got, c.want)
 			}

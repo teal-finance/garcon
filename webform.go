@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"strconv"
 
+	"github.com/teal-finance/garcon/gg"
 	"github.com/teal-finance/garcon/notifier"
 )
 
@@ -200,7 +201,7 @@ func (wf *WebForm) valid(name string, values []string) bool {
 func (wf *WebForm) validName(name string) bool {
 	nLen := len(name)
 	if nLen > wf.maxFieldNameLength {
-		name = Sanitize(name)
+		name = gg.Sanitize(name)
 		state := "(sanitized)"
 		maxDisplay := 8 * wf.maxFieldNameLength
 		if nLen > maxDisplay+10 {
@@ -211,8 +212,8 @@ func (wf *WebForm) validName(name string) bool {
 		return false
 	}
 
-	if p := printable(name); p >= 0 {
-		log.Warningf("WebForm: reject name=%q contains a bad character at position %d", Sanitize(name), p)
+	if p := gg.Printable(name); p >= 0 {
+		log.Warningf("WebForm: reject name=%q contains a bad character at position %d", gg.Sanitize(name), p)
 		return false
 	}
 
@@ -244,7 +245,7 @@ func (wf *WebForm) bulletParagraph(str string, maxLines int) string {
 
 	count := 0
 	blank := false
-	txt := SplitCleanedLines(str)
+	txt := gg.SplitCleanedLines(str)
 	for i := range txt {
 		// skip top blank lines, redundant blank lines and bottom blank lines
 		if txt[i] == "" {

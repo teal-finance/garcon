@@ -14,6 +14,8 @@ import (
 	"time"
 
 	"golang.org/x/time/rate"
+
+	"github.com/teal-finance/garcon/gg"
 )
 
 type ReqLimiter struct {
@@ -28,7 +30,7 @@ type visitor struct {
 	limiter  *rate.Limiter
 }
 
-func (g *Garcon) MiddlewareRateLimiter(settings ...int) Middleware {
+func (g *Garcon) MiddlewareRateLimiter(settings ...int) gg.Middleware {
 	var maxReqBurst, maxReqPerMinute int
 
 	switch len(settings) {
@@ -219,7 +221,7 @@ func (ar *AdaptiveRate) get(symbol, url string, msg any, maxBytes ...int) (int, 
 		return resp.StatusCode, errors.New("Too Many Requests " + symbol)
 	}
 
-	if err = DecodeJSONResponse(resp, msg, maxBytes...); err != nil {
+	if err = gg.DecodeJSONResponse(resp, msg, maxBytes...); err != nil {
 		return resp.StatusCode, fmt.Errorf("decode book %s: %w", symbol, err)
 	}
 

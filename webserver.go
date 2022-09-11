@@ -12,6 +12,8 @@ import (
 	"path"
 	"strconv"
 	"strings"
+
+	"github.com/teal-finance/garcon/gg"
 )
 
 // StaticWebServer is a webserver serving static files
@@ -58,7 +60,7 @@ func (ws *StaticWebServer) ServeFile(urlPath, contentType string) func(w http.Re
 // ServeDir handles the static files using the same Content-Type.
 func (ws *StaticWebServer) ServeDir(contentType string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if TraversalPath(w, r) {
+		if ws.Writer.TraversalPath(w, r) {
 			return
 		}
 
@@ -79,7 +81,7 @@ func (ws *StaticWebServer) ServeDir(contentType string) func(w http.ResponseWrit
 // ServeImages detects the Content-Type depending on the image extension.
 func (ws *StaticWebServer) ServeImages() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if TraversalPath(w, r) {
+		if ws.Writer.TraversalPath(w, r) {
 			return
 		}
 
@@ -99,7 +101,7 @@ func (ws *StaticWebServer) ServeImages() func(w http.ResponseWriter, r *http.Req
 // ServeAssets detects the Content-Type depending on the asset extension.
 func (ws *StaticWebServer) ServeAssets() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if TraversalPath(w, r) {
+		if ws.Writer.TraversalPath(w, r) {
 			return
 		}
 
@@ -172,7 +174,7 @@ func (ws *StaticWebServer) send(w http.ResponseWriter, r *http.Request, absPath 
 	if n, err := io.Copy(w, file); err != nil {
 		log.Warn("WebServer: Copy("+absPath+")", err)
 	} else {
-		log.Out("200", r.RemoteAddr, r.Method, absPath, ConvertSize64(n))
+		log.Out("200", r.RemoteAddr, r.Method, absPath, gg.ConvertSize64(n))
 	}
 }
 

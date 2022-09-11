@@ -19,6 +19,7 @@ import (
 
 	"github.com/teal-finance/emo"
 	"github.com/teal-finance/garcon"
+	"github.com/teal-finance/garcon/gg"
 )
 
 var log = emo.NewZone("app")
@@ -56,7 +57,7 @@ func main() {
 	runServer(h, connState)
 }
 
-func setMiddlewares(gw garcon.Writer) (_ garcon.Chain, connState func(net.Conn, http.ConnState), _ []*url.URL) {
+func setMiddlewares(gw garcon.Writer) (_ gg.Chain, connState func(net.Conn, http.ConnState), _ []*url.URL) {
 	// TODO disable --- auth := flag.Bool("auth", false, "Enable OPA authorization specified in file "+authCfg)
 	dev := flag.Bool("dev", true, "Use development or production settings")
 	flag.Parse()
@@ -73,8 +74,8 @@ func setMiddlewares(gw garcon.Writer) (_ garcon.Chain, connState func(net.Conn, 
 		corsConfig = allowedDevOrigins
 	}
 
-	allowedOrigins := garcon.SplitClean(corsConfig)
-	urls := garcon.ParseURLs(allowedOrigins)
+	allowedOrigins := gg.SplitClean(corsConfig)
+	urls := gg.ParseURLs(allowedOrigins)
 
 	middleware = middleware.Append(
 		reqLimiter.MiddlewareRateLimiter,

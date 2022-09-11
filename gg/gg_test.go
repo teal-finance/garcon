@@ -3,13 +3,13 @@
 // an API and website server under the MIT License.
 // SPDX-License-Identifier: MIT
 
-package garcon_test
+package gg_test
 
 import (
 	"reflect"
 	"testing"
 
-	"github.com/teal-finance/garcon"
+	"github.com/teal-finance/garcon/gg"
 )
 
 func clone[T any](slice []T) []T {
@@ -44,7 +44,7 @@ func TestExtractWords(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
 
-			if got := garcon.ExtractWords(c.csv, c.dictionary); !reflect.DeepEqual(got, c.want) {
+			if got := gg.ExtractWords(c.csv, c.dictionary); !reflect.DeepEqual(got, c.want) {
 				t.Errorf("ExtractWords() = %v, want %v", got, c.want)
 			}
 		})

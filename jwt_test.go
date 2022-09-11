@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/teal-finance/garcon"
+	"github.com/teal-finance/garcon/gg"
 )
 
 type next struct {
@@ -98,7 +99,7 @@ func TestNewJWTChecker(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
 
-			urls := garcon.ParseURLs(c.addresses)
+			urls := gg.ParseURLs(c.addresses)
 
 			if c.shouldPanic {
 				defer func() { _ = recover() }()
