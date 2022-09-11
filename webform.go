@@ -25,7 +25,7 @@ type WebForm struct {
 	// The map key is the input field name.
 	// The map value is a pair of integers:
 	// the max length and the max line breaks.
-	// Use 0 to disable any limit.
+	// Zero (or negative) value for unlimited value size.
 	TextLimits map[string][2]int
 
 	// FileLimits is similar to TextLimits
@@ -33,12 +33,16 @@ type WebForm struct {
 	// The map value is a pair of integers:
 	// the max size in runes of one file
 	// and the max occurrences having same field name.
-	// Use 0 to disable any limit.
+	// Zero (or negative) value for unlimited file size.
 	FileLimits map[string][2]int
 
-	// MaxMDLength includes the
-	// form fields and browser fingerprints.
-	MaxMDLength int
+	// MaxMDBytes includes the form fields and browser fingerprints.
+	// Zero (or negative) value disables this security check.
+	MaxMDBytes int
+
+	// MaxBodyBytes limits someone hogging the host resources.
+	// Zero (or negative) value disables this security check.
+	MaxBodyBytes int64
 
 	maxFieldNameLength int
 }
@@ -55,7 +59,8 @@ func NewContactForm(gw Writer, redirectURL string) WebForm {
 		Redirect:           redirectURL,
 		TextLimits:         DefaultContactSettings(),
 		FileLimits:         DefaultFileSettings(),
-		MaxMDLength:        4000,
+		MaxMDBytes:         4000,
+		MaxBodyBytes:       9000,
 		maxFieldNameLength: 0,
 	}
 }
@@ -115,9 +120,13 @@ func (wf *WebForm) Notify(notifierURL string) func(w http.ResponseWriter, r *htt
 	n := notifier.New(notifierURL)
 
 	return func(w http.ResponseWriter, r *http.Request) {
+		if wf.MaxBodyBytes > 0 {
+			r.Body = http.MaxBytesReader(w, r.Body, wf.MaxBodyBytes)
+		}
+
 		err := r.ParseForm()
 		if err != nil {
-			log.Warn("WebForm ParseForm:", err)
+			log.Warning("WebForm ParseForm:", err)
 			wf.Writer.WriteErr(w, r, http.StatusInternalServerError, "Cannot parse the webform")
 			return
 		}
@@ -125,7 +134,7 @@ func (wf *WebForm) Notify(notifierURL string) func(w http.ResponseWriter, r *htt
 		md := wf.toMarkdown(r)
 		err = n.Notify(md)
 		if err != nil {
-			log.Warn("WebForm Notify:", err)
+			log.Warning("WebForm Notify:", err)
 			wf.Writer.WriteErr(w, r, http.StatusInternalServerError, "Cannot store webform data")
 			return
 		}
@@ -137,8 +146,8 @@ func (wf *WebForm) Notify(notifierURL string) func(w http.ResponseWriter, r *htt
 func (wf *WebForm) toMarkdown(r *http.Request) string {
 	log.Infof("WebForm with %d input fields", len(r.Form))
 	md := wf.formMD(r.Form) + FingerprintMD(r)
-	if extra := overflow25(len(md), wf.MaxMDLength); extra > 0 {
-		md = md[:wf.MaxMDLength] + "\n\n" +
+	if extra := overflow25(len(md), wf.MaxMDBytes); extra > 0 {
+		md = md[:wf.MaxMDBytes] + "\n\n" +
 			"(cut last " + strconv.Itoa(extra) + " characters)"
 	}
 	return md
@@ -155,7 +164,7 @@ func (wf *WebForm) formMD(fields url.Values) string {
 		max, ok := wf.TextLimits[name]
 		maxLen, maxLines := max[0], max[1]
 		if !ok {
-			log.Warnf("WebForm: reject name=%s not in allowlist", name)
+			log.Warningf("WebForm: reject name=%s not in allowlist", name)
 			continue
 		}
 
@@ -182,7 +191,7 @@ func (wf *WebForm) valid(name string, values []string) bool {
 	}
 
 	if len(values) != 1 {
-		log.Warnf("WebForm: reject name=%s because "+
+		log.Warningf("WebForm: reject name=%s because "+
 			"received %d input field(s) while expected only one", name, len(values))
 		return false
 	}
@@ -200,17 +209,17 @@ func (wf *WebForm) validName(name string) bool {
 			name = name[:maxDisplay]
 			state = "(sanitized and cut)"
 		}
-		log.Warnf("WebForm: reject name=%q %s too long (%d > %d)", name, state, nLen, wf.maxFieldNameLength)
+		log.Warningf("WebForm: reject name=%q %s too long (%d > %d)", name, state, nLen, wf.maxFieldNameLength)
 		return false
 	}
 
 	if p := printable(name); p >= 0 {
-		log.Warnf("WebForm: reject name=%q contains a bad character at position %d", Sanitize(name), p)
+		log.Warningf("WebForm: reject name=%q contains a bad character at position %d", Sanitize(name), p)
 		return false
 	}
 
 	if _, ok := wf.FileLimits[name]; ok {
-		log.Warnf("WebForm: skip name=%s because file not yet supported (TODO)", name)
+		log.Warningf("WebForm: skip name=%s because file not yet supported (TODO)", name)
 		return false
 	}
 
