@@ -36,13 +36,13 @@ type WebForm struct {
 	// Zero (or negative) value for unlimited file size.
 	FileLimits map[string][2]int
 
-	// MaxMDBytes includes the form fields and browser fingerprints.
-	// Zero (or negative) value disables this security check.
-	MaxMDBytes int
-
 	// MaxBodyBytes limits someone hogging the host resources.
 	// Zero (or negative) value disables this security check.
 	MaxBodyBytes int64
+
+	// MaxMDBytes includes the form fields and browser fingerprints.
+	// Zero (or negative) value disables this security check.
+	MaxMDBytes int
 
 	maxFieldNameLength int
 }
@@ -59,8 +59,8 @@ func NewContactForm(gw Writer, redirectURL string) WebForm {
 		Redirect:           redirectURL,
 		TextLimits:         DefaultContactSettings(),
 		FileLimits:         DefaultFileSettings(),
+		MaxBodyBytes:       5555,
 		MaxMDBytes:         4000,
-		MaxBodyBytes:       9000,
 		maxFieldNameLength: 0,
 	}
 }
@@ -71,7 +71,7 @@ func DefaultContactSettings() map[string][2]int {
 	return map[string][2]int{
 		"name":      {60, 1},
 		"email":     {60, 1},
-		"text":      {900, 20},
+		"text":      {3000, 80},
 		"org-type":  {20, 1},
 		"tel":       {30, 1},
 		"want-call": {10, 1},
@@ -127,7 +127,7 @@ func (wf *WebForm) Notify(notifierURL string) func(w http.ResponseWriter, r *htt
 		err := r.ParseForm()
 		if err != nil {
 			log.Warning("WebForm ParseForm:", err)
-			wf.Writer.WriteErr(w, r, http.StatusInternalServerError, "Cannot parse the webform")
+			wf.Writer.WriteErr(w, r, http.StatusBadRequest, "cannot parse the webform", "reason", err.Error())
 			return
 		}
 
@@ -135,8 +135,6 @@ func (wf *WebForm) Notify(notifierURL string) func(w http.ResponseWriter, r *htt
 		err = n.Notify(md)
 		if err != nil {
 			log.Warning("WebForm Notify:", err)
-			wf.Writer.WriteErr(w, r, http.StatusInternalServerError, "Cannot store webform data")
-			return
 		}
 
 		http.Redirect(w, r, wf.Redirect, http.StatusFound)
@@ -256,14 +254,14 @@ func (wf *WebForm) bulletParagraph(str string, maxLines int) string {
 			continue
 		}
 
-		count++
 		if blank {
-			count++
+			blank = false
 			md += lineBreak + "\n\n" + bulletIndent
 		} else if md != "" {
 			md += lineBreak + "\n" + bulletIndent
 		}
 		md += txt[i]
+		count++
 
 		remaining := len(txt) - i
 		if (count > maxLines) && (maxLines > 0) && (remaining > maxLines/2) {
