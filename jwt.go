@@ -7,18 +7,13 @@ package garcon
 
 import (
 	"context"
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/base64"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"path"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/teal-finance/garcon/timex"
@@ -55,22 +50,22 @@ type Perm struct {
 }
 
 type JWTChecker struct {
-	gw        Writer
-	secretKey []byte
-	perms     []Perm
-	plans     []string
-	cookies   []http.Cookie
+	gw       Writer
+	verifier tokens.GenVerifier
+	perms    []Perm
+	plans    []string
+	cookies  []http.Cookie
 }
 
-func NewJWTChecker(gw Writer, urls []*url.URL, secretKey []byte, permissions ...any) *JWTChecker {
-	plans, perms := checkParameters(secretKey, permissions...)
+func NewJWTChecker(gw Writer, urls []*url.URL, secretKey string, permissions ...any) *JWTChecker {
+	plans, perms := checkParameters(permissions...)
 
 	ck := &JWTChecker{
-		gw:        gw,
-		secretKey: secretKey,
-		plans:     plans,
-		perms:     perms,
-		cookies:   make([]http.Cookie, len(plans)),
+		gw:       gw,
+		verifier: tokens.NewHMACVerifier(secretKey),
+		plans:    plans,
+		perms:    perms,
+		cookies:  make([]http.Cookie, len(plans)),
 	}
 
 	secure, dns, dir := extractCookieAttributes(urls)
@@ -101,7 +96,7 @@ func NewAccessToken(maxTTL, user string, groups, orgs []string, hexKey string) s
 }
 
 func (ck *JWTChecker) NewCookie(name, plan, user string, secure bool, dns, dir string) http.Cookie {
-	JWT, err := tokens.GenAccessToken("1y", "1y", user, []string{plan}, nil, ck.secretKey)
+	JWT, err := ck.verifier.GenAccessToken("1y", "1y", user, []string{plan}, nil)
 	if err != nil || JWT == "" {
 		log.Panic("Cannot create JWT:", err)
 	}
@@ -189,11 +184,7 @@ func (ck *JWTChecker) Vet(next http.Handler) http.Handler {
 	})
 }
 
-func checkParameters(secretKey []byte, permissions ...any) ([]string, []Perm) {
-	if len(secretKey) != 32 {
-		log.Panic("Want HMAC-SHA256 key containing 32 bytes, but got", len(secretKey))
-	}
-
+func checkParameters(permissions ...any) ([]string, []Perm) {
 	n := len(permissions)
 	if n == 0 {
 		return []string{DefaultPlan}, []Perm{{Value: DefaultPerm}}
@@ -326,14 +317,14 @@ func (ck *JWTChecker) PermFromJWT(JWT string) (Perm, []any) {
 		}
 	}
 
-	claimsJSON, err := ck.claimsFromJWT(JWT)
+	claims, err := ck.verifier.Claims(JWT)
 	if err != nil {
 		return Perm{}, []any{err}
 	}
 
-	perm, err := ck.permFromAccessBytes(claimsJSON)
+	perm, err := ck.permFromAccessClaims(claims)
 	if err != nil {
-		return perm, []any{err} // TODO: ErrExpiredToken
+		return perm, []any{err}
 	}
 
 	return perm, nil
@@ -358,59 +349,6 @@ func (ck *JWTChecker) permFromAccessClaims(claims *tokens.AccessClaims) (Perm, e
 
 	return Perm{}, fmt.Errorf("cannot find any of %v within the JWT claims groups=%s, and cannot convert any group to integer",
 		Sanitize(claims.Groups...), ck.plans)
-}
-
-func (ck *JWTChecker) claimsFromJWT(JWT string) ([]byte, error) {
-	// decompose JWT in three parts
-	parts := strings.Split(JWT, ".")
-	if len(parts) != 3 {
-		return nil, fmt.Errorf("the JWT consists in %d parts, "+
-			"must be 3 parts separated by dots", len(parts))
-	}
-
-	if err := ck.verifySignature(parts); err != nil {
-		return nil, err
-	}
-
-	claimsJSON, err := base64.RawURLEncoding.DecodeString(parts[1])
-	if err != nil {
-		return nil, ErrNoBase64JWT
-	}
-
-	return claimsJSON, nil
-}
-
-// verifySignature of HS256 tokens.
-func (ck *JWTChecker) verifySignature(parts []string) error {
-	signingTxt := strings.Join(parts[0:2], ".")
-	signature := ck.sign(signingTxt)
-	if signature != parts[2] { // parts[2] = JWT signature
-		return ErrJWTSignature
-	}
-	return nil
-}
-
-func (ck *JWTChecker) permFromAccessBytes(claimsJSON []byte) (Perm, error) {
-	var claims tokens.AccessClaims
-	if err := json.Unmarshal(claimsJSON, &claims); err != nil {
-		return Perm{}, fmt.Errorf("%w while unmarshaling AccessClaims: "+
-			Sanitize(string(claimsJSON)), err)
-	}
-
-	if err := claims.Valid(); err != nil {
-		return Perm{}, fmt.Errorf("%w in AccessClaims: "+
-			Sanitize(string(claimsJSON)), err)
-	}
-
-	return ck.permFromAccessClaims(&claims)
-}
-
-// sign return the signature of the signingString.
-// It allocates hmac.New() each time to avoid race condition.
-func (ck *JWTChecker) sign(signingString string) string {
-	h := hmac.New(sha256.New, ck.secretKey)
-	_, _ = h.Write([]byte(signingString))
-	return base64.RawURLEncoding.EncodeToString(h.Sum(nil))
 }
 
 // --------------------------------------

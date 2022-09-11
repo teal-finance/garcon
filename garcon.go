@@ -223,20 +223,14 @@ func (g *Garcon) JWTChecker(secretKeyHex string, planPerm ...any) *JWTChecker {
 		log.Panic("Missing URLs => Set first the URLs with garcon.WithURLs()")
 	}
 
-	if len(secretKeyHex) != 64 {
-		log.Panic("Want HMAC-SHA256 key composed by 64 hexadecimal digits, but got", len(secretKeyHex))
-	}
-	key, err := hex.DecodeString(secretKeyHex)
-	if err != nil {
-		log.Panic("Cannot decode the HMAC-SHA256 key, please provide 64 hexadecimal digits:", err)
-	}
-
-	return NewJWTChecker(g.Writer, g.urls, key, planPerm...)
+	return NewJWTChecker(g.Writer, g.urls, secretKeyHex, planPerm...)
 }
 
 // OverwriteBufferContent is to erase a secret when it is no longer required.
 func OverwriteBufferContent(b []byte) {
 	//nolint:gosec // does not matter if written bytes are not good random values
+	// "math/rand" is 40 times faster than "crypto/rand"
+	// see: https://github.com/SimonWaldherr/golang-benchmarks#random
 	_, _ = rand.Read(b)
 }
 

@@ -7,8 +7,6 @@ package garcon_test
 
 import (
 	"context"
-	"encoding/hex"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -101,16 +99,12 @@ func TestNewJWTChecker(t *testing.T) {
 			t.Parallel()
 
 			urls := garcon.ParseURLs(c.addresses)
-			secretKey, err := hex.DecodeString(c.secretHex)
-			if err != nil {
-				log.Panic(err)
-			}
 
 			if c.shouldPanic {
 				defer func() { _ = recover() }()
 			}
 
-			ck := garcon.NewJWTChecker(c.gw, urls, secretKey, c.permissions...)
+			ck := garcon.NewJWTChecker(c.gw, urls, c.secretHex, c.permissions...)
 
 			if c.shouldPanic {
 				t.Errorf("NewChecker() did not panic")

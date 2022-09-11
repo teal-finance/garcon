@@ -9,7 +9,6 @@
 package main
 
 import (
-	"encoding/hex"
 	"flag"
 	"net"
 	"net/http"
@@ -49,16 +48,8 @@ func main() {
 
 	middleware, connState, urls := setMiddlewares(gw)
 
-	key, err := hex.DecodeString(hmacSHA256Hex)
-	if err != nil {
-		log.Panic("Cannot decode the HMAC-SHA256 key, please provide hexadecimal format (64 characters)", err)
-	}
-	if len(key) != 32 {
-		log.Panic("Want HMAC-SHA256 key containing 32 bytes, but got", len(key))
-	}
-
 	// Handles both REST API and static web files
-	h := handler(gw, garcon.NewJWTChecker(gw, urls, key))
+	h := handler(gw, garcon.NewJWTChecker(gw, urls, hmacSHA256Hex))
 	h = middleware.Then(h)
 
 	log.Init("-------------- Open http://localhost:8080/myapp --------------")
