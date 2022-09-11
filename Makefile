@@ -5,7 +5,7 @@ help:
 	# make fmt    Update generated code and Format code
 	# make test   Check build and Test
 	# make vet    Lint and Run examples
-	# make cov    Visualize the code coverage
+	# make cov    Browse test coverage
 
 .PHONY: all
 all: up fmt test vet cov
@@ -31,10 +31,10 @@ fmt:
 .PHONY: test
 test:
 	go build ./...
-	go test -race -vet all -tags=emo -coverprofile=code-coverage.out ./...
+	go test -race -vet all -tags=garcon -coverprofile=code-coverage.out ./...
 
 code-coverage.out: go.sum */*.go
-	go test -race -vet all -tags=emo -coverprofile=code-coverage.out ./...
+	go test -race -vet all -tags=garcon -coverprofile=code-coverage.out ./...
 
 .PHONY: cov
 cov: code-coverage.out
