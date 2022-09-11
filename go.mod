@@ -15,7 +15,7 @@ require (
 	github.com/rs/cors v1.8.2
 	github.com/teal-finance/emo v0.0.0-20220908102640-66d9abfb8bac
 	github.com/teal-finance/incorruptible v0.0.0-20220905202129-2764bbcba352
-	github.com/teal-finance/quid v0.0.0-20220911020459-f7a0f3b703e5
+	github.com/teal-finance/quid v0.0.0-20220911092509-394ef144b347
 	github.com/zhangyunhao116/fastrand v0.3.0
 	golang.org/x/time v0.0.0-20220722155302-e5dcc9cfc0b9
 )
