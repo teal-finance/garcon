@@ -12,12 +12,11 @@ import (
 	"strconv"
 
 	"github.com/teal-finance/garcon/gg"
-	"github.com/teal-finance/garcon/notifier"
 )
 
 type WebForm struct {
 	Writer   Writer
-	Notifier notifier.Notifier
+	Notifier gg.Notifier
 	Redirect string
 
 	// TextLimits are used as security limits
@@ -118,7 +117,7 @@ func (wf *WebForm) init() {
 func (wf *WebForm) Notify(notifierURL string) func(w http.ResponseWriter, r *http.Request) {
 	wf.init()
 
-	n := notifier.New(notifierURL)
+	n := gg.NewNotifier(notifierURL)
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		if wf.MaxBodyBytes > 0 {
