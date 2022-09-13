@@ -218,7 +218,7 @@ func writeJSON(w http.ResponseWriter) {
 		w.WriteHeader(http.StatusNoContent)
 	} else {
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(b)
+		w.Write(b)
 	}
 }
 

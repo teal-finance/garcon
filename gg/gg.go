@@ -31,7 +31,7 @@ func OverwriteBufferContent(b []byte) {
 	//nolint:gosec // does not matter if written bytes are not good random values
 	// "math/rand" is 40 times faster than "crypto/rand"
 	// see: https://github.com/SimonWaldherr/golang-benchmarks#random
-	_, _ = rand.Read(b)
+	rand.Read(b)
 }
 
 // SplitClean splits the values and sanitize them.

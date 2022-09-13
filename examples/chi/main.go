@@ -52,10 +52,10 @@ func main() {
 
 func post(w http.ResponseWriter, _ *http.Request) {
 	log.Info("router.Post()")
-	_, _ = w.Write([]byte("<html><body> router.Post() </body></html>"))
+	w.Write([]byte("<html><body> router.Post() </body></html>"))
 }
 
 func others(w http.ResponseWriter, _ *http.Request) {
 	log.Info("router.NotFound()")
-	_, _ = w.Write([]byte("<html><body> router.MethodNotAllowed() </body></html>"))
+	w.Write([]byte("<html><body> router.MethodNotAllowed() </body></html>"))
 }

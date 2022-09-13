@@ -147,5 +147,5 @@ func handler(gw garcon.Writer, c *garcon.JWTChecker) http.Handler {
 
 func items(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	_, _ = w.Write([]byte(`["item1","item2","item3"]`))
+	w.Write([]byte(`["item1","item2","item3"]`))
 }

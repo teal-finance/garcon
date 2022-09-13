@@ -90,7 +90,7 @@ func (gw Writer) WriteErr(w http.ResponseWriter, r *http.Request, statusCode int
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
-	_, _ = w.Write(buf)
+	w.Write(buf)
 }
 
 // WriteOK is a fast pretty-JSON marshaler dedicated to the HTTP successful response.
@@ -119,7 +119,7 @@ func (gw Writer) WriteOK(w http.ResponseWriter, kv ...any) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write(buf)
+	w.Write(buf)
 }
 
 func appendMessages(buf []byte, kv []any) (_ []byte, comma bool) {

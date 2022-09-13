@@ -52,12 +52,12 @@ func main() {
 
 func post(w http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
 	log.Info("router.Post")
-	_, _ = w.Write([]byte("<html><body> router.Post </body></html>"))
+	w.Write([]byte("<html><body> router.Post </body></html>"))
 }
 
 type others struct{}
 
 func (others) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
 	log.Info("router.NotFound")
-	_, _ = w.Write([]byte("<html><body> router.NotFound </body></html>"))
+	w.Write([]byte("<html><body> router.NotFound </body></html>"))
 }
