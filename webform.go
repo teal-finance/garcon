@@ -117,7 +117,7 @@ func (wf *WebForm) init() {
 func (wf *WebForm) Notify(notifierURL string) func(w http.ResponseWriter, r *http.Request) {
 	wf.init()
 
-	n := gg.NewNotifier(notifierURL)
+	notifier := gg.NewNotifier(notifierURL)
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		if wf.MaxBodyBytes > 0 {
@@ -132,7 +132,7 @@ func (wf *WebForm) Notify(notifierURL string) func(w http.ResponseWriter, r *htt
 		}
 
 		md := wf.toMarkdown(r)
-		err = n.Notify(md)
+		err = notifier.Notify(md)
 		if err != nil {
 			log.Warning("WebForm Notify:", err)
 		}
