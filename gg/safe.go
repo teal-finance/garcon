@@ -235,11 +235,11 @@ func Printable(array ...string) int {
 }
 
 func RandomBytes(n int) []byte {
-	key := make([]byte, n)
-	if _, err := rand.Read(key); err != nil {
-		log.Panic("RandomBytes:", err)
+	b := make([]byte, n)
+	if _, err := rand.Read(b); err != nil {
+		log.Panicf("RandomBytes(%d) %s", n, err)
 	}
-	return key
+	return b
 }
 
 //nolint:gochecknoglobals // set at startup time, used as constant during runtime
