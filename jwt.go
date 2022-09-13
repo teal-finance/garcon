@@ -323,7 +323,7 @@ func (ck *JWTChecker) PermFromJWT(JWT string) (Perm, []any) {
 		}
 	}
 
-	claims, err := ck.tokenizer.Claims(JWT)
+	claims, err := ck.tokenizer.Claims([]byte(JWT))
 	if err != nil {
 		return Perm{}, []any{err}
 	}

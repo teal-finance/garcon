@@ -13,9 +13,9 @@ require (
 	github.com/pkg/profile v1.6.0
 	github.com/prometheus/client_golang v1.13.0
 	github.com/rs/cors v1.8.2
-	github.com/teal-finance/emo v0.0.0-20220908102640-66d9abfb8bac
+	github.com/teal-finance/emo v0.0.0-20220911224233-8a59de6c9132
 	github.com/teal-finance/incorruptible v0.0.0-20220911120629-83c603e0c8b9
-	github.com/teal-finance/quid v0.0.0-20220911092509-394ef144b347
+	github.com/teal-finance/quid v0.0.0-20220913001019-5655df9970a1
 	github.com/zhangyunhao116/fastrand v0.3.0
 	golang.org/x/time v0.0.0-20220722155302-e5dcc9cfc0b9
 )
