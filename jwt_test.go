@@ -13,6 +13,7 @@ import (
 
 	"github.com/teal-finance/garcon"
 	"github.com/teal-finance/garcon/gg"
+	"github.com/teal-finance/quid/tokens"
 )
 
 type next struct {
@@ -111,7 +112,11 @@ func TestNewJWTChecker(t *testing.T) {
 				t.Errorf("NewChecker() did not panic")
 			}
 
-			cookie := ck.NewCookie("g", c.plan, "Jonh Doe", false, c.addresses[0][6:], "/")
+			tokenizer, err := tokens.NewHMAC(c.secretHex, true)
+			if err != nil {
+				t.Fatal("tokens.NewHMAC err:", err)
+			}
+			cookie := garcon.NewCookie(tokenizer, "g", c.plan, "Jonh Doe", false, c.addresses[0][6:], "/")
 
 			r, err := http.NewRequestWithContext(context.Background(), http.MethodGet, c.addresses[0], http.NoBody)
 			if err != nil {

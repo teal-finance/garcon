@@ -51,33 +51,41 @@ type Perm struct {
 }
 
 type JWTChecker struct {
-	gw        Writer
-	tokenizer tokens.Tokenizer
-	perms     []Perm
-	plans     []string
-	cookies   []http.Cookie
+	gw       Writer
+	verifier tokens.Verifier
+	perms    []Perm
+	plans    []string
+	cookies  []http.Cookie
 }
 
-func NewJWTChecker(gw Writer, urls []*url.URL, secretKey string, permissions ...any) *JWTChecker {
+func NewJWTChecker(gw Writer, urls []*url.URL, key string, permissions ...any) *JWTChecker {
 	plans, perms := checkParameters(permissions...)
 
-	tokenizer, err := tokens.NewHMAC(secretKey)
+	var verifier tokens.Verifier
+	tokenizer, err := tokens.NewHMAC(key, true)
+	if err == nil {
+		verifier, err = tokens.NewVerifier(key, true)
+	} else {
+		verifier = tokenizer
+	}
 	if err != nil {
 		log.Panic(err)
 	}
 
 	ck := &JWTChecker{
-		gw:        gw,
-		tokenizer: tokenizer,
-		plans:     plans,
-		perms:     perms,
-		cookies:   make([]http.Cookie, len(plans)),
+		gw:       gw,
+		verifier: verifier,
+		plans:    plans,
+		perms:    perms,
+		cookies:  make([]http.Cookie, len(plans)),
 	}
 
-	secure, dns, dir := extractCookieAttributes(urls)
-	dns, name := forgeCookieName(secure, dns, dir)
-	for i := range plans {
-		ck.cookies[i] = ck.NewCookie(name, plans[i], "", secure, dns, dir)
+	if tokenizer != nil {
+		secure, dns, dir := extractCookieAttributes(urls)
+		dns, name := forgeCookieName(secure, dns, dir)
+		for i := range plans {
+			ck.cookies[i] = NewCookie(tokenizer, name, plans[i], "", secure, dns, dir)
+		}
 	}
 
 	return ck
@@ -101,8 +109,8 @@ func NewAccessToken(maxTTL, user string, groups, orgs []string, hexKey string) s
 	return token
 }
 
-func (ck *JWTChecker) NewCookie(name, plan, user string, secure bool, dns, dir string) http.Cookie {
-	JWT, err := ck.tokenizer.GenAccessToken("1y", "1y", user, []string{plan}, nil)
+func NewCookie(tokenizer tokens.Tokenizer, name, plan, user string, secure bool, dns, dir string) http.Cookie {
+	JWT, err := tokenizer.GenAccessToken("1y", "1y", user, []string{plan}, nil)
 	if err != nil || JWT == "" {
 		log.Panic("Cannot create JWT:", err)
 	}
@@ -323,7 +331,7 @@ func (ck *JWTChecker) PermFromJWT(JWT string) (Perm, []any) {
 		}
 	}
 
-	claims, err := ck.tokenizer.Claims([]byte(JWT))
+	claims, err := ck.verifier.Claims([]byte(JWT))
 	if err != nil {
 		return Perm{}, []any{err}
 	}
