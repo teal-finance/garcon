@@ -15,7 +15,7 @@ require (
 	github.com/rs/cors v1.8.2
 	github.com/teal-finance/emo v0.0.0-20220911224233-8a59de6c9132
 	github.com/teal-finance/incorruptible v0.0.0-20220911120629-83c603e0c8b9
-	github.com/teal-finance/quid v0.0.0-20220913001019-5655df9970a1
+	github.com/teal-finance/quid v0.0.0-20220913235137-5a5ac8c8d86f
 	github.com/zhangyunhao116/fastrand v0.3.0
 	golang.org/x/time v0.0.0-20220722155302-e5dcc9cfc0b9
 )
@@ -38,6 +38,6 @@ require (
 	github.com/prometheus/common v0.37.0 // indirect
 	github.com/prometheus/procfs v0.8.0 // indirect
 	golang.org/x/net v0.0.0-20220909164309-bea034e7d591 // indirect
-	golang.org/x/sys v0.0.0-20220909162455-aba9fc2a8ff2 // indirect
+	golang.org/x/sys v0.0.0-20220913175220-63ea55921009 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 )
