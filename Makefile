@@ -43,8 +43,8 @@ cov: code-coverage.out
 .PHONY: vet
 vet:
 	go run github.com/golangci/golangci-lint/cmd/golangci-lint@latest run --fix || true
-	go run ./examples/complete || true
-	go run ./examples/low-level || true
-	go run ./examples/keystore || true
-	go run ./examples/httprouten || true
-	go run ./examples/chi || true
+	go run -race ./examples/complete || true
+	go run -race ./examples/low-level || true
+	go run -race ./examples/keystore || true
+	go run -race ./examples/httprouten || true
+	go run -race ./examples/chi || true
