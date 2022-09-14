@@ -209,7 +209,7 @@ import "github.com/teal-finance/garcon"
 
 func main() {
     defer garcon.ProbeCPU().Stop() // collects the CPU-profile and writes it in the file "cpu.pprof"
-    
+
     garcon.LogVersion()     // log the Git version
     garcon.SetVersionFlag() // the -version flag prints the Git version
     jwt := flag.Bool("jwt", false, "Use JWT in lieu of the Incorruptible token")
@@ -257,21 +257,51 @@ func main() {
 
 ```sh
 cd garcon
-go build -race ./examples/complete && ./complete
+go run -race ./examples/complete
 ```
 
 ```log
-2022/01/29 17:31:26 Prometheus export http://localhost:9093
-2022/01/29 17:31:26 CORS: Set origin prefixes: [http://localhost:8080 http://localhost: http://192.168.1.]
-2022/01/29 17:31:26 CORS: Methods=[GET POST] Headers=[Origin Accept Content-Type Authorization Cookie] Credentials=true MaxAge=86400
-2022/01/29 17:31:26 Enable PProf endpoints: http://localhost:8093/debug/pprof
-2022/01/29 17:31:26 Create cookie plan=FreePlan domain=localhost secure=false myapp=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuIjoiRnJlZVBsYW4iLCJleHAiOjE2NzUwMDk4ODZ9.hiQQuFxNghrrCvvzEsXzN1lWTavL09Plx0dhFynrBxc
-2022/01/29 17:31:26 Create cookie plan=PremiumPlan domain=localhost secure=false myapp=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuIjoiUHJlbWl1bVBsYW4iLCJleHAiOjE2NzUwMDk4ODZ9.iP587iHjhLmX_8yMhuQfKu9q7qLbLE7UX-UgkL_VYhE
-2022/01/29 17:31:26 JWT not required for dev. origins: [http://localhost:8080 http://localhost: http://192.168.1.]
-2022/01/29 17:31:26 Middleware response HTTP header: Set Server MyApp-1.2.0
-2022/01/29 17:31:26 Middleware MiddlewareRateLimiter: burst=100 rate=5/s
-2022/01/29 17:31:26 Middleware logger: requester IP and requested URL
-2022/01/29 17:31:26 Server listening on http://localhost:8080
+garcon ℹ️  Probing CPU. To visualize the profile: pprof -http=: cpu.pprof
+2022/09/14 18:43:05 profile: cpu profiling enabled, cpu.pprof
+garcon 🎬  Version: devel
+garcon ℹ️  Enable PProf endpoints: http://localhost:8093/debug/pprof
+incorr 🔒  DevMode accepts missing/invalid token from http://localhost:8080/myapp
+incorr 🔒  cookie myapp Domain=localhost Path=/myapp Max-Age=60 Secure=false SameSite=3 HttpOnly=true Value=0 bytes
+garcon ℹ️  Prometheus export http://localhost:9093 namespace=myapp
+garcon 🔒  CORS Allow origin prefixes: [http://localhost:8080 http://localhost: http://192.168.1.]
+garcon 🔒  CORS Methods: [GET POST DELETE]
+garcon 🔒  CORS Headers: [Origin Content-Type Authorization]
+garcon 🔒  CORS Credentials=true MaxAge=86400
+incorr 🔒  Middleware Incorruptible.Set cookie "myapp" MaxAge=60 setIP=true
+incorr 🔒  Middleware Incorruptible.Set cookie "myapp" MaxAge=60 setIP=true
+incorr 🔒  Middleware Incorruptible.Chk cookie DevMode= true
+incorr 🔒  Middleware Incorruptible.Chk cookie DevMode= true
+incorr 🔒  Middleware Incorruptible.Chk cookie DevMode= true
+incorr 🔒  Middleware Incorruptible.Chk cookie DevMode= true
+garcon ℹ️  Middleware WebForm redirects to http://localhost:8080/myapp
+garcon ℹ️  empty URL => use the FakeNotifier
+incorr 🔒  Middleware Incorruptible.Set cookie "myapp" MaxAge=60 setIP=true
+incorr 🔒  Middleware Incorruptible.Vet cookie/bearer DevMode= true
+incorr 🔒  Middleware Incorruptible.Vet cookie/bearer DevMode= true
+incorr 🔒  Middleware Incorruptible.Vet cookie/bearer DevMode= true
+garcon ℹ️  MiddlewareLogDurationSafe: logs requester IP, sanitized URL and duration
+garcon ℹ️  MiddlewareServerHeader sets the HTTP header Server=MyApp-devel in the responses
+garcon ℹ️  MiddlewareRateLimiter burst=40 rate=2.67/s
+garcon ℹ️  MiddlewareLogFingerprint: 
+1. Accept-Language, the language preferred by the user. 
+2. User-Agent, name and version of the browser and OS. 
+3. R=Referer, the website from which the request originated. 
+4. A=Accept, the content types the browser prefers. 
+5. E=Accept-Encoding, the compression formats the browser supports. 
+6. Connection, can be empty, "keep-alive" or "close". 
+7. Cache-Control, how the browser is caching data. 
+8. URI=Upgrade-Insecure-Requests, the browser can upgrade from HTTP to HTTPS. 
+9. Via avoids request loops and identifies protocol capabilities. 
+10. Authorization or Cookie (both should not be present at the same time). 
+11. DNT (Do Not Track) is being dropped by web browsers.
+garcon ℹ️  MiddlewareRejectUnprintableURI rejects URI having line breaks or unprintable characters
+app    🎬  -------------- Open http://localhost:8080/myapp --------------
+garcon 📰  Server listening on http://localhost:8080
 ```
 
 ### 2. Embedded PProf server
@@ -353,7 +383,7 @@ Attention, in this example we use two redundant middleware pieces using the same
 This is just an example, don't be confused.
 
 ```sh
-go build -race ./examples/complete && ./complete -auth
+go run -race ./examples/complete -auth
 ```
 
 ```log
@@ -371,7 +401,7 @@ default allow = false
 tokens := {"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuIjoiRnJlZVBsYW4iLCJleHAiOjE2Njk5NjQ0ODh9.elDm_t4vezVgEmS8UFFo_spLJTts7JWybzbyO_aYV3Y"} { true }
 allow = true { __local0__ = input.token; data.auth.tokens[__local0__] }]
 2021/12/02 08:09:47 Middleware response HTTP header: Set Server MyBackendName-1.2.0
-2021/12/02 08:09:47 Middleware MiddlewareRateLimiter: burst=100 rate=5/s
+2021/12/02 08:09:47 MiddlewareRateLimiter burst=100 rate=5/s
 2021/12/02 08:09:47 Middleware logger: requester IP and requested URL
 2021/12/02 08:09:47 Server listening on http://localhost:8080
 ```
@@ -590,8 +620,7 @@ providing private storage for each client identified by its unique IP.
 
 ```sh
 cd garcon
-go build ./examples/keystore
-./keystore
+go run -race ./examples/keystore
 ```
 
 Then open <http://localhost:8080> to learn more about the implemented features.
