@@ -67,14 +67,14 @@ func (g *Garcon) MiddlewareOPA(opaFilenames ...string) Middleware {
 	}
 	policy, err := NewPolicy(g.Writer, opaFilenames)
 	if err != nil {
-		log.Panic("WithOPA: cannot create OPA Policy: ", err)
+		log.Panic("WithOPA: cannot create OPA Policy:", err)
 	}
 	return policy.MiddlewareOPA
 }
 
 // MiddlewareOPA is the HTTP middleware to check endpoint authorization.
 func (opa Policy) MiddlewareOPA(next http.Handler) http.Handler {
-	log.Print("INF MiddlewareOPA: ", opa.compiler.Modules)
+	log.Print("INF MiddlewareOPA:", opa.compiler.Modules)
 
 	compiler := opa.compiler
 	gw := opa.gw
@@ -96,14 +96,14 @@ func (opa Policy) MiddlewareOPA(next http.Handler) http.Handler {
 		rs, err := rg.Eval(context.Background())
 		if err != nil || len(rs) == 0 {
 			gw.WriteErr(w, r, http.StatusInternalServerError, "Cannot evaluate autorisation settings")
-			log.Print("ERR OPA Eval: ", err)
+			log.Print("ERR OPA Eval:", err)
 			return
 		}
 
 		allow, ok := rs[0].Expressions[0].Value.(bool)
 		if !ok {
 			gw.WriteErr(w, r, http.StatusInternalServerError, "Missing autorisation settings")
-			log.Print("ERR missing OPA data in ", rs)
+			log.Print("ERR missing OPA data in", rs)
 			return
 		}
 
