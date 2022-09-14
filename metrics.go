@@ -262,7 +262,6 @@ func MiddlewareLogFingerprint(next http.Handler) http.Handler {
 
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			// double space after "in" is for padding with "out" logs
 			log.In(ipMethodURL(r) + fingerprint(r))
 			next.ServeHTTP(w, r)
 		})
@@ -274,7 +273,6 @@ func MiddlewareLogFingerprintSafe(next http.Handler) http.Handler {
 
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			// double space after "in" is for padding with "out" logs
 			log.In(ipMethodURLSafe(r) + fingerprint(r))
 			next.ServeHTTP(w, r)
 		})
