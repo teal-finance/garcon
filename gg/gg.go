@@ -515,13 +515,14 @@ func DecodeHexOrB64(in string, outLen int) (out []byte, _ error) {
 
 	var err error
 
-	if inLen == hexLen {
+	switch {
+	case inLen == hexLen:
 		out, err = hex.DecodeString(in)
 		if err != nil {
 			log.Warn(err)
 			return nil, &decodeError{err, inLen, "hexadecimal"}
 		}
-	} else if b64Len-1 <= inLen && inLen <= b64Len+1 {
+	case b64Len-1 <= inLen && inLen <= b64Len+1:
 		out, err = base64.RawURLEncoding.DecodeString(in)
 		if err != nil {
 			log.Warn(err)
@@ -533,7 +534,7 @@ func DecodeHexOrB64(in string, outLen int) (out []byte, _ error) {
 		case outLen + 1:
 			out = out[:outLen]
 		}
-	} else {
+	default:
 		return nil, &sizeError{inLen, hexLen, b64Len}
 	}
 
