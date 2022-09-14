@@ -259,5 +259,5 @@ func Obfuscate(str string) (string, error) {
 		return "", err
 	}
 	digest := h.Sum([]byte(str))
-	return base64.StdEncoding.EncodeToString(digest), nil
+	return base64.RawURLEncoding.EncodeToString(digest), nil
 }
