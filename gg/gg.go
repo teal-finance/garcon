@@ -7,6 +7,8 @@
 package gg
 
 import (
+	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -501,4 +503,67 @@ func EnvInt(envvar string, fallback ...int) int {
 		return fallback[0]
 	}
 	return 0
+}
+
+// DecodeHexOrB64 tries to decode the input string as hexadecimal or Base64
+// depending on the input length and the required output length.
+// DecodeHexOrB64 supports the unpadded Base64 defined in RFC 4648 §5 for URL encoding.
+func DecodeHexOrB64(in string, outLen int) (out []byte, _ error) {
+	inLen := len(in)
+	hexLen := outLen * 2
+	b64Len := base64.RawURLEncoding.EncodedLen(outLen)
+
+	var err error
+
+	if inLen == hexLen {
+		out, err = hex.DecodeString(in)
+		if err != nil {
+			log.Warn(err)
+			return nil, &decodeError{err, inLen, "hexadecimal"}
+		}
+	} else if b64Len-1 <= inLen && inLen <= b64Len+1 {
+		out, err = base64.RawURLEncoding.DecodeString(in)
+		if err != nil {
+			log.Warn(err)
+			return nil, &decodeError{err, inLen, "Base64"}
+		}
+		switch len(out) {
+		case outLen - 1:
+			out = append(out, 0)
+		case outLen + 1:
+			out = out[:outLen]
+		}
+	} else {
+		return nil, &sizeError{inLen, hexLen, b64Len}
+	}
+
+	if len(out) != outLen {
+		log.Panic("want=", outLen, "got=", len(out))
+	}
+
+	return out, nil
+}
+
+type sizeError struct {
+	inLen  int
+	hexLen int
+	b64Len int
+}
+
+func (e *sizeError) Error() string {
+	return fmt.Sprintf("got %d bytes but want %d hexadecimal digits or %d unpadded Base64 characters (RFC 4648 §5)", e.inLen, e.hexLen, e.b64Len)
+}
+
+type decodeError struct {
+	err   error
+	inLen int
+	base  string
+}
+
+func (e *decodeError) Error() string {
+	return fmt.Sprintf("cannot decode the %d bytes as %s: %s", e.inLen, e.base, e.err.Error())
+}
+
+func (e *decodeError) Unwrap() error {
+	return e.err
 }
