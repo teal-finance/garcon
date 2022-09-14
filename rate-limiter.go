@@ -68,7 +68,7 @@ func NewRateLimiter(gw Writer, maxReqBurst, maxReqPerMinute int, devMode bool) R
 }
 
 func (rl *ReqLimiter) MiddlewareRateLimiter(next http.Handler) http.Handler {
-	log.Infof("MiddlewareRateLimiter: burst=%v rate=%.2f/s",
+	log.Infof("MiddlewareRateLimiter burst=%v rate=%.2f/s",
 		rl.initLimiter.Burst(), rl.initLimiter.Limit())
 
 	go rl.removeOldVisitors()
