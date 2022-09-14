@@ -392,18 +392,18 @@ func fingerprint(r *http.Request) string {
 // FingerprintMD provide the browser fingerprint in markdown format.
 // Attention: read the .
 func FingerprintMD(r *http.Request) string {
-	return "" +
-		headerMD(r, "Accept-Encoding") + // compression formats the browser supports
+	return "\n" + "- **IP**: " + gg.Sanitize(r.RemoteAddr) +
 		headerMD(r, "Accept-Language") + // language preferred by the user
-		headerMD(r, "Accept") + // content types the browser prefers
-		headerMD(r, "Authorization") + // Attention: may contain confidential data
-		headerMD(r, "Cache-Control") + // how the browser is caching data
-		headerMD(r, "Connection") + // can be: empty, "keep-alive" or "close"
-		headerMD(r, "Cookie") + // Attention: may contain confidential data
-		headerMD(r, "DNT") + // "Do Not Track" is being dropped by web standards and browsers
-		headerMD(r, "Referer") + // URL from which the request originated
 		headerMD(r, "User-Agent") + // name and version of browser and OS
-		headerMD(r, "Via") // avoid request loops and identify protocol capabilities
+		headerMD(r, "Referer") + // URL from which the request originated
+		headerMD(r, "Accept") + // content types the browser prefers
+		headerMD(r, "Accept-Encoding") + // compression formats the browser supports
+		headerMD(r, "Connection") + // can be: empty, "keep-alive" or "close"
+		headerMD(r, "Cache-Control") + // how the browser is caching data
+		headerMD(r, "DNT") + // "Do Not Track" is being dropped by web standards and browsers
+		headerMD(r, "Via") + // avoid request loops and identify protocol capabilities
+		headerMD(r, "Authorization") + // Attention: may contain confidential data
+		headerMD(r, "Cookie") // Attention: may contain confidential data
 }
 
 func headerTxt(r *http.Request, header, key, skip string) string {
@@ -419,7 +419,7 @@ func headerMD(r *http.Request, header string) string {
 	if v == "" {
 		return ""
 	}
-	return "\n" + "- " + header + ": " + v
+	return "\n" + "- **" + header + "**: " + v
 }
 
 func StatusCodeStr(code int) string {
