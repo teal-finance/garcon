@@ -506,43 +506,64 @@ func EnvInt(envvar string, fallback ...int) int {
 }
 
 // DecodeHexOrB64 tries to decode the input string as hexadecimal or Base64
-// depending on the input length and the required output length.
-// DecodeHexOrB64 supports the unpadded Base64 defined in RFC 4648 §5 for URL encoding.
-func DecodeHexOrB64(in string, outLen int) (out []byte, _ error) {
+// depending on the given output length.
+// DecodeHexOrB64 supports the unpadded Base64 as defined in RFC 4648 §5 (URL encoding).
+func DecodeHexOrB64(in string, outLen int) ([]byte, error) {
+	return DecodeHexOrB64Bytes([]byte(in), outLen, true)
+}
+
+func EncodeHexOrB64Bytes(bin []byte, isHex bool) []byte {
+	var txt []byte
+	if isHex {
+		txt = make([]byte, hex.EncodedLen(len(bin)))
+		hex.Encode(txt, bin)
+	} else {
+		txt = make([]byte, base64.RawURLEncoding.EncodedLen(len(bin)))
+		base64.RawURLEncoding.Encode(txt, bin)
+	}
+	return txt
+}
+
+// DecodeHexOrB64Bytes tries to decode the input bytes as hexadecimal or Base64
+// depending on the given output length.
+// DecodeHexOrB64Bytes supports the unpadded Base64 defined in RFC 4648 §5 for URL encoding.
+// The "reuse" parameter allows to reuse the input bytes reducing the memory allocation.
+// Caution: the input bytes are overwritten with reuse=true.
+func DecodeHexOrB64Bytes(in []byte, outLen int, reuse bool) ([]byte, error) {
 	inLen := len(in)
-	hexLen := outLen * 2
+	hexLen := hex.EncodedLen(outLen)
 	b64Len := base64.RawURLEncoding.EncodedLen(outLen)
 
-	var err error
-
-	switch {
-	case inLen == hexLen:
-		out, err = hex.DecodeString(in)
-		if err != nil {
-			log.Warn(err)
-			return nil, &decodeError{err, inLen, "hexadecimal"}
-		}
-	case b64Len-1 <= inLen && inLen <= b64Len+1:
-		out, err = base64.RawURLEncoding.DecodeString(in)
-		if err != nil {
-			log.Warn(err)
-			return nil, &decodeError{err, inLen, "Base64"}
-		}
-		switch len(out) {
-		case outLen - 1:
-			out = append(out, 0)
-		case outLen + 1:
-			out = out[:outLen]
-		}
+	switch inLen {
+	case hexLen, b64Len: // OK
 	default:
 		return nil, &sizeError{inLen, hexLen, b64Len}
 	}
 
-	if len(out) != outLen {
-		log.Panic("want=", outLen, "got=", len(out))
+	var out []byte
+	if reuse {
+		out = in
+	} else {
+		out = make([]byte, outLen)
 	}
 
-	return out, nil
+	n, err := decodeHexOrB64Bytes(out, in, inLen == hexLen)
+	if err != nil {
+		log.Warn(err)
+		return nil, &decodeError{err, inLen, inLen == hexLen}
+	}
+	if n != outLen {
+		log.Panic("input=", inLen, "want=", outLen, "got=", len(out))
+	}
+
+	return out[:n], nil
+}
+
+func decodeHexOrB64Bytes(dst, src []byte, isHex bool) (int, error) {
+	if isHex {
+		return hex.Decode(dst, src)
+	}
+	return base64.RawURLEncoding.Decode(dst, src)
 }
 
 type sizeError struct {
@@ -558,11 +579,15 @@ func (e *sizeError) Error() string {
 type decodeError struct {
 	err   error
 	inLen int
-	base  string
+	isHex bool
 }
 
 func (e *decodeError) Error() string {
-	return fmt.Sprintf("cannot decode the %d bytes as %s: %s", e.inLen, e.base, e.err.Error())
+	base := "Base64"
+	if e.isHex {
+		base = "Hexadecimal"
+	}
+	return fmt.Sprintf("cannot decode the %d bytes as %s: %s", e.inLen, base, e.err.Error())
 }
 
 func (e *decodeError) Unwrap() error {
