@@ -58,13 +58,18 @@ type JWTChecker struct {
 	cookies  []http.Cookie
 }
 
-func NewJWTChecker(gw Writer, urls []*url.URL, key string, permissions ...any) *JWTChecker {
+// NewJWTChecker supports keyTxt in hexadecimal and Base64 form
+// Moreover the keyTxt parameter can also be prefixed by the signing algorithm.
+// The keyTxt scheme is: `alg:xxxxxxxxxxxxxxxxxxxxxxxxxx`
+// where `alg` is the optional algorithm name, and `xxxxxxxxxxxxxxxxxxxxxxxxxx`
+// is the key encoded in either hexadecimal or unpadded Base64 as defined in RFC 4648 §5 (URL encoding).
+func NewJWTChecker(gw Writer, urls []*url.URL, keyTxt string, permissions ...any) *JWTChecker {
 	plans, perms := checkParameters(permissions...)
 
 	var verifier tokens.Verifier
-	tokenizer, err := tokens.NewHMAC(key, true)
+	tokenizer, err := tokens.NewHMAC(keyTxt, true)
 	if err == nil {
-		verifier, err = tokens.NewVerifier(key, true)
+		verifier, err = tokens.NewVerifier(keyTxt, true)
 	} else {
 		verifier = tokenizer
 	}

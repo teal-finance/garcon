@@ -210,10 +210,14 @@ func (g *Garcon) IncorruptibleCheckerBin(secretKeyBin []byte, maxAge int, setIP 
 }
 
 // JWTChecker requires WithURLs() to set the Cookie name, secure, domain and path.
-func (g *Garcon) JWTChecker(secretKeyHex string, planPerm ...any) *JWTChecker {
+// The keyTxt can be in hexadecimal or Base64, and can also be prefixed by the wanted signing algorithm.
+// The keyTxt scheme is: `alg:xxxxxxxxxxxxxxxxxxxxxxxxxx`
+// where `alg` is the optional algorithm name, and `xxxxxxxxxxxxxxxxxxxxxxxxxx`
+// is the key encoded in either hexadecimal or unpadded Base64 as defined in RFC 4648 §5 (URL encoding).
+func (g *Garcon) JWTChecker(keyTxt string, planPerm ...any) *JWTChecker {
 	if len(g.urls) == 0 {
 		log.Panic("Missing URLs => Set first the URLs with garcon.WithURLs()")
 	}
 
-	return NewJWTChecker(g.Writer, g.urls, secretKeyHex, planPerm...)
+	return NewJWTChecker(g.Writer, g.urls, keyTxt, planPerm...)
 }
