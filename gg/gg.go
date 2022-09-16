@@ -353,7 +353,7 @@ func extractReadable(buf []byte, header http.Header) string {
 	safe := Sanitize(string(buf))
 
 	if len(safe) > 500 {
-		safe = safe[:400] + " (cut)"
+		safe = safe[:400] + " (trimmed last " + strconv.Itoa(len(safe)-400) + " bytes)"
 	}
 
 	return safe

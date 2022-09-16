@@ -146,7 +146,7 @@ func (wf *WebForm) toMarkdown(r *http.Request) string {
 	md := wf.formMD(r.Form) + FingerprintMD(r)
 	if extra := overflow25(len(md), wf.MaxMDBytes); extra > 0 {
 		md = md[:wf.MaxMDBytes] + "\n\n" +
-			"(cut last " + strconv.Itoa(extra) + " characters)"
+			"(trimmed last " + strconv.Itoa(extra) + " characters)"
 	}
 	return md
 }
@@ -168,7 +168,7 @@ func (wf *WebForm) formMD(fields url.Values) string {
 
 		if extra := overflow25(len(values[0]), maxLen); extra > 0 {
 			values[0] = values[0][:maxLen] + "\n" +
-				"(cut last " + strconv.Itoa(extra) + " characters)"
+				"(trimmed last " + strconv.Itoa(extra) + " characters)"
 			maxLines++
 		}
 
@@ -205,7 +205,7 @@ func (wf *WebForm) validName(name string) bool {
 		maxDisplay := 8 * wf.maxFieldNameLength
 		if nLen > maxDisplay+10 {
 			name = name[:maxDisplay]
-			state = "(sanitized and cut)"
+			state = "(sanitized and trimmed)"
 		}
 		log.Warningf("WebForm: reject name=%q %s too long (%d > %d)", name, state, nLen, wf.maxFieldNameLength)
 		return false
