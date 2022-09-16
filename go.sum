@@ -233,10 +233,10 @@ github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UV
 github.com/stretchr/testify v1.4.0/go.mod h1:j7eGeouHqKxXV5pUuKE4zz7dFj8WfuZ+81PSLYec5m4=
 github.com/teal-finance/emo v0.0.0-20220914195410-20b6929a3239 h1:dqrLueB0LUeNq8QGzUt8l1EcuuDd24SBd2CfXORyjsw=
 github.com/teal-finance/emo v0.0.0-20220914195410-20b6929a3239/go.mod h1:1PNyO4kPCk3rmmQr5bDpsuvLIrIZ3YDvYqecRdU4Nzo=
-github.com/teal-finance/incorruptible v0.0.0-20220916122828-63407c89f7d4 h1:fYL026sVMeztbBpkdepAFramrkP2DosnZpuCBJmK9dI=
-github.com/teal-finance/incorruptible v0.0.0-20220916122828-63407c89f7d4/go.mod h1:ZYNaAodPCVOTQTxkySBXgNaiBxXIxs3OG0F0ZmWuIyU=
-github.com/teal-finance/quid v0.0.0-20220916130446-bd9be6c7954d h1:s5QJzczCSGfLWqvmPWM/lOwMGWxAPB0aAso0B3GMNs0=
-github.com/teal-finance/quid v0.0.0-20220916130446-bd9be6c7954d/go.mod h1:EoqJPffIjF1BxoMyhCy940vkQgvU+6Ljk5r8yrfrPJY=
+github.com/teal-finance/incorruptible v0.0.0-20220916173341-2a473e62ae53 h1:zgD1LfdrlZzDLfzURHpRMCKe+/Tay5ZvwtsgaKkLI9o=
+github.com/teal-finance/incorruptible v0.0.0-20220916173341-2a473e62ae53/go.mod h1:ly5DILrDV5tHJcLdRjMvamvYgJtVGzcmVuT0NqMrJJo=
+github.com/teal-finance/quid v0.0.0-20220916181304-905aa35a284f h1:x0tCZgg4InPzVzOOY22xqJjTYCFanLX7tEQq9ehHNxI=
+github.com/teal-finance/quid v0.0.0-20220916181304-905aa35a284f/go.mod h1:P35xDue/IdPfDx542fgSHDOJFQmnKaHcrJqjvjnF0XI=
 github.com/yuin/goldmark v1.1.25/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.1.32/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
