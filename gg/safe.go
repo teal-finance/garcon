@@ -196,21 +196,6 @@ func PrintableRune(r rune) bool {
 	return true
 }
 
-// printable returns the position of
-// a Carriage Return "\r", or a Line Feed "\n",
-// or any other ASCII control code (except space),
-// or, as well as, an invalid UTF-8 code.
-// printable returns -1 if the string
-// is safely printable preventing log injection.
-func printable(s string) int {
-	for p, r := range s {
-		if !PrintableRune(r) {
-			return p
-		}
-	}
-	return -1
-}
-
 // Printable returns -1 when all the strings are safely printable
 // else returns the position of the rejected character.
 //
@@ -229,6 +214,21 @@ func Printable(array ...string) int {
 	for i, s := range array {
 		if p := printable(s); p >= 0 {
 			return i*1000 + p
+		}
+	}
+	return -1
+}
+
+// printable returns the position of
+// a Carriage Return "\r", or a Line Feed "\n",
+// or any other ASCII control code (except space),
+// or, as well as, an invalid UTF-8 code.
+// printable returns -1 if the string
+// is safely printable preventing log injection.
+func printable(s string) int {
+	for p, r := range s {
+		if !PrintableRune(r) {
+			return p
 		}
 	}
 	return -1
