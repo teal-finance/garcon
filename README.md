@@ -666,3 +666,4 @@ or <https://opensource.org/licenses/MIT>.
 - <https://github.com/kambahr/go-webstandard>
 - <https://github.com/go-aah/aah>
 - <https://github.com/xyproto/algernon>
+- <https://github.com/kataras/iris>
