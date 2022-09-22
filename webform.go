@@ -126,7 +126,7 @@ func (wf *WebForm) Notify(notifierURL string) func(w http.ResponseWriter, r *htt
 
 		err := r.ParseForm()
 		if err != nil {
-			log.Warning("WebForm ParseForm:", err)
+			log.S().Warning("WebForm ParseForm:", err)
 			wf.Writer.WriteErr(w, r, http.StatusBadRequest, "cannot parse the webform", "reason", err.Error())
 			return
 		}
@@ -134,7 +134,7 @@ func (wf *WebForm) Notify(notifierURL string) func(w http.ResponseWriter, r *htt
 		md := wf.toMarkdown(r)
 		err = notifier.Notify(md)
 		if err != nil {
-			log.Warning("WebForm Notify:", err)
+			log.S().Warning("WebForm Notify:", err)
 		}
 
 		http.Redirect(w, r, wf.Redirect, http.StatusFound)
