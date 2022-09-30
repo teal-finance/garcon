@@ -505,11 +505,8 @@ func EnvInt(envvar string, fallback ...int) int {
 	return 0
 }
 
-// DecodeHexOrB64 tries to decode the input string as hexadecimal or Base64
-// depending on the given output length.
-// DecodeHexOrB64 supports the unpadded Base64 as defined in RFC 4648 §5 (URL encoding).
-func DecodeHexOrB64(in string, outLen int) ([]byte, error) {
-	return DecodeHexOrB64Bytes([]byte(in), outLen, true)
+func EncodeHexOrB64(in string, isHex bool) string {
+	return string(EncodeHexOrB64Bytes([]byte(in), isHex))
 }
 
 func EncodeHexOrB64Bytes(bin []byte, isHex bool) []byte {
@@ -522,6 +519,13 @@ func EncodeHexOrB64Bytes(bin []byte, isHex bool) []byte {
 		base64.RawURLEncoding.Encode(txt, bin)
 	}
 	return txt
+}
+
+// DecodeHexOrB64 tries to decode the input string as hexadecimal or Base64
+// depending on the given output length.
+// DecodeHexOrB64 supports the unpadded Base64 as defined in RFC 4648 §5 (URL encoding).
+func DecodeHexOrB64(in string, outLen int) ([]byte, error) {
+	return DecodeHexOrB64Bytes([]byte(in), outLen, true)
 }
 
 // DecodeHexOrB64Bytes tries to decode the input bytes as hexadecimal or Base64
