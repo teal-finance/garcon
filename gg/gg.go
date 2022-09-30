@@ -19,6 +19,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"unsafe"
 
 	md "github.com/JohannesKaufmann/html-to-markdown"
 	"github.com/go-chi/chi/v5"
@@ -598,4 +599,9 @@ func (e *decodeError) Error() string {
 
 func (e *decodeError) Unwrap() error {
 	return e.err
+}
+
+// B2S (Bytes to String) returns a string pointing to a []byte without copying
+func B2S(b []byte) string {
+	return *(*string)(unsafe.Pointer(&b))
 }
