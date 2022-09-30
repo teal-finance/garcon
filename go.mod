@@ -1,6 +1,6 @@
 module github.com/teal-finance/garcon
 
-go 1.18
+go 1.19
 
 require (
 	github.com/JohannesKaufmann/html-to-markdown v1.3.6

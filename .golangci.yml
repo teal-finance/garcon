@@ -275,7 +275,7 @@ linters-settings:
 
   # https://github.com/mvdan/gofumpt
   gofumpt:
-    lang-version: "1.18"
+    lang-version: "1.19"
     extra-rules: true
 
   goimports:
@@ -309,17 +309,17 @@ linters-settings:
     allow-unused: false # report any unused nolint directives
 
   gosimple:
-    go: "1.18"
+    go: "1.19"
     # https://staticcheck.io/docs/options#checks
     checks: ["all"]
 
   staticcheck:
-    go: "1.18"
+    go: "1.19"
     # https://staticcheck.io/docs/options#checks
     checks: ["all"]
 
   stylecheck:
-    go: "1.18"
+    go: "1.19"
     # https://staticcheck.io/docs/options#checks
     checks: ["all"]
     # https://staticcheck.io/docs/options#dot_import_whitelist
@@ -472,7 +472,7 @@ run:
   # from this option's value:
   #     vendor$, third_party$, testdata$, examples$, Godeps$, builtin$
   skip-dirs: [poc]
-  go: "1.18"
+  go: "1.19"
 
 output:
   # colored-line-number|line-number|json|tab|checkstyle, default is "colored-line-number"
