@@ -95,20 +95,20 @@ func (opa Policy) MiddlewareOPA(next http.Handler) http.Handler {
 
 		rs, err := rg.Eval(context.Background())
 		if err != nil || len(rs) == 0 {
-			gw.WriteErr(w, r, http.StatusInternalServerError, "Cannot evaluate autorisation settings")
+			gw.WriteErr(w, r, http.StatusInternalServerError, "cannot evaluate authorization settings")
 			log.Print("ERR OPA Eval:", err)
 			return
 		}
 
 		allow, ok := rs[0].Expressions[0].Value.(bool)
 		if !ok {
-			gw.WriteErr(w, r, http.StatusInternalServerError, "Missing autorisation settings")
+			gw.WriteErr(w, r, http.StatusInternalServerError, "missing authorization settings")
 			log.Print("ERR missing OPA data in", rs)
 			return
 		}
 
 		if !allow {
-			gw.WriteErr(w, r, http.StatusUnauthorized, "No valid JWT",
+			gw.WriteErr(w, r, http.StatusUnauthorized, "no valid JWT",
 				"advice", "Provide your JWT within the 'Authorization Bearer' HTTP header")
 			log.Print("INF OPA Missing or invalid Authorization header " + r.RemoteAddr + " " + r.RequestURI)
 			return
