@@ -601,7 +601,7 @@ func (e *decodeError) Unwrap() error {
 	return e.err
 }
 
-// B2S (Bytes to String) returns a string pointing to a []byte without copying
+// B2S (Bytes to String) returns a string pointing to a []byte without copying.
 func B2S(b []byte) string {
 	return *(*string)(unsafe.Pointer(&b))
 }
