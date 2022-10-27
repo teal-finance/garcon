@@ -1,6 +1,6 @@
 module github.com/teal-finance/garcon
 
-go 1.19
+go 1.18
 
 require (
 	github.com/JohannesKaufmann/html-to-markdown v1.3.6
@@ -10,14 +10,14 @@ require (
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/mailru/easyjson v0.7.7
 	github.com/minio/highwayhash v1.0.2
-	github.com/pkg/profile v1.6.0
+	github.com/pkg/profile v1.7.0
 	github.com/prometheus/client_golang v1.13.0
 	github.com/rs/cors v1.8.2
-	github.com/teal-finance/emo v0.0.0-20220914195410-20b6929a3239
-	github.com/teal-finance/incorruptible v0.0.0-20220916173341-2a473e62ae53
-	github.com/teal-finance/quid v0.0.0-20220916181304-905aa35a284f
+	github.com/teal-finance/emo v0.0.0-20221020231838-605890cfa1bd
+	github.com/teal-finance/incorruptible v0.0.0-20220924215045-e44628c14a6f
+	github.com/teal-finance/quid v0.0.0-20221026222456-1d70a681d920
 	github.com/zhangyunhao116/fastrand v0.3.0
-	golang.org/x/time v0.0.0-20220722155302-e5dcc9cfc0b9
+	golang.org/x/time v0.1.0
 )
 
 require (
@@ -27,17 +27,19 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/cristalhq/base64 v0.1.2 // indirect
+	github.com/felixge/fgprof v0.9.3 // indirect
 	github.com/golang-jwt/jwt/v4 v4.4.2 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
+	github.com/google/pprof v0.0.0-20221010195024-131d412537ea // indirect
 	github.com/josharian/intern v1.0.0 // indirect
-	github.com/klauspost/compress v1.15.10 // indirect
-	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 // indirect
+	github.com/klauspost/compress v1.15.12 // indirect
+	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/mtraver/base91 v1.0.0 // indirect
-	github.com/prometheus/client_model v0.2.0 // indirect
+	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/common v0.37.0 // indirect
 	github.com/prometheus/procfs v0.8.0 // indirect
-	golang.org/x/net v0.0.0-20220909164309-bea034e7d591 // indirect
-	golang.org/x/sys v0.0.0-20220915200043-7b5979e65e41 // indirect
+	golang.org/x/net v0.1.0 // indirect
+	golang.org/x/sys v0.1.0 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 )
