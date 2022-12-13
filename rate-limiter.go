@@ -192,7 +192,7 @@ func (ar *AdaptiveRate) adjust(d time.Duration) {
 func (ar *AdaptiveRate) Get(symbol, url string, msg any, maxBytes ...int) error {
 	var err error
 	d := ar.NextSleep
-	for try, status := 1, http.StatusTooManyRequests; (try < 88) && (status == http.StatusTooManyRequests); try++ {
+	for try, status := 1, http.StatusTooManyRequests; (try < 88) && (status == http.StatusTooManyRequests || status == http.StatusTeapot); try++ {
 		if try > 1 {
 			previous := d
 			alpha := int64(maxAlpha * ar.MinSleep / d)
@@ -212,8 +212,24 @@ func (ar *AdaptiveRate) Get(symbol, url string, msg any, maxBytes ...int) error 
 
 func (ar *AdaptiveRate) get(symbol, url string, msg any, maxBytes ...int) (int, error) {
 	resp, err := http.Get(url)
-	if err != nil {
+	// tentative fix for SIGSEV error
+	// I think it's because we access resp.Status without checking if it's nim
+
+	if err != nil && resp != nil {
 		return resp.StatusCode, fmt.Errorf("GET %s %s: %w", ar.Name, symbol, err)
+	} else if err != nil {
+		// if no response we can try again using the teapot
+		log.Info("we would have had an error")
+		return http.StatusTeapot, fmt.Errorf("GET %s %s: %w", ar.Name, symbol, err)
+		/*
+						;,'
+				_o_    ;:;'
+			,-.'---`.__ ;
+			((j`=====',-'
+			`-\     /
+				`-=-'     hjw
+
+		*/
 	}
 	defer resp.Body.Close()
 
