@@ -54,7 +54,6 @@ func main() {
 	fmt.Printf("fetched %d instruments from Deribit \n", count)
 
 	/*
-
 		optionsBTC, err := p.fillOptions(instruments, 5)
 		if err != nil {
 			return nil, err
@@ -73,8 +72,8 @@ func main() {
 		instruments, err = p.query("SOL")
 		if err != nil {
 			return nil, err
-		}*/
-
+		}
+	*/
 }
 
 func query(ar garcon.AdaptiveRate, coin string) (int, error) {
