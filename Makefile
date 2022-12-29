@@ -8,7 +8,7 @@ help:
 	# make cov    Browse test coverage
 
 .PHONY: all
-all: up fmt test vet cov
+all: up+ fmt test vet cov
 
 go.sum: go.mod
 	go mod tidy
@@ -40,11 +40,21 @@ code-coverage.out: go.sum */*.go
 cov: code-coverage.out
 	go tool cover -html code-coverage.out
 
+# Allow using a different timeout value, examples:
+#    T=30s make vet
+#    make vet T=1m
+T ?= 10s
+
 .PHONY: vet
 vet:
 	go run github.com/golangci/golangci-lint/cmd/golangci-lint@latest run --fix || true
-	timeout 9s go run -race ./examples/complete                                 || true
-	timeout 9s go run -race ./examples/low-level                                || true
-	timeout 9s go run -race ./examples/keystore                                 || true
-	timeout 9s go run -race ./examples/httprouten                               || true
-	timeout 2s go run -race ./examples/chi                                      || true
+	pkill -fe [/]exe/complete   || true
+	pkill -fe [/]exe/low-level  || true
+	pkill -fe [/]exe/keystore   || true
+	pkill -fe [/]exe/httprouter || true
+	pkill -fe [/]exe/chi        || true
+	timeout $T go run -race ./examples/complete   ; [ 124 -le $$? ] && echo Terminated by timeout $T ; true
+	timeout $T go run -race ./examples/low-level  ; [ 124 -le $$? ] && echo Terminated by timeout $T ; true
+	timeout $T go run -race ./examples/keystore   ; [ 124 -le $$? ] && echo Terminated by timeout $T ; true
+	timeout $T go run -race ./examples/httprouter ; [ 124 -le $$? ] && echo Terminated by timeout $T ; true
+	timeout $T go run -race ./examples/chi        ; [ 124 -le $$? ] && echo Terminated by timeout $T ; true
