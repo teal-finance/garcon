@@ -279,7 +279,7 @@ incorr 🔒  Middleware Incorruptible.Chk cookie DevMode= true
 incorr 🔒  Middleware Incorruptible.Chk cookie DevMode= true
 incorr 🔒  Middleware Incorruptible.Chk cookie DevMode= true
 garcon ℹ️  Middleware WebForm redirects to http://localhost:8080/myapp
-garcon ℹ️  empty URL => use the FakeNotifier
+garcon ℹ️  empty URL => use the LogNotifier
 incorr 🔒  Middleware Incorruptible.Set cookie "myapp" MaxAge=60 setIP=true
 incorr 🔒  Middleware Incorruptible.Vet cookie/bearer DevMode= true
 incorr 🔒  Middleware Incorruptible.Vet cookie/bearer DevMode= true
