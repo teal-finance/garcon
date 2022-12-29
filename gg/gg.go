@@ -496,11 +496,13 @@ func EnvStr(envvar string, fallback ...string) string {
 // EnvInt panics if the envvar value cannot be parsed as an integer.
 func EnvInt(envvar string, fallback ...int) int {
 	if str, ok := os.LookupEnv(envvar); ok {
-		integer, err := strconv.Atoi(str)
-		if err != nil {
-			log.Panicf("want integer but got %v=%q err: %v", envvar, str, err)
+		if str != "" {
+			integer, err := strconv.Atoi(str)
+			if err != nil {
+				log.Panicf("want integer but got %v=%q err: %v", envvar, str, err)
+			}
+			return integer
 		}
-		return integer
 	}
 	if len(fallback) > 0 {
 		return fallback[0]

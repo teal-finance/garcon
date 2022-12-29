@@ -30,12 +30,16 @@ const (
 	allowedProdOrigin = "https://my-dns.co"
 	allowedDevOrigins = "http://localhost:  http://192.168.1."
 	serverHeader      = "MyBackendName-1.2.0"
-	// TODO disable --- authCfg           = "examples/sample-auth.rego"
-	pprofPort        = 8093
-	expPort          = 9093
-	burst, reqMinute = 10, 30
+	burst, reqMinute  = 10, 30
 	// the HMAC-SHA256 key to decode JWT (to be removed from source code)
 	hmacSHA256Hex = "9d2e0a02121179a3c3de1b035ae1355b1548781c8ce8538a1dc0853a12dfb13d"
+	// authCfg is deprecated
+	// authCfg = "examples/sample-auth.rego"
+)
+
+var (
+	pprofPort = gg.EnvInt("PPROF_PORT", 8095)
+	expPort   = gg.EnvInt("EXP_PORT", 9095)
 )
 
 func main() {
@@ -53,12 +57,13 @@ func main() {
 	h := handler(gw, garcon.NewJWTChecker(gw, urls, hmacSHA256Hex))
 	h = middleware.Then(h)
 
-	log.Init("-------------- Open http://localhost:8080/myapp --------------")
 	runServer(h, connState)
 }
 
 func setMiddlewares(gw garcon.Writer) (_ gg.Chain, connState func(net.Conn, http.ConnState), _ []*url.URL) {
-	// TODO disable --- auth := flag.Bool("auth", false, "Enable OPA authorization specified in file "+authCfg)
+	// authCfg is deprecated
+	// auth := flag.Bool("auth", false, "Enable OPA authorization specified in file "+authCfg)
+
 	dev := flag.Bool("dev", true, "Use development or production settings")
 	flag.Parse()
 
@@ -83,15 +88,15 @@ func setMiddlewares(gw garcon.Writer) (_ gg.Chain, connState func(net.Conn, http
 		garcon.MiddlewareCORS(allowedOrigins, nil, nil, *dev),
 	)
 
-	// TODO disable --- // Endpoint authentication rules (Open Policy Agent)
-	// TODO disable --- if *auth {
-	// TODO disable --- 	files := garcon.SplitClean(authCfg)
-	// TODO disable --- 	policy, err := garcon.NewPolicy(gw, files)
-	// TODO disable --- 	if err != nil {
-	// TODO disable --- 		log.Fatal(err)
-	// TODO disable --- 	}
-	// TODO disable --- 	middleware = middleware.Append(policy.MiddlewareOPA)
-	// TODO disable --- }
+	// authCfg is deprecated - // Endpoint authentication rules (Open Policy Agent)
+	// authCfg is deprecated - if *auth {
+	// authCfg is deprecated - 	files := garcon.SplitClean(authCfg)
+	// authCfg is deprecated - 	policy, err := garcon.NewPolicy(gw, files)
+	// authCfg is deprecated - 	if err != nil {
+	// authCfg is deprecated - 		log.Fatal(err)
+	// authCfg is deprecated - 	}
+	// authCfg is deprecated - 	middleware = middleware.Append(policy.MiddlewareOPA)
+	// authCfg is deprecated - }
 
 	return middleware, connState, urls
 }
@@ -116,7 +121,7 @@ func runServer(h http.Handler, connState func(net.Conn, http.ConnState)) {
 		ConnContext:       nil,
 	}
 
-	log.Print("Server listening on http://localhost" + server.Addr)
+	log.Init("-------------- Open http://localhost" + server.Addr + "/myapp --------------")
 	log.Fatal(server.ListenAndServe())
 }
 

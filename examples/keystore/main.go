@@ -20,14 +20,20 @@ import (
 
 	"github.com/teal-finance/emo"
 	"github.com/teal-finance/garcon"
+	"github.com/teal-finance/garcon/gg"
 )
 
 var log = emo.NewZone("app")
 
 // Garcon settings
 const (
-	mainPort, pprofPort, expPort = 8080, 8093, 9093
-	burst, perMinute             = 2, 5
+	burst, perMinute = 2, 5
+)
+
+var (
+	mainPort  = gg.EnvInt("MAIN_PORT", 8088)
+	pprofPort = gg.EnvInt("PPROF_PORT", 8098)
+	expPort   = gg.EnvInt("EXP_PORT", 9098)
 )
 
 func main() {
@@ -57,8 +63,9 @@ func main() {
 	h := middleware.Then(r)
 
 	server := garcon.Server(h, mainPort, connState)
-	err := garcon.ListenAndServe(&server)
-	log.Fatal(err)
+
+	log.Init("-------------- Open http://localhost" + server.Addr + " --------------")
+	log.Fatal(garcon.ListenAndServe(&server))
 }
 
 // router creates the mapping between the endpoints and the router functions.

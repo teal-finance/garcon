@@ -21,7 +21,7 @@ import (
 
 var log = emo.NewZone("app")
 
-const port = ":22000"
+var port = ":" + gg.EnvStr("MAIN_PORT", "8087")
 
 func main() {
 	endpoint := flag.String("post-endpoint", "/", "The endpoint for the POST request.")
@@ -46,7 +46,7 @@ func main() {
 		Handler: handler,
 	}
 
-	log.Print("Server listening on http://localhost" + port)
+	log.Init("-------------- Open http://localhost" + server.Addr + *endpoint + " --------------")
 	log.Fatal(server.ListenAndServe())
 }
 

@@ -17,18 +17,24 @@ import (
 
 	"github.com/teal-finance/emo"
 	"github.com/teal-finance/garcon"
+	"github.com/teal-finance/garcon/gg"
 )
 
 var log = emo.NewZone("app")
 
 // Garcon settings
 const (
-	opaFile                      = "examples/sample-auth.rego"
-	mainPort, pprofPort, expPort = 8080, 8093, 9093
+	opaFile = "examples/sample-auth.rego"
 
 	// the HMAC-SHA256 key to decode JWT (do not put your secret keys in your code)
 	hmacSHA256 = "9d2e0a02121179a3c3de1b035ae1355b1548781c8ce8538a1dc0853a12dfb13d"
 	aes128bits = "00112233445566778899aabbccddeeff"
+)
+
+var (
+	mainPort  = gg.EnvInt("MAIN_PORT", 8084)
+	pprofPort = gg.EnvInt("PPROF_PORT", 8094)
+	expPort   = gg.EnvInt("EXP_PORT", 9094)
 )
 
 func main() {
@@ -82,7 +88,7 @@ func main() {
 
 	server := garcon.Server(h, mainPort, connState)
 
-	log.Init("-------------- Open http://localhost:8080/myapp --------------")
+	log.Init("-------------- Open http://localhost" + server.Addr + "/myapp --------------")
 	err := garcon.ListenAndServe(&server)
 	log.Fatal(err)
 }
