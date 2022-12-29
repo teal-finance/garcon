@@ -70,7 +70,7 @@ func SetVersionFlag() {
 	SetCustomVersionFlag(nil, "", "")
 }
 
-// SetCustomVersionFlag register PrintVersion() for the version flag.
+// SetCustomVersionFlag register PrintVersionAndExit() for the -version flag.
 //
 // Example with default values:
 //
@@ -94,16 +94,16 @@ func SetCustomVersionFlag(fs *flag.FlagSet, flagName, program string) {
 		flagName = "version" // default flag is: -version
 	}
 
-	f := func() error { PrintVersion(program); return nil }
+	f := func() error { PrintVersionAndExit(program); return nil }
 
 	flagx.BoolFunc(fs, flagName, "Print version and exit", f)
 }
 
-// PrintVersion prints the version and exits.
+// PrintVersionAndExit prints the version and exits.
 // The version may also contain the (Git) commit information.
 //
 //nolint:forbidigo // must print on stdout
-func PrintVersion(program string) {
+func PrintVersionAndExit(program string) {
 	for _, line := range versionStrings(program) {
 		fmt.Println(line)
 	}
