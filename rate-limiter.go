@@ -234,7 +234,7 @@ func (ar *AdaptiveRate) get(symbol, url string, msg any, maxBytes ...int) (int, 
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusTooManyRequests {
-		return resp.StatusCode, errors.New("Too Many Requests " + symbol)
+		return resp.StatusCode, errors.New("too Many Requests " + symbol)
 	}
 
 	if err = gg.DecodeJSONResponse(resp, msg, maxBytes...); err != nil {
