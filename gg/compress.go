@@ -25,10 +25,8 @@ const (
 	ZStdExt   = ".zst"
 )
 
-var (
-	SupportedEncoders = []string{BrotliExt, GZipExt, S2Ext, ZStdExt}
-	SupportedDecoders = []string{BrotliExt, GZipExt, S2Ext, ZStdExt, Bzip2Ext}
-)
+func SupportedEncoders() []string { return []string{BrotliExt, GZipExt, S2Ext, ZStdExt} }
+func SupportedDecoders() []string { return []string{BrotliExt, GZipExt, S2Ext, ZStdExt, Bzip2Ext} }
 
 func Compress(buf []byte, fn, format string, level int) time.Duration {
 	file, err := os.Create(fn)
@@ -127,7 +125,7 @@ func encoder(file *os.File, format string, level int) (io.WriteCloser, error) {
 		return zstd.NewWriter(file, zstd.WithEncoderLevel(l))
 
 	default:
-		log.Printf("Do not compress because %q is neither %v", format, SupportedEncoders)
+		log.Printf("Do not compress because %q is neither %v", format, SupportedEncoders())
 		return &fakeWClose{file}, nil // file will be closed by caller
 	}
 }
@@ -165,7 +163,7 @@ func decoder(fn, format string, file *os.File) io.ReadCloser {
 		return &fakeRClose{bzip2.NewReader(file)}
 
 	default:
-		log.Printf("Loading without decompression because %q is neither %v", format, SupportedDecoders)
+		log.Printf("Loading without decompression because %q is neither %v", format, SupportedDecoders())
 		return &fakeRClose{file} // file will already be closed by caller
 	}
 }
