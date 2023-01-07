@@ -21,16 +21,16 @@ type Notifier interface {
 }
 
 // NewNotifier selects the Notifier type depending on the parameter pattern.
-func NewNotifier(parameter string) Notifier {
-	if parameter == "" {
-		log.Info("empty URL => use the LogNotifier")
+func NewNotifier(dataSourceName string) Notifier {
+	if dataSourceName == "" {
+		log.Info("empty dataSourceName => use the LogNotifier")
 		return NewLogNotifier()
 	}
 
 	const telegramPrefix = "https://api.telegram.org/bot"
-	if strings.HasPrefix(parameter, telegramPrefix) {
-		log.Info("URL has the Telegram prefix: " + parameter)
-		p := SplitClean(parameter)
+	if strings.HasPrefix(dataSourceName, telegramPrefix) {
+		log.Info("URL has the Telegram prefix: " + dataSourceName)
+		p := SplitClean(dataSourceName)
 		if len(p) == 2 {
 			return NewTelegramNotifier(p[0], p[1])
 		}
@@ -40,7 +40,7 @@ func NewNotifier(parameter string) Notifier {
 	}
 
 	// default
-	return NewMattermostNotifier(parameter)
+	return NewMattermostNotifier(dataSourceName)
 }
 
 // LogNotifier implements a Notifier interface that logs the received notifications.
