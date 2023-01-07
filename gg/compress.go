@@ -98,27 +98,6 @@ func Decompress(fn, format string) []byte {
 	return buf
 }
 
-func compress(file *os.File, format string, buf []byte, level int) (ok bool) {
-	writer, err := encoder(file, format, level)
-	if err != nil {
-		log.Errorf("Cannot create encoder format=%v level=%v err: %v", format, level, err)
-		return false
-	}
-
-	ok = true
-	if _, err := writer.Write(buf); err != nil {
-		log.Warnf("Write() %v: %v", format, err)
-		ok = false
-	}
-
-	if err := writer.Close(); err != nil {
-		log.Warnf("Close() %v: %v", format, err)
-		ok = false
-	}
-
-	return ok
-}
-
 func encoder(file *os.File, format string, level int) (io.WriteCloser, error) {
 	switch format {
 	case BrotliExt:
