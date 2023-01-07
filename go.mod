@@ -23,32 +23,24 @@ require (
 require (
 	github.com/PuerkitoBio/goquery v1.8.0 // indirect
 	github.com/acmacalister/skittles v0.0.0-20160609003031-7423546701e1 // indirect
+	github.com/andybalholm/brotli v1.0.4
 	github.com/andybalholm/cascadia v1.3.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/carlmjohnson/be v0.22.5 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/cristalhq/base64 v0.1.2 // indirect
-	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/felixge/fgprof v0.9.3 // indirect
 	github.com/golang-jwt/jwt/v4 v4.4.3 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
-	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/google/pprof v0.0.0-20221219190121-3cb0bae90811 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
-	github.com/klauspost/compress v1.15.14 // indirect
+	github.com/klauspost/compress v1.15.14
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/mtraver/base91 v1.0.0 // indirect
-	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/common v0.39.0 // indirect
 	github.com/prometheus/procfs v0.9.0 // indirect
-	github.com/sebdah/goldie/v2 v2.5.3 // indirect
-	github.com/sergi/go-diff v1.2.0 // indirect
-	github.com/stretchr/testify v1.8.1 // indirect
 	github.com/yuin/goldmark v1.5.3 // indirect
 	golang.org/x/net v0.4.0 // indirect
 	golang.org/x/sys v0.3.0 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
-	gopkg.in/yaml.v2 v2.4.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
