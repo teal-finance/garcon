@@ -28,7 +28,7 @@ const (
 func SupportedEncoders() []string { return []string{BrotliExt, GZipExt, S2Ext, ZStdExt} }
 func SupportedDecoders() []string { return []string{BrotliExt, GZipExt, S2Ext, ZStdExt, Bzip2Ext} }
 
-func Compress(buf []byte, fn, format string, level int) time.Duration {
+func Compress(buf []byte, fn, ext string, level int) time.Duration {
 	file, err := os.Create(fn)
 	if err != nil {
 		log.Warnf("Cannot create file %v because %v", fn, err)
@@ -37,20 +37,20 @@ func Compress(buf []byte, fn, format string, level int) time.Duration {
 
 	t := time.Now()
 
-	enc, err := encoder(file, format, level)
+	enc, err := encoder(file, ext, level)
 	if err != nil {
-		log.Errorf("Cannot create encoder format=%v level=%v err: %v", format, level, err)
+		log.Errorf("Cannot create encoder extension %q level=%v err: %v", ext, level, err)
 		return 0
 	}
 
 	ok := true
 	if _, err := enc.Write(buf); err != nil {
-		log.Warnf("Write() %v: %v", format, err)
+		log.Warnf("Write() %v: %v", ext, err)
 		ok = false
 	}
 
 	if err := enc.Close(); err != nil {
-		log.Warnf("Close() %v: %v", format, err)
+		log.Warnf("Close() %v: %v", ext, err)
 		ok = false
 	}
 
@@ -66,7 +66,7 @@ func Compress(buf []byte, fn, format string, level int) time.Duration {
 	return time.Since(t)
 }
 
-func Decompress(fn, format string) []byte {
+func Decompress(fn, ext string) []byte {
 	file, err := os.Open(fn)
 	if err != nil {
 		log.Print("Skip cache file after", err)
@@ -79,7 +79,7 @@ func Decompress(fn, format string) []byte {
 		}
 	}()
 
-	reader := decoder(fn, format, file)
+	reader := decoder(fn, ext, file)
 
 	defer func() {
 		if e := reader.Close(); e != nil {
@@ -96,9 +96,16 @@ func Decompress(fn, format string) []byte {
 	return buf
 }
 
-func encoder(file *os.File, format string, level int) (io.WriteCloser, error) {
-	switch format {
+func encoder(file *os.File, ext string, level int) (io.WriteCloser, error) {
+	switch ext {
 	case BrotliExt:
+		if level < brotli.BestSpeed {
+			log.Printf("Increase Brotli level=%d to BestSpeed=%d", level, brotli.BestSpeed)
+			level = brotli.BestSpeed
+		} else if level > brotli.BestCompression {
+			log.Printf("Reduce Brotli level=%d to BestCompression=%d", level, brotli.BestCompression)
+			level = brotli.BestCompression
+		}
 		return brotli.NewWriterLevel(file, level), nil
 
 	case GZipExt:
@@ -106,10 +113,13 @@ func encoder(file *os.File, format string, level int) (io.WriteCloser, error) {
 
 	case S2Ext:
 		switch level {
-		default:
-			return s2.NewWriter(file), nil
 		case 1:
 			return s2.NewWriter(file, s2.WriterUncompressed()), nil
+		default:
+			log.Printf("Change level=%d to Fast=2", level)
+			fallthrough
+		case 2:
+			return s2.NewWriter(file), nil
 		case 3:
 			return s2.NewWriter(file, s2.WriterBetterCompression()), nil
 		case 4:
@@ -118,20 +128,23 @@ func encoder(file *os.File, format string, level int) (io.WriteCloser, error) {
 
 	case ZStdExt:
 		l := zstd.EncoderLevel(level)
-		if l >= zstd.SpeedBestCompression {
+		if l < zstd.SpeedFastest {
+			log.Printf("Increase Zstd level=%d to SpeedFastest=%d", level, zstd.SpeedFastest)
+			l = zstd.SpeedFastest
+		} else if l > zstd.SpeedBestCompression {
 			log.Printf("Reduce Zstd level=%d to SpeedBestCompression=%d", level, zstd.SpeedBestCompression)
 			l = zstd.SpeedBestCompression
 		}
 		return zstd.NewWriter(file, zstd.WithEncoderLevel(l))
 
 	default:
-		log.Printf("Do not compress because %q is neither %v", format, SupportedEncoders())
+		log.Printf("Do not compress because extension %q is neither %v", ext, SupportedEncoders())
 		return &fakeWClose{file}, nil // file will be closed by caller
 	}
 }
 
-func decoder(fn, format string, file *os.File) io.ReadCloser {
-	switch format {
+func decoder(fn, ext string, file *os.File) io.ReadCloser {
+	switch ext {
 	case BrotliExt:
 		log.Print("Decompressing Brotli from", fn)
 		return &fakeRClose{brotli.NewReader(file)}
@@ -163,7 +176,7 @@ func decoder(fn, format string, file *os.File) io.ReadCloser {
 		return &fakeRClose{bzip2.NewReader(file)}
 
 	default:
-		log.Printf("Loading without decompression because %q is neither %v", format, SupportedDecoders())
+		log.Printf("Loading without decompression because extension %q is neither %v", ext, SupportedDecoders())
 		return &fakeRClose{file} // file will already be closed by caller
 	}
 }
