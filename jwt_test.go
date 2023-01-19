@@ -31,7 +31,8 @@ var cases = []struct {
 	addresses    []string
 	gw           garcon.Writer
 	secretHex    string
-	nameAndPerms []any
+	permissions  []any
+	cookieNameIn string
 	cookieName   string
 	plan         string
 	perm         int
@@ -41,7 +42,8 @@ var cases = []struct {
 	addresses:    []string{"http://my-dns.co"},
 	gw:           garcon.NewWriter("http://my-dns.co/doc"),
 	secretHex:    "0a02123112dfb13d58a1bc0c8ce55b154878085035ae4d2e13383a79a3e3de1b",
-	nameAndPerms: nil,
+	permissions:  nil,
+	cookieNameIn: "",
 	cookieName:   "my-dns",
 	plan:         garcon.DefaultPlan,
 	perm:         garcon.DefaultPerm,
@@ -51,7 +53,8 @@ var cases = []struct {
 	addresses:    []string{"http://my-dns.co"},
 	gw:           garcon.NewWriter("http://my-dns.co/doc"),
 	secretHex:    "0a02123112dfb13d58a1bc0c8ce55b154878085035ae4d2e13383a79a3e3de1b",
-	nameAndPerms: []any{"my-cookie-name"},
+	permissions:  []any{},
+	cookieNameIn: "my-cookie-name",
 	cookieName:   "my-cookie-name",
 	plan:         garcon.DefaultPlan,
 	perm:         garcon.DefaultPerm,
@@ -61,7 +64,8 @@ var cases = []struct {
 	addresses:    []string{"https://sub.dns.co/"},
 	gw:           garcon.NewWriter("http://my-dns.co/doc"),
 	secretHex:    "0a02123112dfb13d58a1bc0c8ce55b154878085035ae4d2e13383a79a3e3de1b",
-	nameAndPerms: []any{"", "Anonymous", 6},
+	permissions:  []any{"Anonymous", 6},
+	cookieNameIn: "",
 	cookieName:   "__Host-sub-dns",
 	plan:         "Anonymous",
 	perm:         6,
@@ -71,7 +75,8 @@ var cases = []struct {
 	addresses:    []string{"http://my-dns.co/dir"},
 	gw:           garcon.NewWriter("doc"),
 	secretHex:    "0a02123112dfb13d58a1bc0c8ce55b154878085035ae4d2e13383a79a3e3de1b",
-	nameAndPerms: []any{"", "Anonymous", 6, "Personal"}, // len(permissions) is not even => panic
+	permissions:  []any{"Anonymous", 6, "Personal"}, // len(permissions) is not even => panic
+	cookieNameIn: "",
 	cookieName:   "dir",
 	plan:         "error",
 	perm:         666,
@@ -81,7 +86,8 @@ var cases = []struct {
 	addresses:    []string{"http://sub.dns.co//./sss/..///-_-my.dir_-_.jpg///"},
 	gw:           garcon.NewWriter("/doc"),
 	secretHex:    "0a02123112dfb13d58a1bc0c8ce55b154878085035ae4d2e13383a79a3e3de1b",
-	nameAndPerms: []any{"", "Anonymous", 6, "Personal", 48, "Enterprise", 0},
+	permissions:  []any{"Anonymous", 6, "Personal", 48, "Enterprise", 0},
+	cookieNameIn: "",
 	cookieName:   "my-dir",
 	plan:         "Personal",
 	perm:         48,
@@ -91,7 +97,8 @@ var cases = []struct {
 	addresses:    []string{"http://localhost:8080/"},
 	gw:           garcon.NewWriter(""),
 	secretHex:    "0a02123112dfb13d58a1bc0c8ce55b154878085035ae4d2e13383a79a3e3de1b",
-	nameAndPerms: []any{"", "Anonymous", 6, "Personal", 48, "Enterprise", -1},
+	permissions:  []any{"Anonymous", 6, "Personal", 48, "Enterprise", -1},
+	cookieNameIn: "",
 	cookieName:   garcon.DefaultCookieName,
 	plan:         "Enterprise",
 	perm:         -1,
@@ -101,7 +108,8 @@ var cases = []struct {
 	addresses:    []string{"https://my-dns.co:8080/my/sub/-_-my.dir_-_.jpg/"},
 	gw:           garcon.NewWriter(""),
 	secretHex:    "0a02123112dfb13d58a1bc0c8ce55b154878085035ae4d2e13383a79a3e3de1b",
-	nameAndPerms: []any{"", "Anonymous", 6, "Personal", 48, "Enterprise", -1},
+	permissions:  []any{"Anonymous", 6, "Personal", 48, "Enterprise", -1},
+	cookieNameIn: "",
 	cookieName:   "__Secure-my-dir",
 	plan:         "55",
 	perm:         55,
@@ -124,7 +132,7 @@ func TestNewJWTChecker(t *testing.T) {
 				defer func() { _ = recover() }()
 			}
 
-			ck := garcon.NewJWTChecker(c.gw, urls, c.secretHex, c.nameAndPerms...)
+			ck := garcon.NewJWTChecker(c.gw, urls, c.secretHex, c.cookieNameIn, c.permissions...)
 
 			if c.shouldPanic {
 				t.Errorf("#%d NewChecker() did not panic", i)
@@ -209,16 +217,16 @@ func TestNewJWTChecker(t *testing.T) {
 			if !next.called {
 				t.Errorf("#%d checker.Vet() has not called next.ServeHTTP()", i)
 			}
-			if len(c.nameAndPerms) >= 3 {
+			if len(c.permissions) >= 2 {
 				var ok bool
-				c.perm, ok = c.nameAndPerms[2].(int)
+				c.perm, ok = c.permissions[1].(int)
 				if !ok {
-					t.Errorf("#%d c.nameAndPerms[2] is not int", i)
+					t.Errorf("#%d c.permissions[1] is not int", i)
 				}
 			}
 			if next.perm != c.perm {
 				t.Errorf("#%d checker.Set() request ctx perm got=%d want=%d "+
-					"len(permissions)=%d", i, next.perm, c.perm, len(c.nameAndPerms))
+					"len(permissions)=%d", i, next.perm, c.perm, len(c.permissions))
 			}
 			resp.Body.Close()
 		})

@@ -13,7 +13,6 @@ import (
 	"net/http"
 	"net/url"
 	"path"
-	"reflect"
 	"strconv"
 	"time"
 
@@ -64,8 +63,8 @@ type JWTChecker struct {
 // The keyTxt scheme is: `alg:xxxxxxxxxxxxxxxxxxxxxxxxxx`
 // where `alg` is the optional algorithm name, and `xxxxxxxxxxxxxxxxxxxxxxxxxx`
 // is the key encoded in either hexadecimal or unpadded Base64 as defined in RFC 4648 §5 (URL encoding).
-func NewJWTChecker(gw Writer, urls []*url.URL, keyTxt string, nameAndPermissions ...any) *JWTChecker {
-	cookieName, plans, perms := optionalArgs(nameAndPermissions...)
+func NewJWTChecker(gw Writer, urls []*url.URL, keyTxt, cookieName string, permissions ...any) *JWTChecker {
+	plans, perms := optionalArgs(permissions...)
 
 	var verifier tokens.Verifier
 	tokenizer, err := tokens.NewHMAC(keyTxt, true)
@@ -204,39 +203,21 @@ func (ck *JWTChecker) Vet(next http.Handler) http.Handler {
 	})
 }
 
-func optionalArgs(nameAndPermissions ...any) (string, []string, []Perm) {
-	const help = "The (optional) parametric arguments must be the cookie name " +
-		"followed by an alternating of permission string and int. " +
+func optionalArgs(permissions ...any) ([]string, []Perm) {
+	const help = "The (optional) parametric arguments must be " +
+		"an alternating of permission string and int. " +
 		"Example: NewJWTChecker(writer, urls, keyTxt, cookieName, plan1, perm1, plan2, perm2)"
 
-	n := len(nameAndPermissions)
-
-	cookieName := ""
-	if n > 0 {
-		if n%2 != 1 {
-			log.Panicf("The number of the parametric arguments in NewJWTChecker() must be odd but got %d."+help, n)
-		}
-
-		switch first := nameAndPermissions[0].(type) {
-		case string:
-			cookieName = first
-			log.Info("Middleware JWT uses cookie name", cookieName, "(string)")
-		case ServerName:
-			cookieName = first.String()
-			log.Info("Middleware JWT uses cookie name", cookieName, "(ServerName)")
-		default:
-			log.Panic("The first parametric argument in NewJWTChecker() "+
-				"must the cookie name in either a string or a ServerName type "+
-				"but got type=", reflect.TypeOf(first), "content=", first)
-		}
+	n := len(permissions)
+	if n == 0 {
+		return []string{DefaultPlan}, []Perm{{Value: DefaultPerm}}
 	}
 
-	if n <= 1 {
-		return cookieName, []string{DefaultPlan}, []Perm{{Value: DefaultPerm}}
+	if n%2 != 0 {
+		log.Panicf("The number of the parametric arguments in NewJWTChecker() must be even but got %d."+help, n)
 	}
 
-	permissions := nameAndPermissions[1:]
-	n = (n - 1) / 2
+	n /= 2
 	plans := make([]string, n)
 	perms := make([]Perm, n)
 	for i, p := range permissions {
@@ -253,7 +234,7 @@ func optionalArgs(nameAndPermissions ...any) (string, []string, []Perm) {
 		}
 	}
 
-	return cookieName, plans, perms
+	return plans, perms
 }
 
 func splitURL(urls []*url.URL) (secure bool, dns, dir string) {

@@ -54,7 +54,7 @@ func main() {
 	middleware, connState, urls := setMiddlewares(gw)
 
 	// Handles both REST API and static web files
-	h := handler(gw, garcon.NewJWTChecker(gw, urls, hmacSHA256Hex))
+	h := handler(gw, garcon.NewJWTChecker(gw, urls, hmacSHA256Hex, "my-cookie"))
 	h = middleware.Then(h)
 
 	runServer(h, connState)

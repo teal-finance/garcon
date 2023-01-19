@@ -219,5 +219,5 @@ func (g *Garcon) JWTChecker(keyTxt string, planPerm ...any) *JWTChecker {
 		log.Panic("Missing URLs => Set first the URLs with garcon.WithURLs()")
 	}
 
-	return NewJWTChecker(g.Writer, g.urls, keyTxt, append([]any{g.ServerName}, planPerm...)...)
+	return NewJWTChecker(g.Writer, g.urls, keyTxt, g.ServerName.String(), planPerm...)
 }
