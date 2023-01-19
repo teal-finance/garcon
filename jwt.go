@@ -255,7 +255,7 @@ func extractCookieAttributes(urls []*url.URL) (secure bool, dns, dir string) {
 
 	dns = u.Hostname()
 
-	dir = path.Clean(dir)
+	dir = path.Clean(u.Path)
 	if dir == "." {
 		dir = "/"
 	}
