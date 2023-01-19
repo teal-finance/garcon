@@ -375,9 +375,8 @@ func ConvertSize(sizeInBytes int) string {
 	return ConvertSize64(int64(sizeInBytes))
 }
 
-// ConvertSize64 is similar ConvertSize but takes in input an int64.
-// See also ByteSize() from "github.com/gofiber/fiber/v2/utils"
-// https://github.com/gofiber/fiber/blob/master/utils/convert.go#L57
+// ConvertSize64 is ConvertSize with int64 input.
+// A good alternative is `ByteSize()“ from "github.com/gofiber/fiber".
 func ConvertSize64(sizeInBytes int64) string {
 	const unit int64 = 1024
 

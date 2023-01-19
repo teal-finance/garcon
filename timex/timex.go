@@ -84,6 +84,7 @@ func DStr(d time.Duration) string {
 		if d < Second {
 			return str
 		}
+
 		d = d.Round(Second)
 	} else if d <= -Minute || d >= Minute {
 		d = d.Round(Second) // no sub-second precision when greater than a hour
@@ -128,7 +129,7 @@ const (
 	DaySec    = 24 * HourSec // DaySec = number of seconds in one day.
 	WeekSec   = 7 * DaySec   // WeekSec = number of seconds in one week.
 	MonthSec  = YearSec / 12 // MonthSec = number of seconds in one month.
-	YearSec   = 31556952     // SecondsInOneYear is the average of the the number of seconds in one year.
+	YearSec   = 31556952     // SecondsInOneYear is the average of the number of seconds in one year.
 
 	MicrosecondNs = 1000                 // Number of nanoseconds in 1 microsecond
 	MillisecondNs = 1000 * MicrosecondNs // Number of nanoseconds in 1 millisecond

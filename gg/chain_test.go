@@ -185,6 +185,8 @@ func TestChain_Then_OrdersRoundTrippersCorrectly(t *testing.T) {
 	}
 }
 
+const bodyResponse = "t1\nt2\nt3\nt4\napp\n"
+
 func TestChain_Append_AddsHandlersCorrectly1(t *testing.T) {
 	chain := gg.NewChain(tagMiddleware("t1\n"), tagMiddleware("t2\n"))
 	newChain := chain.Append(tagMiddleware("t3\n"), tagMiddleware("t4\n"))
@@ -206,7 +208,7 @@ func TestChain_Append_AddsHandlersCorrectly1(t *testing.T) {
 
 	chained.ServeHTTP(w, r)
 
-	if w.Body.String() != "t1\nt2\nt3\nt4\napp\n" {
+	if w.Body.String() != bodyResponse {
 		t.Error("Append does not add handlers correctly")
 	}
 }
@@ -241,7 +243,7 @@ func TestRTChain_Append_AddsRoundTrippersCorrectly1(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if body != "t1\nt2\nt3\nt4\napp\n" {
+	if body != bodyResponse {
 		t.Error("Append does not add round trippers correctly")
 	}
 }
@@ -271,7 +273,7 @@ func TestChain_Append_AddsHandlersCorrectly2(t *testing.T) {
 
 	chained.ServeHTTP(w, r)
 
-	if w.Body.String() != "t1\nt2\nt3\nt4\napp\n" {
+	if w.Body.String() != bodyResponse {
 		t.Error("Append does not add handlers in correctly")
 	}
 }
@@ -310,7 +312,7 @@ func TestRTChain_Append_AddsRoundTrippersCorrectly2(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if body != "t1\nt2\nt3\nt4\napp\n" {
+	if body != bodyResponse {
 		t.Error("Append does not add round trippers in correctly")
 	}
 }

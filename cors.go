@@ -75,6 +75,7 @@ func newCORS(origins, methods, headers []string, debug bool) *cors.Cors {
 		ExposedHeaders:         nil,
 		MaxAge:                 3600 * 24, // https://developer.mozilla.org/docs/Web/HTTP/Headers/Access-Control-Max-Age
 		AllowCredentials:       true,
+		AllowPrivateNetwork:    false,
 		OptionsPassthrough:     false,
 		OptionsSuccessStatus:   http.StatusNoContent,
 		Debug:                  debug, // verbose logs

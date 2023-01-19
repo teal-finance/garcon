@@ -161,24 +161,22 @@ type versionInfo struct {
 }
 
 // initVersionInfo computes the version and commit information (Git).
-//
-//nolint:govet // local var "init" sets global var "init"
 func initVersionInfo() versionInfo {
-	var info versionInfo
+	var vi versionInfo
 
 	noProgramName := ""
-	info.Version = Version(noProgramName)
+	vi.Version = Version(noProgramName)
 
 	short := versioninfo.Short()
 	if !strings.HasSuffix(V, short) {
-		info.Short = versioninfo.Short()
+		vi.Short = versioninfo.Short()
 	}
 
 	if !versioninfo.LastCommit.IsZero() {
-		info.LastCommit = versioninfo.LastCommit.Format("2006-01-02 15:04:05")
+		vi.LastCommit = versioninfo.LastCommit.Format("2006-01-02 15:04:05")
 	}
 
-	return info
+	return vi
 }
 
 const html = `<!DOCTYPE html>

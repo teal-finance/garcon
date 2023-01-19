@@ -219,7 +219,7 @@ func (ws *StaticWebServer) imagePathAndTypeFromExt(r *http.Request, extPos int, 
 	return "", imageContentType(ext)
 }
 
-// extIndex returns the position of the extension within the the urlPath.
+// extIndex returns the position of the extension within the urlPath.
 // If no dot, returns the ending position.
 func extIndex(urlPath string) int {
 	for i := len(urlPath) - 1; i >= 0 && urlPath[i] != '/'; i-- {
