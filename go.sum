@@ -39,8 +39,8 @@ github.com/golang/protobuf v1.5.2/go.mod h1:XVQd3VNwM+JqD3oG2Ue2ip4fOMUkwXdXDdiu
 github.com/google/go-cmp v0.5.5/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
 github.com/google/go-cmp v0.5.9 h1:O2Tfq5qg4qc4AmwVlvv0oLiVAGB7enBSJ2x2DqQFi38=
 github.com/google/pprof v0.0.0-20211214055906-6f57359322fd/go.mod h1:KgnwoLYCZ8IQu3XUZ8Nc/bM9CCZFOyjUNOSygVozoDg=
-github.com/google/pprof v0.0.0-20221219190121-3cb0bae90811 h1:wORs2YN3R3ona/CXYuTvLM31QlgoNKHvlCNuArCDDCU=
-github.com/google/pprof v0.0.0-20221219190121-3cb0bae90811/go.mod h1:dDKJzRmX4S37WGHujM7tX//fmj1uioxKzKxz3lo4HJo=
+github.com/google/pprof v0.0.0-20230111200839-76d1ae5aea2b h1:8htHrh2bw9c7Idkb7YNac+ZpTqLMjRpI+FWu51ltaQc=
+github.com/google/pprof v0.0.0-20230111200839-76d1ae5aea2b/go.mod h1:dDKJzRmX4S37WGHujM7tX//fmj1uioxKzKxz3lo4HJo=
 github.com/ianlancetaylor/demangle v0.0.0-20210905161508-09a460cdf81d/go.mod h1:aYm2/VgdVmcIU8iMfdMvDMsRAQjcfZSKFby6HOFvi/w=
 github.com/josharian/intern v1.0.0 h1:vlS4z54oSdjm0bgjRigI+G1HpF+tI+9rE5LLzOg8HmY=
 github.com/josharian/intern v1.0.0/go.mod h1:5DoeVV0s6jJacbCEi61lwdGj/aVlrQvzHFFd8Hwg//Y=
@@ -90,11 +90,10 @@ github.com/teal-finance/emo v0.0.0-20221020231838-605890cfa1bd h1:QqBCAak6sJaiq+
 github.com/teal-finance/emo v0.0.0-20221020231838-605890cfa1bd/go.mod h1:LkXZJ/yRHmJdqK3HA1r+c6WsRYrl/slowgilyjnAh+o=
 github.com/teal-finance/incorruptible v0.0.0-20221218151336-b7408a3dd11b h1:UbR5/Z6WNESBPwYO8H2FTcPgdrqrc5oQ2hCgQDvmL5s=
 github.com/teal-finance/incorruptible v0.0.0-20221218151336-b7408a3dd11b/go.mod h1:raafBNcODbH7ghUcN8znmHquCJePvH2pn4c0BZgu9Qc=
-github.com/teal-finance/quid v0.0.0-20221113141027-48c235729dea h1:pNRA3aOyNbmFmW2VMLUNP/K2y7ysk8EIgTBusTlySfM=
-github.com/teal-finance/quid v0.0.0-20221113141027-48c235729dea/go.mod h1:AEb8+T4EiFr9phJOlKR57LqPoIU1FhAIZwqYQ5QXggQ=
+github.com/teal-finance/quid v0.0.0-20230113005041-5b692bd07dfb h1:lzYcYSKTBd+tGUMNXMXctxg7n5FAY5cTuU4AcUyksrg=
+github.com/teal-finance/quid v0.0.0-20230113005041-5b692bd07dfb/go.mod h1:AEb8+T4EiFr9phJOlKR57LqPoIU1FhAIZwqYQ5QXggQ=
 github.com/yuin/goldmark v1.4.14/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=
-github.com/yuin/goldmark v1.5.3 h1:3HUJmBFbQW9fhQOzMgseU134xfi6hU+mjWywx5Ty+/M=
-github.com/yuin/goldmark v1.5.3/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=
+github.com/yuin/goldmark v1.5.2 h1:ALmeCk/px5FSm1MAcFBAsVKZjDuMVj8Tm7FFIlMJnqU=
 github.com/zhangyunhao116/fastrand v0.3.0 h1:7bwe124xcckPulX6fxtr2lFdO2KQqaefdtbk+mqO/Ig=
 github.com/zhangyunhao116/fastrand v0.3.0/go.mod h1:0v5KgHho0VE6HU192HnY15de/oDS8UrbBChIFjIhBtc=
 golang.org/x/net v0.0.0-20210916014120-12bc252f5db8/go.mod h1:9nx3DQGgdP8bBQD5qxJ1jj9UTztislL4KSBs9R2vV5Y=
