@@ -48,7 +48,7 @@ func New(opts ...Option) *Garcon {
 
 	// namespace fallback = retrieve it from first URL
 	if g.ServerName == "" && len(g.urls) > 0 {
-		g.ServerName = ExtractName(g.urls[0].String())
+		g.ServerName = ServerName(gg.Namify(g.urls[0].String()))
 	}
 
 	// set CORS origins
@@ -76,7 +76,7 @@ type Option func(*Garcon)
 
 func WithServerName(str string) Option {
 	return func(g *Garcon) {
-		g.ServerName = ExtractName(str)
+		g.ServerName = ServerName(gg.Namify(str))
 	}
 }
 
@@ -169,7 +169,7 @@ type TokenChecker interface {
 	// In dev. mode, Chk accepts any request but does not store invalid tokens.
 	Chk(next http.Handler) http.Handler
 
-	// Vet is a middleware accepting accepting requests having a valid token
+	// Vet is a middleware accepting requests having a valid token
 	// either in the cookie or in the first "Authorization" header:
 	// other requests are rejected with http.StatusUnauthorized.
 	// Vet also stores the decoded token in the request context.
@@ -219,5 +219,5 @@ func (g *Garcon) JWTChecker(keyTxt string, planPerm ...any) *JWTChecker {
 		log.Panic("Missing URLs => Set first the URLs with garcon.WithURLs()")
 	}
 
-	return NewJWTChecker(g.Writer, g.urls, keyTxt, planPerm...)
+	return NewJWTChecker(g.Writer, g.urls, keyTxt, append([]any{g.ServerName}, planPerm...)...)
 }

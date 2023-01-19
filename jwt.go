@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"reflect"
 	"strconv"
 	"time"
 
@@ -30,7 +31,7 @@ const (
 	// require a bearer to prove possession of cryptographic key material
 	// (proof-of-possession).
 	authScheme        = "Bearer "
-	defaultCookieName = "g" // g as in garcon
+	DefaultCookieName = "g" // g as in garcon
 	// DefaultPlan is the plan name in absence of "permissions" parametric parameters.
 	DefaultPlan = "VIP"
 	// DefaultPerm is the perm value in absence of "permissions" parametric parameters.
@@ -63,8 +64,8 @@ type JWTChecker struct {
 // The keyTxt scheme is: `alg:xxxxxxxxxxxxxxxxxxxxxxxxxx`
 // where `alg` is the optional algorithm name, and `xxxxxxxxxxxxxxxxxxxxxxxxxx`
 // is the key encoded in either hexadecimal or unpadded Base64 as defined in RFC 4648 §5 (URL encoding).
-func NewJWTChecker(gw Writer, urls []*url.URL, keyTxt string, permissions ...any) *JWTChecker {
-	plans, perms := checkParameters(permissions...)
+func NewJWTChecker(gw Writer, urls []*url.URL, keyTxt string, nameAndPermissions ...any) *JWTChecker {
+	cookieName, plans, perms := optionalArgs(nameAndPermissions...)
 
 	var verifier tokens.Verifier
 	tokenizer, err := tokens.NewHMAC(keyTxt, true)
@@ -86,10 +87,10 @@ func NewJWTChecker(gw Writer, urls []*url.URL, keyTxt string, permissions ...any
 	}
 
 	if tokenizer != nil {
-		secure, dns, dir := extractCookieAttributes(urls)
-		dns, name := forgeCookieName(secure, dns, dir)
+		secure, dns, dir := splitURL(urls)
+		dns, cookieName = hardenCookieName(secure, dns, dir, cookieName)
 		for i := range plans {
-			ck.cookies[i] = NewCookie(tokenizer, name, plans[i], "", secure, dns, dir)
+			ck.cookies[i] = NewCookie(tokenizer, cookieName, plans[i], "", secure, dns, dir)
 		}
 	}
 
@@ -98,17 +99,17 @@ func NewJWTChecker(gw Writer, urls []*url.URL, keyTxt string, permissions ...any
 
 func NewAccessToken(maxTTL, user string, groups, orgs []string, hexKey string) string {
 	if len(hexKey) != 64 {
-		log.Panic("Want HMAC-SHA256 key composed by 64 hexadecimal digits, but got", len(hexKey))
+		log.Panic("Middleware JWT wants HMAC-SHA256 key composed by 64 hexadecimal digits, but got", len(hexKey))
 	}
 
 	binKey, err := hex.DecodeString(hexKey)
 	if err != nil {
-		log.Panic("Cannot decode the HMAC-SHA256 key, please provide 64 hexadecimal digits:", err)
+		log.Panic("Middleware JWT cannot decode the HMAC-SHA256 key, please provide 64 hexadecimal digits:", err)
 	}
 
 	token, err := tokens.GenAccessToken(maxTTL, maxTTL, user, groups, orgs, binKey)
 	if err != nil || token == "" {
-		log.Panic("Cannot create JWT:", err)
+		log.Panic("Middleware JWT cannot create JWT:", err)
 	}
 
 	return token
@@ -117,10 +118,10 @@ func NewAccessToken(maxTTL, user string, groups, orgs []string, hexKey string) s
 func NewCookie(tokenizer tokens.Tokenizer, name, plan, user string, secure bool, dns, dir string) http.Cookie {
 	JWT, err := tokenizer.GenAccessToken("1y", "1y", user, []string{plan}, nil)
 	if err != nil || JWT == "" {
-		log.Panic("Cannot create JWT:", err)
+		log.Panic("Middleware JWT cannot create an access token:", err)
 	}
 
-	log.Info("JWT newCookie plan="+plan+" domain="+dns+
+	log.Info("Middleware JWT cookie: plan="+plan+" domain="+dns+
 		" path="+dir+" secure=", secure, " "+name+"="+JWT)
 
 	return http.Cookie{
@@ -203,17 +204,39 @@ func (ck *JWTChecker) Vet(next http.Handler) http.Handler {
 	})
 }
 
-func checkParameters(permissions ...any) ([]string, []Perm) {
-	n := len(permissions)
-	if n == 0 {
-		return []string{DefaultPlan}, []Perm{{Value: DefaultPerm}}
-	}
-	if n%2 != 0 {
-		log.Panicf("The number %d of parametric arguments in NewChecker() must be even, "+
-			"permissions must alternate string and int: plan1, perm1, plan2, perm2...", n)
+func optionalArgs(nameAndPermissions ...any) (string, []string, []Perm) {
+	const help = "The (optional) parametric arguments must be the cookie name " +
+		"followed by an alternating of permission string and int. " +
+		"Example: NewJWTChecker(writer, urls, keyTxt, cookieName, plan1, perm1, plan2, perm2)"
+
+	n := len(nameAndPermissions)
+
+	cookieName := ""
+	if n > 0 {
+		if n%2 != 1 {
+			log.Panicf("The number of the parametric arguments in NewJWTChecker() must be odd but got %d."+help, n)
+		}
+
+		switch first := nameAndPermissions[0].(type) {
+		case string:
+			cookieName = first
+			log.Info("Middleware JWT uses cookie name", cookieName, "(string)")
+		case ServerName:
+			cookieName = first.String()
+			log.Info("Middleware JWT uses cookie name", cookieName, "(ServerName)")
+		default:
+			log.Panic("The first parametric argument in NewJWTChecker() "+
+				"must the cookie name in either a string or a ServerName type "+
+				"but got type=", reflect.TypeOf(first), "content=", first)
+		}
 	}
 
-	n /= 2
+	if n <= 1 {
+		return cookieName, []string{DefaultPlan}, []Perm{{Value: DefaultPerm}}
+	}
+
+	permissions := nameAndPermissions[1:]
+	n = (n - 1) / 2
 	plans := make([]string, n)
 	perms := make([]Perm, n)
 	for i, p := range permissions {
@@ -226,22 +249,21 @@ func checkParameters(permissions ...any) ([]string, []Perm) {
 			perms[i/2] = Perm{Value: v}
 		}
 		if !ok {
-			log.Panic("Wrong type for the parametric arguments in NewChecker(), " +
-				"permissions must alternate string and int: plan1, perm1, plan2, perm2...")
+			log.Panicf("Wrong type for the parametric arguments (permission #%d) in NewChecker(). "+help, i)
 		}
 	}
 
-	return plans, perms
+	return cookieName, plans, perms
 }
 
-func extractCookieAttributes(urls []*url.URL) (secure bool, dns, dir string) {
+func splitURL(urls []*url.URL) (secure bool, dns, dir string) {
 	if len(urls) == 0 {
-		log.Panic("No urls => Cannot set Cookie domain")
+		log.Panic("Middleware JWT misses an URL => cannot set the cookie domain")
 	}
 
 	u := urls[0]
 	if u == nil {
-		log.Panic("Unexpected nil in URL slide:", urls)
+		log.Panic("Middleware JWT got nil in URL slide:", urls)
 	}
 
 	switch {
@@ -250,7 +272,7 @@ func extractCookieAttributes(urls []*url.URL) (secure bool, dns, dir string) {
 	case u.Scheme == "https":
 		secure = true
 	default:
-		log.Panic("Unexpected URL scheme in", u)
+		log.Panic("Middleware JWT wants http or https in URL scheme but got URL", u)
 	}
 
 	dns = u.Hostname()
@@ -263,38 +285,44 @@ func extractCookieAttributes(urls []*url.URL) (secure bool, dns, dir string) {
 	return secure, dns, dir
 }
 
-// forgeCookieName returns the sanitized path and
+// hardenCookieName returns the sanitized path and
 // a nice cookie name deduced from the path basename.
-func forgeCookieName(secure bool, dns, dir string) (domain, name string) {
-	name = defaultCookieName
-	for i := len(dir) - 2; i >= 0; i-- {
-		if dir[i] == byte('/') {
-			name = dir[i+1:]
-			break
-		}
+func hardenCookieName(secure bool, dns, dir, cookieName string) (string, string) {
+	if cookieName == "" {
+		cookieName = gg.Namify(dir)
+		log.Info("Middleware JWT uses cookie name", cookieName, "from URL path", dir)
+	}
+	if cookieName == "" && dns != "localhost" {
+		cookieName = gg.Namify(dns)
+		log.Info("Middleware JWT uses cookie name", cookieName, "from domain name", dns)
+	}
+	if cookieName == "" {
+		cookieName = DefaultCookieName
+		log.Info("Middleware JWT uses default cookie name " + DefaultCookieName)
 	}
 
 	if secure {
 		if dir == "/" {
 			// "__Host-" is when cookie has "Secure" flag, has no "Domain", has "Path=/" and is sent from a secure origin.
-			name = "__Host-" + name
+			cookieName = "__Host-" + cookieName
 			dns = ""
 		} else {
 			// "__Secure-" is when cookie has "Secure" flag and is sent from a secure origin
 			// "__Host-" is safer than the "__Secure-" prefix.
-			name = "__Secure-" + name
+			cookieName = "__Secure-" + cookieName
 		}
+		log.Info("Middleware JWT hardens cookie name", cookieName)
 	}
 
-	return dns, name
+	return dns, cookieName
 }
 
-func (ck *JWTChecker) PermFromBearerOrCookie(r *http.Request) (Perm, []any) {
+func (ck *JWTChecker) PermFromBearerOrCookie(r *http.Request) (perm Perm, err []any) {
 	JWT, errBearer := ck.jwtFromBearer(r)
 	if errBearer != nil {
 		c, errCookie := r.Cookie(ck.cookies[0].Name)
 		if errCookie != nil {
-			return Perm{}, []any{
+			return perm, []any{
 				ErrNoValidJWT,
 				"expected_cookie_name", ck.cookies[0].Name,
 				"error_bearer", errBearer,
@@ -321,10 +349,10 @@ func (ck *JWTChecker) jwtFromBearer(r *http.Request) (string, error) {
 	return "", ErrNoBearer
 }
 
-func (ck *JWTChecker) PermFromCookie(r *http.Request) (Perm, []any) {
-	c, err := r.Cookie(ck.cookies[0].Name)
-	if err != nil {
-		return Perm{}, []any{err}
+func (ck *JWTChecker) PermFromCookie(r *http.Request) (perm Perm, err []any) {
+	c, e := r.Cookie(ck.cookies[0].Name)
+	if e != nil {
+		return perm, []any{e}
 	}
 	return ck.PermFromJWT(c.Value)
 }
@@ -380,7 +408,7 @@ var permKey struct{}
 func PermFromCtx(r *http.Request) Perm {
 	perm, ok := r.Context().Value(permKey).(Perm)
 	if !ok {
-		log.Warn("JWT no permission in context", r.URL.Path)
+		log.Warn("Middleware JWT misses permission in context", r.URL.Path)
 	}
 	return perm
 }

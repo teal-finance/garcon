@@ -27,74 +27,92 @@ func (next *next) ServeHTTP(_ http.ResponseWriter, r *http.Request) {
 }
 
 var cases = []struct {
-	name        string
-	addresses   []string
-	gw          garcon.Writer
-	secretHex   string
-	permissions []any
-	plan        string
-	perm        int
-	shouldPanic bool
+	name         string
+	addresses    []string
+	gw           garcon.Writer
+	secretHex    string
+	nameAndPerms []any
+	cookieName   string
+	plan         string
+	perm         int
+	shouldPanic  bool
 }{{
-	name:        "0plans",
-	addresses:   []string{"http://my-dns.co"},
-	gw:          garcon.NewWriter("http://my-dns.co/doc"),
-	secretHex:   "0a02123112dfb13d58a1bc0c8ce55b154878085035ae4d2e13383a79a3e3de1b",
-	permissions: nil,
-	plan:        garcon.DefaultPlan,
-	perm:        garcon.DefaultPerm,
-	shouldPanic: false,
+	name:         "0plans",
+	addresses:    []string{"http://my-dns.co"},
+	gw:           garcon.NewWriter("http://my-dns.co/doc"),
+	secretHex:    "0a02123112dfb13d58a1bc0c8ce55b154878085035ae4d2e13383a79a3e3de1b",
+	nameAndPerms: nil,
+	cookieName:   "my-dns",
+	plan:         garcon.DefaultPlan,
+	perm:         garcon.DefaultPerm,
+	shouldPanic:  false,
 }, {
-	name:        "1plans",
-	addresses:   []string{"http://my-dns.co/"},
-	gw:          garcon.NewWriter("http://my-dns.co/doc"),
-	secretHex:   "0a02123112dfb13d58a1bc0c8ce55b154878085035ae4d2e13383a79a3e3de1b",
-	permissions: []any{"Anonymous", 6},
-	plan:        "Anonymous",
-	perm:        6,
-	shouldPanic: false,
+	name:         "name-only",
+	addresses:    []string{"http://my-dns.co"},
+	gw:           garcon.NewWriter("http://my-dns.co/doc"),
+	secretHex:    "0a02123112dfb13d58a1bc0c8ce55b154878085035ae4d2e13383a79a3e3de1b",
+	nameAndPerms: []any{"my-cookie-name"},
+	cookieName:   "my-cookie-name",
+	plan:         garcon.DefaultPlan,
+	perm:         garcon.DefaultPerm,
+	shouldPanic:  false,
 }, {
-	name:        "bad-plans",
-	addresses:   []string{"http://my-dns.co/g"},
-	gw:          garcon.NewWriter("doc"),
-	secretHex:   "0a02123112dfb13d58a1bc0c8ce55b154878085035ae4d2e13383a79a3e3de1b",
-	permissions: []any{"Anonymous", 6, "Personal"}, // len(permissions) is not even => panic
-	plan:        "error",
-	perm:        666,
-	shouldPanic: true,
+	name:         "1plans",
+	addresses:    []string{"https://sub.dns.co/"},
+	gw:           garcon.NewWriter("http://my-dns.co/doc"),
+	secretHex:    "0a02123112dfb13d58a1bc0c8ce55b154878085035ae4d2e13383a79a3e3de1b",
+	nameAndPerms: []any{"", "Anonymous", 6},
+	cookieName:   "__Host-sub-dns",
+	plan:         "Anonymous",
+	perm:         6,
+	shouldPanic:  false,
 }, {
-	name:        "3plans",
-	addresses:   []string{"http://my-dns.co//./sss/..///g///"},
-	gw:          garcon.NewWriter("/doc"),
-	secretHex:   "0a02123112dfb13d58a1bc0c8ce55b154878085035ae4d2e13383a79a3e3de1b",
-	permissions: []any{"Anonymous", 6, "Personal", 48, "Enterprise", 0},
-	plan:        "Personal",
-	perm:        48,
-	shouldPanic: false,
+	name:         "bad-plans",
+	addresses:    []string{"http://my-dns.co/dir"},
+	gw:           garcon.NewWriter("doc"),
+	secretHex:    "0a02123112dfb13d58a1bc0c8ce55b154878085035ae4d2e13383a79a3e3de1b",
+	nameAndPerms: []any{"", "Anonymous", 6, "Personal"}, // len(permissions) is not even => panic
+	cookieName:   "dir",
+	plan:         "error",
+	perm:         666,
+	shouldPanic:  true,
 }, {
-	name:        "localhost",
-	addresses:   []string{"http://localhost:8080/"},
-	gw:          garcon.NewWriter(""),
-	secretHex:   "0a02123112dfb13d58a1bc0c8ce55b154878085035ae4d2e13383a79a3e3de1b",
-	permissions: []any{"Anonymous", 6, "Personal", 48, "Enterprise", -1},
-	plan:        "Enterprise",
-	perm:        -1,
-	shouldPanic: false,
+	name:         "3plans",
+	addresses:    []string{"http://sub.dns.co//./sss/..///-_-my.dir_-_.jpg///"},
+	gw:           garcon.NewWriter("/doc"),
+	secretHex:    "0a02123112dfb13d58a1bc0c8ce55b154878085035ae4d2e13383a79a3e3de1b",
+	nameAndPerms: []any{"", "Anonymous", 6, "Personal", 48, "Enterprise", 0},
+	cookieName:   "my-dir",
+	plan:         "Personal",
+	perm:         48,
+	shouldPanic:  false,
 }, {
-	name:        "customPlan",
-	addresses:   []string{"http://localhost:8080/"},
-	gw:          garcon.NewWriter(""),
-	secretHex:   "0a02123112dfb13d58a1bc0c8ce55b154878085035ae4d2e13383a79a3e3de1b",
-	permissions: []any{"Anonymous", 6, "Personal", 48, "Enterprise", -1},
-	plan:        "55",
-	perm:        55,
-	shouldPanic: false,
+	name:         "localhost",
+	addresses:    []string{"http://localhost:8080/"},
+	gw:           garcon.NewWriter(""),
+	secretHex:    "0a02123112dfb13d58a1bc0c8ce55b154878085035ae4d2e13383a79a3e3de1b",
+	nameAndPerms: []any{"", "Anonymous", 6, "Personal", 48, "Enterprise", -1},
+	cookieName:   garcon.DefaultCookieName,
+	plan:         "Enterprise",
+	perm:         -1,
+	shouldPanic:  false,
+}, {
+	name:         "customPlan",
+	addresses:    []string{"https://my-dns.co:8080/my/sub/-_-my.dir_-_.jpg/"},
+	gw:           garcon.NewWriter(""),
+	secretHex:    "0a02123112dfb13d58a1bc0c8ce55b154878085035ae4d2e13383a79a3e3de1b",
+	nameAndPerms: []any{"", "Anonymous", 6, "Personal", 48, "Enterprise", -1},
+	cookieName:   "__Secure-my-dir",
+	plan:         "55",
+	perm:         55,
+	shouldPanic:  false,
 }}
 
 func TestNewJWTChecker(t *testing.T) {
 	t.Parallel()
 
-	for _, c := range cases {
+	for i, c := range cases {
+		i := i
 		c := c
 
 		t.Run(c.name, func(t *testing.T) {
@@ -106,21 +124,25 @@ func TestNewJWTChecker(t *testing.T) {
 				defer func() { _ = recover() }()
 			}
 
-			ck := garcon.NewJWTChecker(c.gw, urls, c.secretHex, c.permissions...)
+			ck := garcon.NewJWTChecker(c.gw, urls, c.secretHex, c.nameAndPerms...)
 
 			if c.shouldPanic {
-				t.Errorf("NewChecker() did not panic")
+				t.Errorf("#%d NewChecker() did not panic", i)
+			}
+
+			if ck.Cookie(0).Name != c.cookieName {
+				t.Errorf("#%d Want cookieName %q but got %q", i, c.cookieName, ck.Cookie(0).Name)
 			}
 
 			tokenizer, err := tokens.NewHMAC(c.secretHex, true)
 			if err != nil {
-				t.Fatal("tokens.NewHMAC err:", err)
+				t.Fatalf("#%d tokens.NewHMAC err: %s", i, err)
 			}
-			cookie := garcon.NewCookie(tokenizer, "g", c.plan, "Jonh Doe", false, c.addresses[0][6:], "/")
+			cookie := garcon.NewCookie(tokenizer, c.cookieName, c.plan, "Jonh Doe", false, c.addresses[0][6:], "/")
 
 			r, err := http.NewRequestWithContext(context.Background(), http.MethodGet, c.addresses[0], http.NoBody)
 			if err != nil {
-				t.Fatal("NewRequestWithContext err:", err)
+				t.Fatalf("#%d NewRequestWithContext err: %s", i, err)
 			}
 			r.AddCookie(&cookie)
 
@@ -134,18 +156,18 @@ func TestNewJWTChecker(t *testing.T) {
 
 			body := w.Body.String()
 			if body != "" {
-				t.Fatal("checker.Chk()", body)
+				t.Fatalf("#%d checker.Chk() %s", i, body)
 			}
 			if !next.called {
-				t.Errorf("checker.Chk() has not called next.ServeHTTP()")
+				t.Errorf("#%d checker.Chk() has not called next.ServeHTTP()", i)
 			}
 			if next.perm != c.perm {
-				t.Errorf("checker.Chk() request ctx perm got=%d want=%d", next.perm, c.perm)
+				t.Errorf("#%d checker.Chk() request ctx perm got=%d want=%d", i, next.perm, c.perm)
 			}
 
 			r, err = http.NewRequestWithContext(context.Background(), http.MethodGet, c.addresses[0], http.NoBody)
 			if err != nil {
-				t.Fatal("NewRequestWithContext err:", err)
+				t.Fatalf("#%d NewRequestWithContext err: %s", i, err)
 			}
 			r.AddCookie(&cookie)
 
@@ -157,18 +179,18 @@ func TestNewJWTChecker(t *testing.T) {
 
 			body = w.Body.String()
 			if body != "" {
-				t.Fatal("checker.Vet()", body)
+				t.Fatalf("#%d checker.Vet() %s", i, body)
 			}
 			if !next.called {
-				t.Errorf("checker.Vet() has not called next.ServeHTTP()")
+				t.Errorf("#%d checker.Vet() has not called next.ServeHTTP()", i)
 			}
 			if next.perm != c.perm {
-				t.Errorf("checker.Vet() request ctx perm got=%d want=%d", next.perm, c.perm)
+				t.Errorf("#%d checker.Vet() request ctx perm got=%d want=%d", i, next.perm, c.perm)
 			}
 
 			r, err = http.NewRequestWithContext(context.Background(), http.MethodGet, c.addresses[0], http.NoBody)
 			if err != nil {
-				t.Fatal("NewRequestWithContext err:", err)
+				t.Fatalf("#%d NewRequestWithContext err: %s", i, err)
 			}
 
 			w = httptest.NewRecorder()
@@ -180,23 +202,23 @@ func TestNewJWTChecker(t *testing.T) {
 			resp := w.Result()
 			cookies := resp.Cookies()
 			if len(cookies) != 1 {
-				t.Error("checker.Set() has not set only one cookie, but", len(cookies))
+				t.Errorf("#%d wants only one cookie, but checker.Set() provided %d", i, len(cookies))
 			} else if cookies[0].Value != ck.Cookie(0).Value {
-				t.Error("checker.Set() has not used the first cookie")
+				t.Errorf("#%d checker.Set() has not used the first cookie", i)
 			}
 			if !next.called {
-				t.Errorf("checker.Vet() has not called next.ServeHTTP()")
+				t.Errorf("#%d checker.Vet() has not called next.ServeHTTP()", i)
 			}
-			if len(c.permissions) >= 2 {
+			if len(c.nameAndPerms) >= 3 {
 				var ok bool
-				c.perm, ok = c.permissions[1].(int)
+				c.perm, ok = c.nameAndPerms[2].(int)
 				if !ok {
-					t.Errorf("c.permissions[1] is not int")
+					t.Errorf("#%d c.nameAndPerms[2] is not int", i)
 				}
 			}
 			if next.perm != c.perm {
-				t.Errorf("checker.Set() request ctx perm got=%d want=%d "+
-					"len(permissions)=%d", next.perm, c.perm, len(c.permissions))
+				t.Errorf("#%d checker.Set() request ctx perm got=%d want=%d "+
+					"len(permissions)=%d", i, next.perm, c.perm, len(c.nameAndPerms))
 			}
 			resp.Body.Close()
 		})

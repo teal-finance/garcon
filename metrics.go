@@ -8,7 +8,6 @@ package garcon
 import (
 	"net"
 	"net/http"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -32,25 +31,12 @@ func (ns ServerName) String() string {
 	return string(ns)
 }
 
-// ExtractName extracts the wider "[a-zA-Z0-9_]+" string from the end of str.
-// If str is a path or an URL, keep the last basename.
-// Example: keep "myapp" from "https://example.com/path/myapp/"
-// ExtractName also removes all punctuation characters except "_".
-func ExtractName(str string) ServerName {
-	str = strings.Trim(str, "/")
-	if i := strings.LastIndex(str, "/"); i >= 0 {
-		str = str[i+1:]
-	}
-	re := regexp.MustCompile(`[^a-zA-Z0-9_]`)
-	str = re.ReplaceAllLiteralString(str, "")
-	return ServerName(str)
-}
-
 // SetPromNamingRule verifies Prom naming rules for namespace and fixes it if necessary.
 // valid namespace = [a-zA-Z][a-zA-Z0-9_]*
 // https://prometheus.io/docs/concepts/data_model/#metric-names-and-labels
 func (ns *ServerName) SetPromNamingRule() {
 	str := ns.String()
+	str = strings.ReplaceAll(str, "-", "_")
 	if !unicode.IsLetter(rune(str[0])) {
 		*ns = ServerName("a" + str)
 	}

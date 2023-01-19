@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"unsafe"
@@ -606,4 +607,31 @@ func (e *decodeError) Unwrap() error {
 // B2S (Bytes to String) returns a string pointing to a []byte without copying.
 func B2S(b []byte) string {
 	return *(*string)(unsafe.Pointer(&b))
+}
+
+// Namify extracts the wider "[a-zA-Z0-9_]+" string from the end of str.
+// If str is a path or an URL, keep the last basename.
+// Example: keep "myapp" from "https://example.com/path/myapp/"
+// Namify also removes all punctuation characters except "_" and "-".
+func Namify(str string) string {
+	str = strings.Trim(str, "/.")
+
+	// keep last directory name (basename)
+	if i := strings.LastIndex(str, "/"); i >= 0 {
+		str = str[i+1:]
+	}
+
+	// remove file or domain extension (if any)
+	if i := strings.LastIndex(str, "."); i > 0 {
+		str = str[:i]
+	}
+
+	// use dash between sub domain and main TLS
+	str = strings.ReplaceAll(str, ".", "-")
+
+	// keep alphanumeric characters only
+	re := regexp.MustCompile(`[^a-zA-Z0-9_-]`)
+	str = re.ReplaceAllLiteralString(str, "")
+
+	return strings.Trim(str, "_-")
 }
