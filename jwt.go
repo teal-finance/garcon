@@ -121,7 +121,7 @@ func NewCookie(tokenizer tokens.Tokenizer, name, plan, user string, secure bool,
 	}
 
 	log.Info("Middleware JWT cookie: plan="+plan+" domain="+dns+
-		" path="+dir+" secure=", secure, " "+name+"="+JWT)
+		" path="+dir+" secure=", secure, name+"="+JWT)
 
 	return http.Cookie{
 		Name:       name,
