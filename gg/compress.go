@@ -109,6 +109,13 @@ func encoder(file *os.File, ext string, level int) (io.WriteCloser, error) {
 		return brotli.NewWriterLevel(file, level), nil
 
 	case GZipExt:
+		if level < gzip.StatelessCompression {
+			log.Printf("Increase GZip level=%d to StatelessCompression=%d", level, gzip.StatelessCompression)
+			level = gzip.StatelessCompression
+		} else if level > gzip.BestCompression {
+			log.Printf("Reduce GZip level=%d to BestCompression=%d", level, gzip.BestCompression)
+			level = gzip.BestCompression
+		}
 		return gzip.NewWriterLevel(file, level)
 
 	case S2Ext:
@@ -116,7 +123,7 @@ func encoder(file *os.File, ext string, level int) (io.WriteCloser, error) {
 		case 1:
 			return s2.NewWriter(file, s2.WriterUncompressed()), nil
 		default:
-			log.Printf("Change level=%d to Fast=2", level)
+			log.Printf("Change S2 level=%d to default compression level: Fast=2", level)
 			fallthrough
 		case 2:
 			return s2.NewWriter(file), nil
