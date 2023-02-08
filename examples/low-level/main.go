@@ -67,9 +67,15 @@ func setMiddlewares(gw garcon.Writer) (_ gg.Chain, connState func(net.Conn, http
 	dev := flag.Bool("dev", true, "Use development or production settings")
 	flag.Parse()
 
-	// Start a metrics server in background if export port > 0.
-	// The metrics server is for use with Prometheus or another compatible monitoring tool.
-	middleware, connState := garcon.StartMetricsServer(expPort, "LowLevel")
+	// Start an exporter/health server in background if export port > 0.
+	// This server is for use with Kubernetes and Prometheus-like monitoring tools.
+	middleware, connState := garcon.StartExporterServer(expPort, "LowLevel",
+		garcon.WithLivenessProbes(func() []byte { return nil }),
+		garcon.WithLivenessProbes(func() []byte { return nil }),
+		garcon.WithLivenessProbes(func() []byte { return nil }),
+		garcon.WithReadinessProbes(func() []byte { return nil }),
+		garcon.WithReadinessProbes(func() []byte { return []byte("fail") }),
+	)
 
 	// Limit the input request rate per IP
 	reqLimiter := garcon.NewRateLimiter(gw, burst, reqMinute, *dev)

@@ -13,7 +13,6 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -31,20 +30,21 @@ func (ns ServerName) String() string {
 	return string(ns)
 }
 
-// SetPromNamingRule verifies Prom naming rules for namespace and fixes it if necessary.
+// RespectPromNamingRule verifies Prom naming rules for namespace and fixes it if necessary.
 // valid namespace = [a-zA-Z][a-zA-Z0-9_]*
 // https://prometheus.io/docs/concepts/data_model/#metric-names-and-labels
-func (ns *ServerName) SetPromNamingRule() {
+func (ns ServerName) RespectPromNamingRule() ServerName {
 	str := ns.String()
 	str = strings.ReplaceAll(str, "-", "_")
 	if !unicode.IsLetter(rune(str[0])) {
-		*ns = ServerName("a" + str)
+		ns = ServerName("a" + str)
 	}
+	return ns
 }
 
-// updateHTTPMetrics counts the connections and update web traffic metrics
+// ConnState counts the HTTP connections and update web traffic metrics
 // depending on incoming requests and outgoing responses.
-func (ns ServerName) updateHTTPMetrics() func(net.Conn, http.ConnState) {
+func (ns ServerName) ConnState() func(net.Conn, http.ConnState) {
 	connGauge := ns.newGauge("in_flight_connections", "Number of current active connections")
 	iniCounter := ns.newCounter("conn_new_total", "Total initiated connections since startup")
 	reqCounter := ns.newCounter("conn_req_total", "Total requested connections since startup")
@@ -126,7 +126,7 @@ func (r *statusRecorder) WriteHeader(status int) {
 	r.StatusCode = status
 }
 
-// MiddlewareExportTrafficMetrics measures the time to handle a request.
+// MiddlewareExportTrafficMetrics measures the duration to process a request.
 func (ns ServerName) MiddlewareExportTrafficMetrics(next http.Handler) http.Handler {
 	summary := ns.newSummaryVec(
 		"request_duration_seconds",
@@ -264,42 +264,120 @@ func MiddlewareLogFingerprintSafe(next http.Handler) http.Handler {
 		})
 }
 
-// StartMetricsServer creates and starts the Prometheus export server.
-func (g *Garcon) StartMetricsServer(expPort int) (gg.Chain, func(net.Conn, http.ConnState)) {
-	return StartMetricsServer(expPort, g.ServerName)
+// StartExporterServer creates and starts the exporter health server
+// (Kubernetes health endpoints and Prometheus export server).
+func (g *Garcon) StartExporterServer(expPort int, options ...ProbeOption) (gg.Chain, func(net.Conn, http.ConnState)) {
+	return StartExporterServer(expPort, g.ServerName, options...)
 }
 
-// StartMetricsServer creates and starts the Prometheus export server.
-func StartMetricsServer(port int, namespace ServerName) (gg.Chain, func(net.Conn, http.ConnState)) {
+// StartExporterServer creates and starts the exporter health server for Prometheus metrics and liveness/readiness endpoints.
+func StartExporterServer(port int, namespace ServerName, options ...ProbeOption) (gg.Chain, func(net.Conn, http.ConnState)) {
 	if port <= 0 {
-		log.Info("Disable Prometheus, export port=", port)
+		log.Info("Disable Prometheus and health endpoints, export port=", port)
 		return nil, nil
 	}
 
-	addr := ":" + strconv.Itoa(port)
-
-	go func() {
-		err := http.ListenAndServe(addr, metricsHandler())
-		log.Fatal(err)
-	}()
-
-	log.Info("Prometheus export http://localhost" + addr + " namespace=" + namespace.String())
-
-	// Add build info
 	prometheus.MustRegister(collectors.NewBuildInfoCollector())
+	namespace = namespace.RespectPromNamingRule()
+	connState := namespace.ConnState()
+	middleware := namespace.MiddlewareExportTrafficMetrics
+	chain := gg.NewChain(middleware)
 
-	namespace.SetPromNamingRule()
-	chain := gg.NewChain(namespace.MiddlewareExportTrafficMetrics)
-	counter := namespace.updateHTTPMetrics()
-	return chain, counter
+	addr := ":" + strconv.Itoa(port)
+	go serveEndpoints(addr, options...)
+	log.Info("Prometheus export http://localhost"+addr+
+		" namespace="+namespace.String()+" probes=", len(options))
+
+	return chain, connState
 }
 
-// metricsHandler exports the metrics by processing
+// WithLivenessProbes adds given liveness probes to the set of probes.
+func WithLivenessProbes(probes ...ProbeFunction) ProbeOption {
+	return func(h *exporterHandler) {
+		h.livenessProbes = append(h.livenessProbes, probes...)
+	}
+}
+
+// ProbeFunction returns a JSON text explaining the health issue.
+// If the health status is OK, returns nothing (an empty text).
+type ProbeFunction func() []byte
+
+// WithReadinessProbes adds given readiness probes to the set of probes.
+func WithReadinessProbes(probes ...ProbeFunction) ProbeOption {
+	return func(h *exporterHandler) {
+		h.readinessProbes = append(h.readinessProbes, probes...)
+	}
+}
+
+type ProbeOption func(*exporterHandler)
+
+func serveEndpoints(addr string, options ...ProbeOption) {
+	server := http.Server{
+		Addr:              addr,
+		Handler:           newExporterHandler(options...),
+		TLSConfig:         nil,
+		ReadTimeout:       time.Second,
+		ReadHeaderTimeout: time.Second,
+		WriteTimeout:      time.Minute,
+		IdleTimeout:       time.Second,
+		MaxHeaderBytes:    444, // 444 bytes should be enough
+		TLSNextProto:      nil,
+		ConnState:         nil,
+		ErrorLog:          nil,
+		BaseContext:       nil,
+		ConnContext:       nil,
+	}
+	err := server.ListenAndServe()
+	log.Panic(err)
+}
+
+// newExporterHandler exports the metrics by processing
 // the Prometheus requests on the "/metrics" endpoint.
-func metricsHandler() http.Handler {
-	handler := chi.NewRouter()
-	handler.Handle("/metrics", promhttp.Handler())
-	return handler
+func newExporterHandler(options ...ProbeOption) http.Handler {
+	h := &exporterHandler{
+		livenessProbes:  []ProbeFunction{},
+		readinessProbes: []ProbeFunction{},
+	}
+
+	for _, option := range options {
+		option(h)
+	}
+
+	return h
+}
+
+type exporterHandler struct {
+	livenessProbes  []ProbeFunction
+	readinessProbes []ProbeFunction
+}
+
+// ServeHTTP implements http.Handler interface.
+func (h *exporterHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	switch r.URL.Path {
+	case "/metrics":
+		promhttp.Handler().ServeHTTP(w, r)
+	case "/health":
+		handleEnpoint(w, h.livenessProbes)
+	case "/ready":
+		handleEnpoint(w, append(h.livenessProbes, h.readinessProbes...))
+	default:
+		log.Warning(ipMethodURLSafe(r) + " on Exporter Server")
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte(`{"message":"This is the Exporter/Health Server"}`))
+	}
+}
+
+func handleEnpoint(w http.ResponseWriter, probes []ProbeFunction) {
+	for _, p := range probes {
+		txt := p()
+		if len(txt) != 0 {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			w.Write(txt)
+			return
+		}
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
 func ipMethodURL(r *http.Request) string {

@@ -114,8 +114,8 @@ func WithURLs(addresses ...string) Option {
 }
 
 // ListenAndServe runs the HTTP server(s) in foreground.
-// Optionally it also starts a metrics server in background (if export port > 0).
-// The metrics server is for use with Prometheus or another compatible monitoring tool.
+// Optionally it also starts an exporter health server in background (if export port > 0).
+// The exporter health server is for use with Kubernetes and Prometheus-like monitoring tools.
 func ListenAndServe(server *http.Server) error {
 	log.Print("Server listening on http://localhost" + server.Addr)
 

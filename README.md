@@ -1,6 +1,6 @@
 # Teal.Finance/Garcon
 
-| ![logo](examples/www/myapp/images/garcon.png) | Garcon works with all HTTP routers ans middleware respecting the Go HTTP standards. Garcon provides the batteries: static website server, contact-form backend, API helpers, debugging helpers (PProf), Git version, metrics server (Prometheus), URI sanitization and middleware: rate-limiter, JWT cookies, CORS, traffic logs, OPA…<br>[![Go Reference](examples/www/myapp/images/go-ref.svg "Go documentation for Garcon")](https://pkg.go.dev/github.com/teal-finance/garcon) [![Go Report Card](https://goreportcard.com/badge/github.com/teal-finance/garcon)](https://goreportcard.com/report/github.com/teal-finance/garcon) |
+| ![logo](examples/www/myapp/images/garcon.png) | Garcon works with all HTTP routers ans middleware respecting the Go HTTP standards. Garcon provides the batteries: static website server, contact-form backend, API helpers, debugging helpers (PProf), Git version, exporter server (Prometheus), health endpoints (Kubernetes), URI sanitization and middleware: rate-limiter, JWT cookies, CORS, traffic logs, OPA…<br>[![Go Reference](examples/www/myapp/images/go-ref.svg "Go documentation for Garcon")](https://pkg.go.dev/github.com/teal-finance/garcon) [![Go Report Card](https://goreportcard.com/badge/github.com/teal-finance/garcon)](https://goreportcard.com/report/github.com/teal-finance/garcon) |
 | --------------------------------------------- |:--------- |
 
 ## Motivation
@@ -39,6 +39,7 @@ server.ListenAndServe()
 
 - Static web files server supporting Brotli and AVIF
 - Metrics server exporting data to Prometheus (or other compatible monitoring tool)
+- Health status server for Kubernetes liveness and readiness probes
 - PProf server for debugging purpose
 - Serialize JSON responses, including the error messages
 - Chained middleware (fork of [justinas/alice](https://github.com/justinas/alice))
@@ -223,7 +224,7 @@ func main() {
     ic := g.IncorruptibleChecker(aes128Key, 60, true)
     jc := g.JWTChecker(hmacSHA256Key, "FreePlan", 10, "PremiumPlan", 100)
 
-    middleware, connState := g.StartMetricsServer(9093)
+    middleware, connState := g.StartExporterServer(9093)
     middleware = middleware.Append(
         g.MiddlewareRejectUnprintableURI(),
         g.MiddlewareLogRequests("fingerprint"),
@@ -335,9 +336,28 @@ pprof -http=: goroutine
 
 See the [PProf post](https://go.dev/blog/pprof) (2013) for further explanations.
 
-### 3. Embedded metrics server
+### 3. Exporter server
 
-The export port <http://localhost:9093/metrics> is for the monitoring tools like Prometheus.
+To facilitate the prod management, metrics and health state are communicated.
+Tools like Prometheus and Kubernetes collect every N seconds this information depending on the endpoint:
+
+- <http://localhost:9093/metrics> to communicate internal metrics
+
+- <http://localhost:9093/health> [liveness probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#define-a-liveness-http-request)
+  reponds `"200 OK"` if it is *healthy*.
+  Here *healthy* means the application is running
+  and can access to its dependencies (e.g. database),
+  the application does no need to be killed/restarted.
+  
+- <http://localhost:9093/ready> [readiness probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#define-readiness-probes)
+  reponds `"200 OK"` if it is *ready to receive traffic*.
+  Here *ready to receive traffic* means the application is *healthy*,
+  the initialization phase is completed
+  and valid requests do not result in errors.
+
+Kubernetes uses that readiness status to orchestrate the deployment.
+The default update policy is to update one pod at a time:
+Kubernetes waits for the new pod to be *ready to receive traffic* before updating the next one.
 
 ### 4. Static website server
 
@@ -527,9 +547,9 @@ func main() {
 }
 
 func setMiddlewares(gw garcon.Writer) (middleware garcon.Chain, connState func(net.Conn, http.ConnState)) {
-    // Start a metrics server in background if export port > 0.
-    // The metrics server is for use with Prometheus or another compatible monitoring tool.
-    middleware, connState = garcon.StartMetricsServer(expPort, devMode)
+ // Start an exporter/health server in background if export port > 0.
+ // This server is for use with Kubernetes and Prometheus-like monitoring tools.
+    middleware, connState = garcon.StartExporterServer(expPort, devMode)
 
     // Limit the input request rate per IP
     reqLimiter := garcon.NewReqLimiter(gw, burst, reqMinute, devMode)
@@ -609,7 +629,7 @@ func handler(gw garcon.Writer) http.Handler {
 
 func items(w http.ResponseWriter, _ *http.Request) {
     w.Header().Set("Content-Type", "application/json")
-    _, _ = w.Write([]byte(`["item1","item2","item3"]`))
+    w.Write([]byte(`["item1","item2","item3"]`))
 }
 ```
 
