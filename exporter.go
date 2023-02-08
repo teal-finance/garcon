@@ -264,14 +264,14 @@ func MiddlewareLogFingerprintSafe(next http.Handler) http.Handler {
 		})
 }
 
-// StartExporterServer creates and starts the exporter health server
+// StartExporter creates and starts the exporter health server
 // (Kubernetes health endpoints and Prometheus export server).
-func (g *Garcon) StartExporterServer(expPort int, options ...ProbeOption) (gg.Chain, func(net.Conn, http.ConnState)) {
-	return StartExporterServer(expPort, g.ServerName, options...)
+func (g *Garcon) StartExporter(expPort int, options ...ProbeOption) (gg.Chain, func(net.Conn, http.ConnState)) {
+	return StartExporter(expPort, g.ServerName, options...)
 }
 
-// StartExporterServer creates and starts the exporter health server for Prometheus metrics and liveness/readiness endpoints.
-func StartExporterServer(port int, namespace ServerName, options ...ProbeOption) (gg.Chain, func(net.Conn, http.ConnState)) {
+// StartExporter creates and starts the exporter health server for Prometheus metrics and liveness/readiness endpoints.
+func StartExporter(port int, namespace ServerName, options ...ProbeOption) (gg.Chain, func(net.Conn, http.ConnState)) {
 	if port <= 0 {
 		log.Info("Disable Prometheus and health endpoints, export port=", port)
 		return nil, nil

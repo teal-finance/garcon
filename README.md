@@ -224,7 +224,7 @@ func main() {
     ic := g.IncorruptibleChecker(aes128Key, 60, true)
     jc := g.JWTChecker(hmacSHA256Key, "FreePlan", 10, "PremiumPlan", 100)
 
-    middleware, connState := g.StartExporterServer(9093)
+    middleware, connState := g.StartExporter(9093)
     middleware = middleware.Append(
         g.MiddlewareRejectUnprintableURI(),
         g.MiddlewareLogRequests("fingerprint"),
@@ -549,7 +549,7 @@ func main() {
 func setMiddlewares(gw garcon.Writer) (middleware garcon.Chain, connState func(net.Conn, http.ConnState)) {
  // Start an exporter/health server in background if export port > 0.
  // This server is for use with Kubernetes and Prometheus-like monitoring tools.
-    middleware, connState = garcon.StartExporterServer(expPort, devMode)
+    middleware, connState = garcon.StartExporter(expPort, devMode)
 
     // Limit the input request rate per IP
     reqLimiter := garcon.NewReqLimiter(gw, burst, reqMinute, devMode)

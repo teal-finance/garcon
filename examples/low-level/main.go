@@ -69,7 +69,7 @@ func setMiddlewares(gw garcon.Writer) (_ gg.Chain, connState func(net.Conn, http
 
 	// Start an exporter/health server in background if export port > 0.
 	// This server is for use with Kubernetes and Prometheus-like monitoring tools.
-	middleware, connState := garcon.StartExporterServer(expPort, "LowLevel",
+	middleware, connState := garcon.StartExporter(expPort, "LowLevel",
 		garcon.WithLivenessProbes(func() []byte { return nil }),
 		garcon.WithLivenessProbes(func() []byte { return nil }),
 		garcon.WithLivenessProbes(func() []byte { return nil }),

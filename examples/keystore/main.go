@@ -50,7 +50,7 @@ func main() {
 		garcon.WithDev(!*prod),
 	)
 
-	middleware, connState := g.StartExporterServer(expPort,
+	middleware, connState := g.StartExporter(expPort,
 		garcon.WithLivenessProbes(func() []byte { return nil }),
 		garcon.WithLivenessProbes(func() []byte { return nil }),
 		garcon.WithLivenessProbes(func() []byte { return nil }),
