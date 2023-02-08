@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/pprof"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/pkg/profile"
@@ -73,6 +74,21 @@ func pProfHandler() http.Handler {
 
 func runPProfServer(addr string, handler http.Handler) {
 	log.Info("Enable PProf endpoints: http://" + addr + "/debug/pprof")
-	err := http.ListenAndServe(addr, handler)
+	server := http.Server{
+		Addr:              addr,
+		Handler:           handler,
+		TLSConfig:         nil,
+		ReadTimeout:       time.Second,
+		ReadHeaderTimeout: time.Second,
+		WriteTimeout:      time.Minute,
+		IdleTimeout:       time.Second,
+		MaxHeaderBytes:    444, // 444 bytes should be enough
+		TLSNextProto:      nil,
+		ConnState:         nil,
+		ErrorLog:          nil,
+		BaseContext:       nil,
+		ConnContext:       nil,
+	}
+	err := server.ListenAndServe()
 	log.Panic(err)
 }
