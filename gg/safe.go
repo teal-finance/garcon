@@ -59,7 +59,8 @@ func sanitize(str string) string {
 	}, str)
 }
 
-func sanitizeFaster(str string) string {
+// FastSanitize is an alternative of the Sanitize function using an optimized implementation.
+func FastSanitize(str string) string {
 	return strings.Map(func(r rune) rune {
 		switch {
 		case r < 32, r == 127: // The .notdef character is often represented by the empty box (tofu)
@@ -77,7 +78,7 @@ func sanitizeFaster(str string) string {
 // trims leading/trailing/redundant spaces,.
 func SplitCleanedLines(str string) []string {
 	// count number of lines in the returned txt
-	n, m, max := 1, 0, 0
+	count, length, max := 1, 0, 0
 	r1, r2 := '\n', '\n'
 	for _, r0 := range str {
 		if r0 == '\r' {
@@ -87,17 +88,17 @@ func SplitCleanedLines(str string) []string {
 			if (r1 == '\n') && (r2 == '\n') {
 				continue // skip redundant line feeds
 			}
-			n++
-			if max < m {
-				max = m // max line length
+			count++
+			if max < length {
+				max = length // max line length
 			}
-			m = 0
+			length = 0
 		}
 		r1, r2 = r0, r1
-		m++
+		length++
 	}
 
-	txt := make([]string, 0, n)
+	txt := make([]string, 0, count)
 	line := make([]rune, 0, max)
 
 	r1, r2 = '\n', '\n'
