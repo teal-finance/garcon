@@ -35,9 +35,9 @@ func Compress(buf []byte, fn, ext string, level int) time.Duration {
 		return 0
 	}
 
-	t := time.Now()
+	startTime := time.Now()
 
-	enc, err := encoder(file, ext, level)
+	enc, err := Compressor(file, ext, level)
 	if err != nil {
 		log.Errorf("Cannot create encoder extension %q level=%v err: %v", ext, level, err)
 		return 0
@@ -63,7 +63,7 @@ func Compress(buf []byte, fn, ext string, level int) time.Duration {
 		return 0
 	}
 
-	return time.Since(t)
+	return time.Since(startTime)
 }
 
 func Decompress(fn, ext string) []byte {
@@ -96,58 +96,74 @@ func Decompress(fn, ext string) []byte {
 	return buf
 }
 
-func encoder(file *os.File, ext string, level int) (io.WriteCloser, error) {
+func Compressor(file *os.File, ext string, level int) (io.WriteCloser, error) {
 	switch ext {
 	case BrotliExt:
-		if level < brotli.BestSpeed {
-			log.Printf("Increase Brotli level=%d to BestSpeed=%d", level, brotli.BestSpeed)
-			level = brotli.BestSpeed
-		} else if level > brotli.BestCompression {
-			log.Printf("Reduce Brotli level=%d to BestCompression=%d", level, brotli.BestCompression)
-			level = brotli.BestCompression
-		}
-		return brotli.NewWriterLevel(file, level), nil
+		return BrotliCompressor(file, level), nil
 
 	case GZipExt:
-		if level < gzip.StatelessCompression {
-			log.Printf("Increase GZip level=%d to StatelessCompression=%d", level, gzip.StatelessCompression)
-			level = gzip.StatelessCompression
-		} else if level > gzip.BestCompression {
-			log.Printf("Reduce GZip level=%d to BestCompression=%d", level, gzip.BestCompression)
-			level = gzip.BestCompression
-		}
-		return gzip.NewWriterLevel(file, level)
+		return GZipCompressor(file, level)
 
 	case S2Ext:
-		switch level {
-		case 1:
-			return s2.NewWriter(file, s2.WriterUncompressed()), nil
-		default:
-			log.Printf("Change S2 level=%d to default compression level: Fast=2", level)
-			fallthrough
-		case 2:
-			return s2.NewWriter(file), nil
-		case 3:
-			return s2.NewWriter(file, s2.WriterBetterCompression()), nil
-		case 4:
-			return s2.NewWriter(file, s2.WriterBestCompression()), nil
-		}
+		return S2Compressor(file, level), nil
 
 	case ZStdExt:
-		l := zstd.EncoderLevel(level)
-		if l < zstd.SpeedFastest {
-			log.Printf("Increase Zstd level=%d to SpeedFastest=%d", level, zstd.SpeedFastest)
-			l = zstd.SpeedFastest
-		} else if l > zstd.SpeedBestCompression {
-			log.Printf("Reduce Zstd level=%d to SpeedBestCompression=%d", level, zstd.SpeedBestCompression)
-			l = zstd.SpeedBestCompression
-		}
-		return zstd.NewWriter(file, zstd.WithEncoderLevel(l))
+		return ZStdCompressor(file, level)
 
 	default:
 		log.Printf("Do not compress because extension %q is neither %v", ext, SupportedEncoders())
-		return &fakeWClose{file}, nil // file will be closed by caller
+		return &noCompression{file}, nil // file will be closed by caller
 	}
+}
+
+func BrotliCompressor(file *os.File, level int) io.WriteCloser {
+	if level < brotli.BestSpeed {
+		log.Printf("Increase Brotli level=%d to BestSpeed=%d", level, brotli.BestSpeed)
+		level = brotli.BestSpeed
+	} else if level > brotli.BestCompression {
+		log.Printf("Reduce Brotli level=%d to BestCompression=%d", level, brotli.BestCompression)
+		level = brotli.BestCompression
+	}
+	return brotli.NewWriterLevel(file, level)
+}
+
+func GZipCompressor(file *os.File, level int) (io.WriteCloser, error) {
+	if level < gzip.StatelessCompression {
+		log.Printf("Increase GZip level=%d to StatelessCompression=%d", level, gzip.StatelessCompression)
+		level = gzip.StatelessCompression
+	} else if level > gzip.BestCompression {
+		log.Printf("Reduce GZip level=%d to BestCompression=%d", level, gzip.BestCompression)
+		level = gzip.BestCompression
+	}
+	return gzip.NewWriterLevel(file, level)
+}
+
+func S2Compressor(file *os.File, level int) io.WriteCloser {
+	switch level {
+	case 1:
+		return s2.NewWriter(file, s2.WriterUncompressed())
+	default:
+		log.Printf("Change S2 level=%d to default compression level: Fast=2", level)
+		fallthrough
+	case 2:
+		return s2.NewWriter(file)
+	case 3:
+		return s2.NewWriter(file, s2.WriterBetterCompression())
+	case 4:
+		return s2.NewWriter(file, s2.WriterBestCompression())
+	}
+}
+
+func ZStdCompressor(file *os.File, level int) (io.WriteCloser, error) {
+	l := zstd.EncoderLevel(level)
+	if l < zstd.SpeedFastest {
+		log.Printf("Increase Zstd level=%d to SpeedFastest=%d", level, zstd.SpeedFastest)
+		l = zstd.SpeedFastest
+	} else if l > zstd.SpeedBestCompression {
+		log.Printf("Reduce Zstd level=%d to SpeedBestCompression=%d", level, zstd.SpeedBestCompression)
+		l = zstd.SpeedBestCompression
+	}
+	return zstd.NewWriter(file, zstd.WithEncoderLevel(l))
 }
 
 func decoder(fn, ext string, file *os.File) io.ReadCloser {
@@ -188,12 +204,12 @@ func decoder(fn, ext string, file *os.File) io.ReadCloser {
 	}
 }
 
-// fakeWClose is just to avoid the file being closed twice (when no compression).
-type fakeWClose struct {
+// noCompression is just to avoid the file being closed twice (when no compression).
+type noCompression struct {
 	io.Writer
 }
 
-func (*fakeWClose) Close() error { return nil }
+func (*noCompression) Close() error { return nil }
 
 // fakeRClose is required because gzip.NewReader() is the single encoder requiring to be explicitly closed.
 // That's a pity because gzip.z.Close() only returns z.decompressor.err :-(.
