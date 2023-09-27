@@ -313,19 +313,20 @@ type ProbeOption func(*exporterHandler)
 
 func serveEndpoints(addr string, options ...ProbeOption) {
 	server := http.Server{
-		Addr:              addr,
-		Handler:           newExporterHandler(options...),
-		TLSConfig:         nil,
-		ReadTimeout:       time.Second,
-		ReadHeaderTimeout: time.Second,
-		WriteTimeout:      time.Minute,
-		IdleTimeout:       time.Second,
-		MaxHeaderBytes:    444, // 444 bytes should be enough
-		TLSNextProto:      nil,
-		ConnState:         nil,
-		ErrorLog:          nil,
-		BaseContext:       nil,
-		ConnContext:       nil,
+		Addr:                         addr,
+		Handler:                      newExporterHandler(options...),
+		DisableGeneralOptionsHandler: false,
+		TLSConfig:                    nil,
+		ReadTimeout:                  time.Second,
+		ReadHeaderTimeout:            time.Second,
+		WriteTimeout:                 time.Minute,
+		IdleTimeout:                  time.Second,
+		MaxHeaderBytes:               444, // 444 bytes should be enough
+		TLSNextProto:                 nil,
+		ConnState:                    nil,
+		ErrorLog:                     nil,
+		BaseContext:                  nil,
+		ConnContext:                  nil,
 	}
 	err := server.ListenAndServe()
 	log.Panic(err)
