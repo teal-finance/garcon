@@ -111,7 +111,6 @@ linters:
     # unused
     - deadcode # find unused code
     - ineffassign # detect when assignments to existing variables are not used
-    - structcheck # find unused struct fields
     - unparam # report unused function parameters
     - unused # check for unused constants, variables, functions and types
     - varcheck # find unused global variables and constants
@@ -138,6 +137,7 @@ linters:
     - maligned
     - scopelint
     - ifshort # check code uses short syntax for if-statements whenever possible
+    - structcheck # find unused struct fields
 
 linters-settings:
   dupl:
@@ -225,7 +225,7 @@ linters-settings:
       - ifElseChain # Detects repeated if-else statements and suggests to replace them with switch statement
       - importShadow # Detects when imported package names shadowed in the assignments
       - initClause # Detects non-assignment statements inside if/switch init clause
-      - ioutilDeprecated # Detects deprecated io/ioutil package usages
+#     - ioutilDeprecated # Detects deprecated io/ioutil package usages
       - methodExprCall # Detects method expression call that can be replaced with a method call
       - nestingReduce # Finds where nesting level could be reduced
       - newDeref # Detects immediate dereferencing of `new` expressions
@@ -275,7 +275,7 @@ linters-settings:
 
   # https://github.com/mvdan/gofumpt
   gofumpt:
-    lang-version: "1.19"
+    lang-version: "1.21"
     extra-rules: true
 
   goimports:
@@ -309,17 +309,17 @@ linters-settings:
     allow-unused: false # report any unused nolint directives
 
   gosimple:
-    go: "1.19"
+    go: "1.21"
     # https://staticcheck.io/docs/options#checks
     checks: ["all"]
 
   staticcheck:
-    go: "1.19"
+    go: "1.21"
     # https://staticcheck.io/docs/options#checks
     checks: ["all"]
 
   stylecheck:
-    go: "1.19"
+    go: "1.21"
     # https://staticcheck.io/docs/options#checks
     checks: ["all"]
     # https://staticcheck.io/docs/options#dot_import_whitelist
@@ -472,7 +472,7 @@ run:
   # from this option's value:
   #     vendor$, third_party$, testdata$, examples$, Godeps$, builtin$
   skip-dirs: [poc]
-  go: "1.19"
+  go: "1.21"
 
 output:
   # colored-line-number|line-number|json|tab|checkstyle, default is "colored-line-number"
