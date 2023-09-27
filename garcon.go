@@ -138,19 +138,20 @@ func Server(h http.Handler, port int, connState ...func(net.Conn, http.ConnState
 	}
 
 	return http.Server{
-		Addr:              ":" + strconv.Itoa(port),
-		Handler:           h,
-		TLSConfig:         nil,
-		ReadTimeout:       time.Second,
-		ReadHeaderTimeout: time.Second,
-		WriteTimeout:      time.Minute, // Garcon.MiddlewareRateLimiter() delays responses, so people (attackers) who click frequently will wait longer.
-		IdleTimeout:       time.Second,
-		MaxHeaderBytes:    444, // 444 bytes should be enough
-		TLSNextProto:      nil,
-		ConnState:         connState[0],
-		ErrorLog:          log.Default(),
-		BaseContext:       nil,
-		ConnContext:       nil,
+		Addr:                         ":" + strconv.Itoa(port),
+		Handler:                      h,
+		DisableGeneralOptionsHandler: false,
+		TLSConfig:                    nil,
+		ReadTimeout:                  time.Second,
+		ReadHeaderTimeout:            time.Second,
+		WriteTimeout:                 time.Minute, // Garcon.MiddlewareRateLimiter() delays responses, so people (attackers) who click frequently will wait longer.
+		IdleTimeout:                  time.Second,
+		MaxHeaderBytes:               444, // 444 bytes should be enough
+		TLSNextProto:                 nil,
+		ConnState:                    connState[0],
+		ErrorLog:                     log.Default(),
+		BaseContext:                  nil,
+		ConnContext:                  nil,
 	}
 }
 

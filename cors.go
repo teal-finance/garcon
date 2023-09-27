@@ -67,18 +67,20 @@ func newCORS(origins, methods, headers []string, debug bool) *cors.Cors {
 	}
 
 	options := cors.Options{
-		AllowedOrigins:         nil,
-		AllowOriginFunc:        allowOriginFunc(origins),
-		AllowOriginRequestFunc: nil,
-		AllowedMethods:         methods,
-		AllowedHeaders:         headers,
-		ExposedHeaders:         nil,
-		MaxAge:                 3600 * 24, // https://developer.mozilla.org/docs/Web/HTTP/Headers/Access-Control-Max-Age
-		AllowCredentials:       true,
-		AllowPrivateNetwork:    false,
-		OptionsPassthrough:     false,
-		OptionsSuccessStatus:   http.StatusNoContent,
-		Debug:                  debug, // verbose logs
+		AllowedOrigins:             nil,
+		AllowOriginFunc:            allowOriginFunc(origins),
+		AllowOriginRequestFunc:     nil,
+		AllowOriginVaryRequestFunc: nil,
+		AllowedMethods:             methods,
+		AllowedHeaders:             headers,
+		ExposedHeaders:             nil,
+		MaxAge:                     3600 * 24, // https://developer.mozilla.org/docs/Web/HTTP/Headers/Access-Control-Max-Age
+		AllowCredentials:           true,
+		AllowPrivateNetwork:        false,
+		OptionsPassthrough:         false,
+		OptionsSuccessStatus:       http.StatusNoContent,
+		Debug:                      debug, // verbose logs
+		Logger:                     nil,
 	}
 
 	log.Security("CORS Methods:", options.AllowedMethods)
