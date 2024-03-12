@@ -59,7 +59,7 @@ func New(opts ...Option) *Garcon {
 	}
 	g.origins = gg.OriginsFromURLs(g.urls)
 
-	if len(g.docURL) > 0 {
+	if g.docURL != "" {
 		// if docURL is just a path => complete it with the base URL (scheme + host)
 		baseURL := g.urls[0].String()
 		if !strings.HasPrefix(g.docURL, baseURL) &&
