@@ -75,19 +75,20 @@ func pProfHandler() http.Handler {
 func runPProfServer(addr string, handler http.Handler) {
 	log.Info("Enable PProf endpoints: http://" + addr + "/debug/pprof")
 	server := http.Server{
-		Addr:              addr,
-		Handler:           handler,
-		TLSConfig:         nil,
-		ReadTimeout:       time.Second,
-		ReadHeaderTimeout: time.Second,
-		WriteTimeout:      time.Minute,
-		IdleTimeout:       time.Second,
-		MaxHeaderBytes:    444, // 444 bytes should be enough
-		TLSNextProto:      nil,
-		ConnState:         nil,
-		ErrorLog:          nil,
-		BaseContext:       nil,
-		ConnContext:       nil,
+		Addr:                         addr,
+		Handler:                      handler,
+		DisableGeneralOptionsHandler: false,
+		TLSConfig:                    nil,
+		ReadTimeout:                  time.Second,
+		ReadHeaderTimeout:            time.Second,
+		WriteTimeout:                 time.Minute,
+		IdleTimeout:                  time.Second,
+		MaxHeaderBytes:               444, // 444 bytes should be enough
+		TLSNextProto:                 nil,
+		ConnState:                    nil,
+		ErrorLog:                     nil,
+		BaseContext:                  nil,
+		ConnContext:                  nil,
 	}
 	err := server.ListenAndServe()
 	log.Panic(err)
