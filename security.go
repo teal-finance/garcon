@@ -40,11 +40,11 @@ func MiddlewareRejectUnprintableURI(next http.Handler) http.Handler {
 
 // MiddlewareSecureHTTPHeader is a middleware adding recommended HTTP response headers to secure the web application.
 func MiddlewareSecureHTTPHeader(secure bool) func(next http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
+	return func(_ http.Handler) http.Handler {
 		log.Info("MiddlewareSecureHTTPHeader sets some secure HTTP headers")
 
 		return http.HandlerFunc(
-			func(w http.ResponseWriter, r *http.Request) {
+			func(w http.ResponseWriter, _ *http.Request) {
 				w.Header().Set("X-Content-Type-Options", "nosniff")
 
 				// secure must be false for http://localhost

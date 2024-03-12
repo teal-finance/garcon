@@ -24,11 +24,11 @@ import (
 )
 
 func TestNewChain(t *testing.T) {
-	c1 := func(h http.Handler) http.Handler {
+	c1 := func(_ http.Handler) http.Handler {
 		return nil
 	}
 
-	c2 := func(h http.Handler) http.Handler {
+	c2 := func(_ http.Handler) http.Handler {
 		return http.StripPrefix("potato", nil)
 	}
 
@@ -43,11 +43,11 @@ func TestNewChain(t *testing.T) {
 }
 
 func TestNewRTChain(t *testing.T) {
-	c1 := func(h http.RoundTripper) http.RoundTripper {
+	c1 := func(_ http.RoundTripper) http.RoundTripper {
 		return nil
 	}
 
-	c2 := func(h http.RoundTripper) http.RoundTripper {
+	c2 := func(_ http.RoundTripper) http.RoundTripper {
 		return http.DefaultTransport
 	}
 
@@ -98,7 +98,7 @@ func TestRTChain_ThenFunc_TreatsNilAsDefaultTransport(t *testing.T) {
 }
 
 func TestChain_ThenFunc_ConstructsHandlerFunc(t *testing.T) {
-	fn := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	fn := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
 	chained := gg.NewChain().ThenFunc(fn)
@@ -112,7 +112,7 @@ func TestChain_ThenFunc_ConstructsHandlerFunc(t *testing.T) {
 }
 
 func TestRTChain_ThenFunc_ConstructsRoundTripperFunc(t *testing.T) {
-	fn := gg.RoundTripperFunc(func(r *http.Request) (*http.Response, error) {
+	fn := gg.RoundTripperFunc(func(_ *http.Request) (*http.Response, error) {
 		var res http.Response
 		return &res, nil
 	})
@@ -388,7 +388,7 @@ func funcsEqual(f1, f2 any) bool {
 	return val1.Pointer() == val2.Pointer()
 }
 
-var testApp = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+var testApp = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 	_, err := w.Write([]byte("app\n"))
 	if err != nil {
 		panic(err)
