@@ -358,9 +358,9 @@ func (h *exporterHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case "/metrics":
 		promhttp.Handler().ServeHTTP(w, r)
 	case "/health":
-		handleEnpoint(w, h.livenessProbes)
+		handleEndpoint(w, h.livenessProbes)
 	case "/ready":
-		handleEnpoint(w, append(h.livenessProbes, h.readinessProbes...))
+		handleEndpoint(w, append(h.livenessProbes, h.readinessProbes...))
 	default:
 		log.Warning(ipMethodURLSafe(r) + " on Exporter Server")
 		w.WriteHeader(http.StatusNotFound)
@@ -368,7 +368,7 @@ func (h *exporterHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func handleEnpoint(w http.ResponseWriter, probes []ProbeFunction) {
+func handleEndpoint(w http.ResponseWriter, probes []ProbeFunction) {
 	for _, p := range probes {
 		txt := p()
 		if len(txt) != 0 {

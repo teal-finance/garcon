@@ -22,12 +22,12 @@ func (g *Garcon) MiddlewareCORS() gg.Middleware {
 
 // MiddlewareCORSWithMethodsHeaders is a middleware to handle Cross-Origin Resource Sharing (CORS).
 func (g *Garcon) MiddlewareCORSWithMethodsHeaders(methods, headers []string) gg.Middleware {
-	return MiddlewareCORS(g.origins, methods, headers, g.devMode)
+	return MiddlewareCORS(g.allowedOrigins, methods, headers, g.devMode)
 }
 
 // MiddlewareCORS uses restrictive CORS values.
-func MiddlewareCORS(origins, methods, headers []string, debug bool) func(next http.Handler) http.Handler {
-	c := newCORS(origins, methods, headers, debug)
+func MiddlewareCORS(allowedOrigins, methods, headers []string, debug bool) func(next http.Handler) http.Handler {
+	c := newCORS(allowedOrigins, methods, headers, debug)
 	if c.Log != nil {
 		c.Log = corsLogger{}
 	}
@@ -56,7 +56,7 @@ func DevOrigins() []*url.URL {
 	}
 }
 
-func newCORS(origins, methods, headers []string, debug bool) *cors.Cors {
+func newCORS(allowedOrigins, methods, headers []string, debug bool) *cors.Cors {
 	if len(methods) == 0 {
 		// original default: http.MethodGet, http.MethodPost, http.MethodHead
 		methods = []string{http.MethodGet, http.MethodPost, http.MethodDelete}
@@ -68,7 +68,7 @@ func newCORS(origins, methods, headers []string, debug bool) *cors.Cors {
 
 	options := cors.Options{
 		AllowedOrigins:             nil,
-		AllowOriginFunc:            allowOriginFunc(origins),
+		AllowOriginFunc:            allowOriginFunc(allowedOrigins),
 		AllowOriginRequestFunc:     nil,
 		AllowOriginVaryRequestFunc: nil,
 		AllowedMethods:             methods,
@@ -87,18 +87,22 @@ func newCORS(origins, methods, headers []string, debug bool) *cors.Cors {
 	log.Security("CORS Headers:", options.AllowedHeaders)
 	log.Securityf("CORS Credentials=%v MaxAge=%v", options.AllowCredentials, options.MaxAge)
 
+	if debug {
+		log.Ok("CORS Debug mode")
+	}
+
 	return cors.New(options)
 }
 
-func allowOriginFunc(origins []string) func(string) bool {
-	InsertSchema(origins)
-	switch len(origins) {
+func allowOriginFunc(allowedOrigins []string) func(string) bool {
+	InsertSchema(allowedOrigins)
+	switch len(allowedOrigins) {
 	case 0:
 		return allOrigins()
 	case 1:
-		return oneOrigin(origins[0])
+		return oneOrigin(allowedOrigins[0])
 	default:
-		return multipleOriginPrefixes(origins)
+		return multipleOriginPrefixes(allowedOrigins)
 	}
 }
 
@@ -126,22 +130,22 @@ func oneOrigin(allowedOrigin string) func(string) bool {
 			return true
 		}
 
-		log.Security("CORS Refuse " + origin + " is not " + allowedOrigin)
+		log.Security("CORS Refuse", origin, "is not"+allowedOrigin)
 		return false
 	}
 }
 
-func multipleOriginPrefixes(addrPrefixes []string) func(origin string) bool {
-	log.Security("CORS Allow origin prefixes:", addrPrefixes)
+func multipleOriginPrefixes(allowedPrefixes []string) func(origin string) bool {
+	log.Security("CORS Allow origin prefixes:", allowedPrefixes)
 
 	return func(origin string) bool {
-		for _, prefix := range addrPrefixes {
+		for _, prefix := range allowedPrefixes {
 			if strings.HasPrefix(origin, prefix) {
 				return true
 			}
 		}
 
-		log.Security("CORS Refuse", origin, "without prefixes", addrPrefixes)
+		log.Security("CORS Refuse", origin, "without prefixes", allowedPrefixes)
 		return false
 	}
 }

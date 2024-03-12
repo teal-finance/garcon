@@ -38,7 +38,7 @@ func OverwriteBufferContent(b []byte) {
 	rand.Read(b)
 }
 
-// SplitClean splits the values and sanitize them.
+// SplitClean splits the string into sanitized tokens.
 func SplitClean(values string, separators ...rune) []string {
 	list := Split(values, separators...)
 	result := make([]string, 0, len(list))
@@ -171,13 +171,13 @@ func ParseURLs(origins []string) []*url.URL {
 	return urls
 }
 
-func OriginsFromURLs(urls []*url.URL) []string {
-	origins := make([]string, 0, len(urls))
+func KeepSchemeHostOnly(urls []*url.URL) []string {
+	sh := make([]string, 0, len(urls))
 	for _, u := range urls {
 		o := u.Scheme + "://" + u.Host
-		origins = append(origins, o)
+		sh = append(sh, o)
 	}
-	return origins
+	return sh
 }
 
 var ErrNonPrintable = errors.New("non-printable")

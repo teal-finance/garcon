@@ -25,13 +25,13 @@ import (
 var log = emo.NewZone("garcon")
 
 type Garcon struct {
-	ServerName ServerName
-	Writer     Writer
-	docURL     string
-	urls       []*url.URL
-	origins    []string
-	pprofPort  int
-	devMode    bool
+	ServerName     ServerName
+	Writer         Writer
+	docURL         string
+	urls           []*url.URL
+	allowedOrigins []string
+	pprofPort      int
+	devMode        bool
 }
 
 func (g Garcon) IsDevMode() bool { return g.devMode }
@@ -57,7 +57,7 @@ func New(opts ...Option) *Garcon {
 	} else if g.devMode {
 		g.urls = gg.AppendURLs(g.urls, DevOrigins()...)
 	}
-	g.origins = gg.OriginsFromURLs(g.urls)
+	g.allowedOrigins = gg.KeepSchemeHostOnly(g.urls)
 
 	if g.docURL != "" {
 		// if docURL is just a path => complete it with the base URL (scheme + host)
@@ -87,13 +87,17 @@ func WithDocURL(docURL string) Option {
 }
 
 func WithDev(enable ...bool) Option {
+	if len(enable) >= 2 {
+		log.Panic("garcon.WithDev() must be called with zero or one argument")
+	}
+
 	devMode := true
 	if len(enable) > 0 {
 		devMode = enable[0]
+	}
 
-		if len(enable) >= 2 {
-			log.Panic("garcon.WithDev() must be called with zero or one argument")
-		}
+	if devMode {
+		log.Ok("Debug mode")
 	}
 
 	return func(g *Garcon) {

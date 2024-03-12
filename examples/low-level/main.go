@@ -80,12 +80,12 @@ func setMiddlewares(gw garcon.Writer) (_ gg.Chain, connState func(net.Conn, http
 	// Limit the input request rate per IP
 	reqLimiter := garcon.NewRateLimiter(gw, burst, reqMinute, *dev)
 
-	corsConfig := allowedProdOrigin
+	allowedStr := allowedProdOrigin
 	if *dev {
-		corsConfig = allowedDevOrigins
+		allowedStr = allowedDevOrigins
 	}
 
-	allowedOrigins := gg.SplitClean(corsConfig)
+	allowedOrigins := gg.SplitClean(allowedStr)
 	urls := gg.ParseURLs(allowedOrigins)
 
 	middleware = middleware.Append(
