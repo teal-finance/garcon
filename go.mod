@@ -18,7 +18,6 @@ require (
 	github.com/teal-finance/emo v0.0.0-20240312100810-1c5a4984c875
 	github.com/teal-finance/incorruptible v0.0.0-20240312103045-cd27cac96f11
 	github.com/teal-finance/quid v0.0.0-20230216061629-9c9b3ff5e887
-	github.com/zhangyunhao116/fastrand v0.3.0
 	golang.org/x/time v0.5.0
 )
 

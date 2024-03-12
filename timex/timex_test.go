@@ -9,13 +9,12 @@
 package timex
 
 import (
+	"math/rand/v2"
 	"reflect"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
-
-	rand "github.com/zhangyunhao116/fastrand"
 )
 
 var parseDurationTests = []struct {
@@ -152,7 +151,7 @@ func TestParseDurationRoundTrip(t *testing.T) {
 	const maxLoops = 100
 	for i := 0; i < maxLoops; i++ {
 		// Resolutions finer than milliseconds will result in imprecise round-trips.
-		ns := rand.Intn(WeekNs) % MillisecondNs
+		ns := rand.IntN(WeekNs) % MillisecondNs
 		name := strconv.Itoa(ns) + "ns"
 
 		t.Run(name, func(t *testing.T) {
