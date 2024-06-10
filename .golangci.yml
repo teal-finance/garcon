@@ -117,7 +117,6 @@ linters:
 
     # new
     - asasalint # []any as any in variadic func(...any)
-    - nosnakecase # detects snake case of variable naming and function name
     - usestdlibvars # A linter that detect the possibility to use variables/constants from the Go standard library
 
   disable:
@@ -138,6 +137,7 @@ linters:
     - scopelint
     - ifshort # check code uses short syntax for if-statements whenever possible
     - structcheck # find unused struct fields
+    - nosnakecase # detects snake case of variable naming and function name
 
 linters-settings:
   dupl:
