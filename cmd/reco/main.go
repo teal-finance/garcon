@@ -1,4 +1,4 @@
-// Copyright (C) 2020-2022 TealTicks contributors
+// Copyright (c) 2020-2022 TealTicks contributors
 //
 // This program is free software and can be redistributed and/or modify
 // it under the terms of the GNU Affero General Public License as
