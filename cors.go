@@ -130,7 +130,7 @@ func oneOrigin(allowedOrigin string) func(string) bool {
 			return true
 		}
 
-		log.Security("CORS Refuse", origin, "is not"+allowedOrigin)
+		log.Security("CORS Refuse", origin, "is not "+allowedOrigin)
 		return false
 	}
 }

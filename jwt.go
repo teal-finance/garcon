@@ -214,7 +214,7 @@ func optionalArgs(permissions ...any) ([]string, []Perm) {
 	}
 
 	if n%2 != 0 {
-		log.Panicf("The number of the parametric arguments in NewJWTChecker() must be even but got %d."+help, n)
+		log.Panicf("The number of the parametric arguments in NewJWTChecker() must be even but got %d. "+help, n)
 	}
 
 	n /= 2
