@@ -338,14 +338,14 @@ func (ck *JWTChecker) PermFromCookie(r *http.Request) (perm Perm, err []any) {
 	return ck.PermFromJWT(c.Value)
 }
 
-func (ck *JWTChecker) PermFromJWT(JWT string) (Perm, []any) {
+func (ck *JWTChecker) PermFromJWT(jwt string) (Perm, []any) {
 	for i := range ck.cookies {
-		if JWT == ck.cookies[i].Value {
+		if jwt == ck.cookies[i].Value {
 			return ck.perms[i], nil
 		}
 	}
 
-	claims, err := ck.verifier.Claims([]byte(JWT))
+	claims, err := ck.verifier.Claims([]byte(jwt))
 	if err != nil {
 		return Perm{}, []any{err}
 	}
