@@ -37,17 +37,17 @@ func main() {
 	for i := 0; i < 1000; i++ {
 		instruments, err := query(ar, "BTC")
 		if err != nil {
-			log.Fatalf(err.Error())
+			log.Fatal(err.Error())
 		}
 		count += instruments
 		instruments, err = query(ar, "ETH")
 		if err != nil {
-			log.Fatalf(err.Error())
+			log.Fatal(err.Error())
 		}
 		count += instruments
 		instruments, err = query(ar, "SOL")
 		if err != nil {
-			log.Fatalf(err.Error())
+			log.Fatal(err.Error())
 		}
 		count += instruments
 	}
