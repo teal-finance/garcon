@@ -247,10 +247,10 @@ func splitURL(urls []*url.URL) (secure bool, dns, dir string) {
 		log.Panic("Middleware JWT got nil in URL slide:", urls)
 	}
 
-	switch {
-	case u.Scheme == "http":
+	switch u.Scheme {
+	case "http":
 		secure = false
-	case u.Scheme == "https":
+	case "https":
 		secure = true
 	default:
 		log.Panic("Middleware JWT wants http or https in URL scheme but got URL", u)
