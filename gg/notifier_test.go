@@ -16,7 +16,7 @@ func TestNotifier_Notify(t *testing.T) {
 	n := gg.NewNotifier(url)
 	err := n.Notify("Hello, world!")
 
-	want := "MattermostNotifier: 405 Method Not Allowed from host=framateam.org"
+	want := "MattermostNotifier: 404 Not Found from host=framateam.org"
 	if err.Error() != want {
 		t.Error("got:  " + err.Error())
 		t.Error("want: " + want)
